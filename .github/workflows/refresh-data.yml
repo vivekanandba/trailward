@@ -1,0 +1,35 @@
+name: Weekly data refresh
+
+# Re-runs the data pipeline weekly, commits treks.json if it changed.
+# The push then triggers the gated deploy workflow. No server involved.
+on:
+  schedule:
+    - cron: "0 2 * * 1" # Mondays 02:00 UTC
+  workflow_dispatch: # manual "run now"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build:data
+      - run: npm run validate:data
+      - name: Commit refreshed data if changed
+        run: |
+          if [[ -n "$(git status --porcelain src/data/treks.json)" ]]; then
+            git config user.name "trailward-bot"
+            git config user.email "actions@github.com"
+            git add src/data/treks.json
+            git commit -m "chore(data): weekly refresh of treks.json"
+            git push
+          else
+            echo "No data changes this run."
+          fi
