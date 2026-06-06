@@ -19,6 +19,7 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
     const q = query.trim();
     if (q.length < 3) {
       setResults([]);
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -64,7 +65,7 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
         className="w-full rounded-lg border border-trail-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300"
       />
       {open && (results.length > 0 || (!loading && query.trim().length >= 3)) && (
-        <ul className="absolute z-[1000] mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-trail-200 bg-white shadow-lg">
+        <ul className="absolute z-[1200] mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-trail-200 bg-white shadow-lg">
           {results.length === 0 ? (
             <li className="px-3 py-2 text-sm text-trail-500">No place found.</li>
           ) : (

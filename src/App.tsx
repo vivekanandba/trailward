@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import treksRaw from "./data/treks.json";
 import type { Trek } from "./lib/trek";
 import { loadOrigin, saveOrigin } from "./lib/origin";
@@ -21,6 +21,13 @@ export default function App() {
   // Curated treks for this origin; otherwise discover peaks live (spec 03).
   const curated = useMemo(() => ALL_TREKS.filter((t) => t.cityId === origin.id), [origin.id]);
 
+  // Track the current radius without re-querying Overpass on every slider nudge;
+  // discovery re-runs on origin change and reads the latest radius from the ref.
+  const radiusRef = useRef(filters.radiusKm);
+  useEffect(() => {
+    radiusRef.current = filters.radiusKm;
+  }, [filters.radiusKm]);
+
   useEffect(() => {
     if (curated.length > 0) {
       setDiscovery([]);
@@ -28,7 +35,7 @@ export default function App() {
     }
     let active = true;
     setDiscovering(true);
-    discoverPeaks(origin, filters.radiusKm)
+    discoverPeaks(origin, radiusRef.current)
       .then((d) => active && setDiscovery(d))
       .finally(() => active && setDiscovering(false));
     return () => {
@@ -44,10 +51,9 @@ export default function App() {
     [baseTreks, origin, filters],
   );
 
-  const selected = useMemo(
-    () => baseTreks.find((t) => t.id === selectedId),
-    [baseTreks, selectedId],
-  );
+  // Look up the selection among the currently-visible treks so the detail panel
+  // closes automatically when active filters exclude the selected trek (#6).
+  const selected = useMemo(() => visible.find((t) => t.id === selectedId), [visible, selectedId]);
 
   const pickOrigin = (o: typeof origin) => {
     setOrigin(o);

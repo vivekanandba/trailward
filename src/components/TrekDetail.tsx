@@ -11,6 +11,16 @@ interface TrekDetailProps {
   onClose(): void;
 }
 
+// Safe hostname for a source link; falls back to the raw string if the URL is
+// malformed, so one bad source never blanks the panel (spec 00).
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace("www.", "");
+  } catch {
+    return url;
+  }
+}
+
 // One labelled fact row; renders nothing when the value is absent (spec 06).
 function Fact({ label, value }: { label: string; value?: string | number | null }) {
   if (value === undefined || value === null || value === "") return null;
@@ -151,7 +161,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                   rel="noreferrer"
                   className="underline hover:text-trail-800"
                 >
-                  {new URL(url).hostname.replace("www.", "")}
+                  {hostnameOf(url)}
                 </a>
               </span>
             ))}
