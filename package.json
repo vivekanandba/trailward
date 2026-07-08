@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Trailward — interactive map of treks within a radius of any place (Bangalore by default).",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
