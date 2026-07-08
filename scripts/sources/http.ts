@@ -79,20 +79,17 @@ export async function fetchText(url: string, opts: GetOptions = {}): Promise<str
         method: opts.method ?? "GET",
         body: opts.body,
         headers: { "user-agent": USER_AGENT, ...opts.headers },
-        // Follow redirects so a 3xx (e.g. Wikipedia title normalisation) resolves
-        // to the resource instead of returning a redirect stub as "success".
-        maxRedirections: 3,
         // Bound each attempt so one stalled host can't hang the whole build.
         headersTimeout: REQUEST_TIMEOUT_MS,
         bodyTimeout: REQUEST_TIMEOUT_MS,
       });
-      if (res.statusCode >= 400) {
-        // 4xx won't fix itself on retry — fail fast without burning attempts.
-        // 5xx may be transient, so let it fall through to the retry path.
-        const err = new Error(`HTTP ${res.statusCode} for ${url}`);
-        if (res.statusCode < 500) throw new NonRetryableError(err.message);
-        throw err;
+      // request() does not follow redirects, so a 3xx body is just a stub —
+      // returning it would feed garbage to JSON.parse. 3xx and 4xx won't change
+      // on retry (fail fast); only 5xx falls through to the retry path.
+      if (res.statusCode >= 300 && res.statusCode < 500) {
+        throw new NonRetryableError(`HTTP ${res.statusCode} for ${url}`);
       }
+      if (res.statusCode >= 500) throw new Error(`HTTP ${res.statusCode} for ${url}`);
       return await res.body.text();
     } catch (err) {
       lastErr = err;
