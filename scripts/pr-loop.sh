@@ -121,8 +121,10 @@ cmd_approve() {
   # GitHub forbids approving your own PR; tolerate ONLY that. Capture stderr so a
   # genuine failure (bad auth, no permission, PR gone) surfaces instead of being
   # misreported as the benign self-approval skip.
+  # `&& rc=0 || rc=$?` keeps the failing command inside a list so `set -e`
+  # doesn't abort before we can inspect why it failed.
   local out rc
-  out="$(gh pr review "$num" --approve --body "Reviewed: all review threads resolved and checks green." 2>&1)"; rc=$?
+  out="$(gh pr review "$num" --approve --body "Reviewed: all review threads resolved and checks green." 2>&1)" && rc=0 || rc=$?
   if [ "$rc" -eq 0 ]; then
     echo "approved PR #$num"
   elif printf '%s' "$out" | grep -qiE 'can not approve your own|own pull request'; then
@@ -140,9 +142,9 @@ cmd_merge() {
   # non-zero for failing OR still-pending checks. A PR with no checks configured
   # prints "no checks reported" — that's allowed (nothing to gate on).
   local checks rc
-  checks="$(gh pr checks "$num" 2>&1)"; rc=$?
+  checks="$(gh pr checks "$num" 2>&1)" && rc=0 || rc=$?
   if [ "$rc" -ne 0 ]; then
-    printf '%s' "$checks" | grep -qi "no checks reported" \
+    printf '%s' "$checks" | grep -qiE "no checks (reported|found)" \
       || die "refusing to merge: CI is not green (failing or pending):"$'\n'"$checks"
   fi
   gh pr merge "$num" --squash --delete-branch
