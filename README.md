@@ -59,6 +59,14 @@ Playwright · Node/tsx pipeline scripts.
 | `npm run validate:data` | Validate the committed data file                        |
 | `npm run quality:check` | Type-check + lint + format check                        |
 
+## Contributing
+
+Every change lands through a pull request that runs a **reviewer↔dev review
+loop** before merging — nothing goes straight to `main`. With Claude Code, run
+`/ship` from a feature branch to open the PR, review-and-fix in a loop until
+it's clean, then approve and merge. See [`docs/pr-workflow.md`](./docs/pr-workflow.md)
+(mechanics live in [`scripts/pr-loop.sh`](./scripts/pr-loop.sh)).
+
 ## Hosting (GitHub Pages)
 
 This repo deploys to GitHub Pages via `.github/workflows/deploy.yml`. The site lives at
