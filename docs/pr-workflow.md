@@ -67,5 +67,8 @@ the script only performs the mechanical, repeatable GitHub actions.
 - **Keep the PR open** for the entire loop; only merge at the very end.
 - A review comment you disagree with can be resolved with a **reply explaining
   why** — resolving a thread doesn't require a code change.
-- CI (`.github/workflows/deploy.yml`) still gates the merge: validate-data,
-  unit tests, and e2e must pass, and merging `main` redeploys the site.
+- CI gates the merge: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+  runs validate-data, typecheck, unit tests, and e2e on every pull request, and
+  `pr-loop.sh merge` refuses unless those checks are green (or genuinely absent).
+  Merging `main` then runs [`deploy.yml`](../.github/workflows/deploy.yml), which
+  re-runs the same gates and redeploys the site.

@@ -40,20 +40,36 @@ cmd_open() {
   local base="${1:-main}"
   local branch; branch="$(current_branch)"
   [ "$branch" != "$base" ] || die "refusing to open a PR from '$base' onto itself; work on a feature branch"
-  # Idempotent: reuse an existing open PR for this branch if one exists.
-  local existing; existing="$(gh pr view --json number --jq .number 2>/dev/null || true)"
+  # Idempotent: reuse only an OPEN PR for this branch (gh pr view would also
+  # match a closed/merged one and hand back a dead number).
+  local existing; existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
   if [ -n "$existing" ]; then echo "$existing"; return; fi
-  git push -u origin "$branch" >/dev/null 2>&1 || true
+  # Push loudly — a swallowed push failure would open the PR against a stale
+  # remote HEAD and the whole loop would run on outdated code.
+  git push -u origin "$branch" >/dev/null || die "git push failed for '$branch' — resolve it before opening the PR"
   gh pr create --base "$base" --head "$branch" --fill >/dev/null
   gh pr view --json number --jq .number
 }
 
 # GraphQL: all review threads on the PR (id, resolved, first comment path/body).
+# Any extra args (e.g. `--jq '<filter>'`) are forwarded to `gh api` so callers
+# can project the result — without the forward the filter is silently dropped
+# and gh returns the raw JSON blob.
 _threads_json() {
-  local num="$1"
+  local num="$1"; shift
   gh api graphql \
-    -f query='query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$num){reviewThreads(first:100){nodes{id isResolved comments(first:1){nodes{path body}}}}}}}' \
-    -F owner="$(owner)" -F repo="$(name)" -F num="$num"
+    -f query='query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$num){reviewThreads(first:100){totalCount nodes{id isResolved comments(first:1){nodes{path body}}}}}}}' \
+    -F owner="$(owner)" -F repo="$(name)" -F num="$num" "$@"
+}
+
+# GitHub caps reviewThreads at 100 per page; warn (don't silently miscount) if
+# a PR has more so the operator knows the count/resolve only covered the first 100.
+_warn_if_truncated() {
+  local num="$1" total
+  total="$(_threads_json "$num" --jq '.data.repository.pullRequest.reviewThreads.totalCount')"
+  [ "${total:-0}" -gt 100 ] &&
+    echo "pr-loop: warning: PR #$num has $total review threads; only the first 100 are processed" >&2
+  return 0
 }
 
 cmd_threads() {
@@ -64,48 +80,71 @@ cmd_threads() {
 
 cmd_unresolved() {
   local num; num="$(pr_number "${1:-}")"
+  _warn_if_truncated "$num"
   _threads_json "$num" --jq \
     '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved|not)] | length'
 }
 
 cmd_resolve_all() {
   local num; num="$(pr_number "${1:-}")"
+  _warn_if_truncated "$num"
   local ids; ids="$(_threads_json "$num" --jq \
     '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved|not) | .id')"
   if [ -z "$ids" ]; then echo "no unresolved threads"; return; fi
-  local n=0
+  local ok=0 fail=0
   while IFS= read -r tid; do
     [ -n "$tid" ] || continue
-    gh api graphql \
+    # Trust the mutation's returned isResolved, not just a 0 exit — a thread that
+    # doesn't actually resolve must not be counted as done (else the loop churns).
+    local resolved
+    resolved="$(gh api graphql \
       -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' \
-      -F id="$tid" >/dev/null
-    n=$((n+1))
+      -F id="$tid" --jq '.data.resolveReviewThread.thread.isResolved' 2>/dev/null || echo false)"
+    if [ "$resolved" = "true" ]; then ok=$((ok+1)); else
+      fail=$((fail+1)); echo "pr-loop: failed to resolve thread $tid" >&2
+    fi
   done <<< "$ids"
-  echo "resolved $n thread(s)"
+  echo "resolved $ok thread(s)${fail:+$([ "$fail" -gt 0 ] && echo ", $fail failed")}"
+  [ "$fail" -eq 0 ]
 }
 
 cmd_status() {
   local num; num="$(pr_number "${1:-}")"
   local unresolved; unresolved="$(cmd_unresolved "$num")"
   gh pr view "$num" --json number,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup --jq \
-    '"PR #\(.number)  mergeable=\(.mergeable)  state=\(.mergeStateStatus)  review=\(.reviewDecision // "NONE")  checks=" + ([.statusCheckRollup[]?.conclusion // .statusCheckRollup[]?.status] | join(","))'
+    '"PR #\(.number)  mergeable=\(.mergeable)  state=\(.mergeStateStatus)  review=\(.reviewDecision // "NONE")  checks=" + (([.statusCheckRollup[]? | (.conclusion // .status)] | join(",")) | if . == "" then "none" else . end)'
   echo "unresolved review threads: $unresolved"
 }
 
 cmd_approve() {
   local num; num="$(pr_number "${1:-}")"
-  # GitHub forbids approving your own PR; tolerate that so the loop can proceed.
-  if gh pr review "$num" --approve --body "Reviewed: all review threads resolved and checks green." 2>/dev/null; then
+  # GitHub forbids approving your own PR; tolerate ONLY that. Capture stderr so a
+  # genuine failure (bad auth, no permission, PR gone) surfaces instead of being
+  # misreported as the benign self-approval skip.
+  local out rc
+  out="$(gh pr review "$num" --approve --body "Reviewed: all review threads resolved and checks green." 2>&1)"; rc=$?
+  if [ "$rc" -eq 0 ]; then
     echo "approved PR #$num"
+  elif printf '%s' "$out" | grep -qiE 'can not approve your own|own pull request'; then
+    echo "approve skipped (self-authored PR — GitHub forbids self-approval); gating on resolved threads + green checks instead"
   else
-    echo "approve skipped (likely a self-authored PR, which GitHub can't self-approve); gating on resolved threads + green checks instead"
+    die "approve failed for PR #$num: $out"
   fi
 }
 
 cmd_merge() {
   local num; num="$(pr_number "${1:-}")"
-  local unresolved; unresolved="$(cmd_unresolved "$num")"
+  local unresolved; unresolved="$(cmd_unresolved "$num" | tail -1)"
   [ "$unresolved" = "0" ] || die "refusing to merge: $unresolved unresolved review thread(s)"
+  # Gate on CI. `gh pr checks` exits 0 only when every check has passed; it is
+  # non-zero for failing OR still-pending checks. A PR with no checks configured
+  # prints "no checks reported" — that's allowed (nothing to gate on).
+  local checks rc
+  checks="$(gh pr checks "$num" 2>&1)"; rc=$?
+  if [ "$rc" -ne 0 ]; then
+    printf '%s' "$checks" | grep -qi "no checks reported" \
+      || die "refusing to merge: CI is not green (failing or pending):"$'\n'"$checks"
+  fi
   gh pr merge "$num" --squash --delete-branch
   echo "merged PR #$num"
 }
