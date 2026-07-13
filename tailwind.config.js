@@ -21,7 +21,7 @@ export default {
         // Difficulty tokens — must match src/lib/difficulty.ts.
         difficulty: {
           easy: "#2e7d32",
-          moderate: "#ed6c02",
+          moderate: "#b45309", // AA on white; matches src/lib/difficulty.ts
           hard: "#c62828",
           discovery: "#64748b",
         },

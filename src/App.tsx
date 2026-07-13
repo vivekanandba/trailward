@@ -10,6 +10,7 @@ import FilterBar from "./components/FilterBar";
 import TrekDetail from "./components/TrekDetail";
 import OriginSearch from "./components/OriginSearch";
 import FeedbackForm from "./components/FeedbackForm";
+import Panel from "./components/Panel";
 
 const ALL_TREKS = treksRaw as Trek[];
 
@@ -185,22 +186,30 @@ export default function App() {
             onSelect={setSelectedId}
           />
           {selected && (
-            <div className="absolute inset-y-0 right-0 z-[1000] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl">
+            <Panel
+              onClose={() => setSelectedId(undefined)}
+              labelledBy="trek-detail-title"
+              className="absolute inset-y-0 right-0 z-[1000] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl focus:outline-none"
+            >
               <TrekDetail
                 trek={selected}
                 origin={origin}
                 onClose={() => setSelectedId(undefined)}
               />
-            </div>
+            </Panel>
           )}
           {feedbackKind && (
-            <div className="absolute inset-y-0 right-0 z-[1050] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl">
+            <Panel
+              onClose={() => setFeedbackKind(null)}
+              labelledBy="feedback-title"
+              className="absolute inset-y-0 right-0 z-[1050] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl focus:outline-none"
+            >
               <FeedbackForm
                 key={feedbackKind}
                 initialKind={feedbackKind}
                 onClose={() => setFeedbackKind(null)}
               />
-            </div>
+            </Panel>
           )}
         </main>
       </div>
