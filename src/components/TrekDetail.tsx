@@ -67,6 +67,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
 
   const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
   const color = difficultyColor(trek.difficulty);
+  const credit = trek.image ? splitAttribution(trek.image.attribution) : null;
 
   return (
     <div className="flex h-full flex-col">
@@ -116,24 +117,20 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
               className="h-44 w-full rounded-lg object-cover"
             />
             <figcaption className="mt-1 text-[11px] text-trail-500">
-              {(() => {
-                const { text, url } = splitAttribution(trek.image.attribution);
-                return url ? (
-                  <>
-                    {text}{" "}
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline hover:text-trail-700"
-                    >
-                      source
-                    </a>
-                  </>
-                ) : (
-                  text
-                );
-              })()}
+              {credit?.text}
+              {credit?.url && (
+                <>
+                  {" "}
+                  <a
+                    href={credit.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline hover:text-trail-700"
+                  >
+                    source
+                  </a>
+                </>
+              )}
             </figcaption>
           </figure>
         )}

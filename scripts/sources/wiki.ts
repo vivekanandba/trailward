@@ -35,6 +35,9 @@ export function commonsFilePage(uploadUrl: string): string | undefined {
     return undefined;
   }
   const segs = path.split("/").filter(Boolean);
+  // Only Commons uploads live at a File: page on commons.wikimedia.org. Local
+  // (e.g. /wikipedia/en/...) uploads don't, so don't fabricate a dead link.
+  if (!segs.includes("commons")) return undefined;
   // The original filename is the last segment, or the second-to-last for thumbs.
   const file = segs.includes("thumb") ? segs[segs.length - 2] : segs[segs.length - 1];
   if (!file) return undefined;
