@@ -4,6 +4,7 @@ import {
   TileLayer,
   Circle,
   CircleMarker,
+  Marker,
   Tooltip,
   useMap,
   useMapEvents,
@@ -20,7 +21,58 @@ interface TrekMapProps {
   treks: Trek[]; // already filtered (→ 05)
   selectedId?: string;
   onSelect(id: string): void;
+  onRadiusChange?(km: number): void;
   theme?: "light" | "dark";
+}
+
+const RADIUS_MIN = 10;
+const RADIUS_MAX = 150;
+const RADIUS_STEP = 5;
+
+// A draggable handle sitting on the ring's east edge; dragging it resizes the
+// radius (snapped to the slider's step + bounds). Uses a divIcon so it needs no
+// Leaflet marker-image assets. Radius commits on dragend to avoid a refit storm.
+function RadiusHandle({
+  origin,
+  radiusKm,
+  onChange,
+}: {
+  origin: Origin;
+  radiusKm: number;
+  onChange(km: number): void;
+}) {
+  const lngPerKm = 1 / (111.32 * Math.cos((origin.lat * Math.PI) / 180));
+  const edge: [number, number] = [origin.lat, origin.lng + radiusKm * lngPerKm];
+  const icon = useMemo(
+    () =>
+      L.divIcon({
+        className: "",
+        html: '<div style="width:16px;height:16px;border-radius:9999px;background:#2f6b3f;border:3px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:grab"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      }),
+    [],
+  );
+  return (
+    <Marker
+      position={edge}
+      draggable
+      icon={icon}
+      keyboard={false}
+      eventHandlers={{
+        dragend: (e) => {
+          const p = (e.target as L.Marker).getLatLng();
+          const raw = distanceFrom(origin, { lat: p.lat, lng: p.lng });
+          const snapped = Math.round(raw / RADIUS_STEP) * RADIUS_STEP;
+          onChange(Math.max(RADIUS_MIN, Math.min(RADIUS_MAX, snapped)));
+        },
+      }}
+    >
+      <Tooltip direction="right" offset={[10, 0]}>
+        Drag to set radius ({radiusKm} km)
+      </Tooltip>
+    </Marker>
+  );
 }
 
 // CARTO basemaps: Voyager in light, Dark Matter in dark.
@@ -175,6 +227,7 @@ export default function TrekMap({
   treks,
   selectedId,
   onSelect,
+  onRadiusChange,
   theme = "light",
 }: TrekMapProps) {
   return (
@@ -199,6 +252,9 @@ export default function TrekMap({
         radius={radiusKm * 1000}
         pathOptions={{ color: "#2f6b3f", weight: 1.5, fillColor: "#2f6b3f", fillOpacity: 0.06 }}
       />
+      {onRadiusChange && (
+        <RadiusHandle origin={origin} radiusKm={radiusKm} onChange={onRadiusChange} />
+      )}
       <CircleMarker
         center={[origin.lat, origin.lng]}
         radius={7}

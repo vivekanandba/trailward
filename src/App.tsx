@@ -262,6 +262,7 @@ export default function App() {
               treks={visible}
               selectedId={selectedId}
               onSelect={setSelectedId}
+              onRadiusChange={(km) => setFilters((f) => ({ ...f, radiusKm: km }))}
               theme={theme}
             />
           </div>
