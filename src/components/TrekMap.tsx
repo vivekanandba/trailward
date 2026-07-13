@@ -53,14 +53,15 @@ function FitToResults({
   treks: Trek[];
 }) {
   const map = useMap();
-  const signature = treks.map((t) => t.id).join(",");
+  const hasResults = treks.length > 0;
   useEffect(() => {
     const bounds = L.latLng(origin.lat, origin.lng).toBounds(radiusKm * 2 * 1000);
     for (const t of treks) bounds.extend([t.lat, t.lng]);
     map.fitBounds(bounds, { padding: [24, 24], animate: !prefersReducedMotion() });
-    // Refit on origin/radius/result-set change (signature), not marker identity.
+    // Refit on origin/radius change and when results first appear (e.g. discovery
+    // loading) — NOT on every filter tweak, which would yank the map mid-typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, origin.lat, origin.lng, radiusKm, signature]);
+  }, [map, origin.lat, origin.lng, radiusKm, hasResults]);
   return null;
 }
 
