@@ -269,7 +269,7 @@ export default function App() {
             <Panel
               onClose={() => setSelectedId(undefined)}
               labelledBy="trek-detail-title"
-              className="absolute inset-y-0 right-0 z-[1000] w-full max-w-sm border-l border-trail-100 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl focus:outline-none"
+              className="fixed inset-0 z-[1200] overflow-hidden bg-white shadow-2xl focus:outline-none dark:bg-slate-900 lg:absolute lg:inset-y-0 lg:left-auto lg:right-0 lg:z-[1000] lg:w-full lg:max-w-sm lg:border-l lg:border-trail-100 dark:lg:border-slate-700"
             >
               <TrekDetail
                 trek={selected}
@@ -282,7 +282,7 @@ export default function App() {
             <Panel
               onClose={() => setFeedbackKind(null)}
               labelledBy="feedback-title"
-              className="absolute inset-y-0 right-0 z-[1050] w-full max-w-sm border-l border-trail-100 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl focus:outline-none"
+              className="fixed inset-0 z-[1250] overflow-hidden bg-white shadow-2xl focus:outline-none dark:bg-slate-900 lg:absolute lg:inset-y-0 lg:left-auto lg:right-0 lg:z-[1050] lg:w-full lg:max-w-sm lg:border-l lg:border-trail-100 dark:lg:border-slate-700"
             >
               <FeedbackForm
                 key={feedbackKind}
