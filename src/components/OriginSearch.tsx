@@ -114,6 +114,7 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
               >
                 <button
                   type="button"
+                  tabIndex={-1}
                   onClick={() => pick(r)}
                   onMouseEnter={() => setActive(i)}
                   className={`block w-full px-3 py-2 text-left text-sm hover:bg-trail-50 ${

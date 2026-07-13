@@ -17,6 +17,11 @@ interface PanelProps {
  */
 export default function Panel({ onClose, labelledBy, className, children }: PanelProps) {
   const ref = useRef<HTMLDivElement>(null);
+  // Read onClose via a ref so the effect can run exactly once (mount/unmount).
+  // Keying it on onClose would re-run — and refocus the opener — on every
+  // parent re-render, since App passes a fresh closure each time.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const el = ref.current;
@@ -26,7 +31,7 @@ export default function Panel({ onClose, labelledBy, className, children }: Pane
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !el) return;
@@ -56,7 +61,8 @@ export default function Panel({ onClose, labelledBy, className, children }: Pane
       // Restore focus to the opener so keyboard users aren't dumped at the top.
       opener?.focus?.();
     };
-  }, [onClose]);
+    // Mount/unmount only — onClose is read via ref (see above).
+  }, []);
 
   return (
     <div
