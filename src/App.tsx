@@ -42,11 +42,16 @@ export default function App() {
   // closes it); everything else replaces, to avoid spamming history on every
   // filter nudge.
   const prevSelectedRef = useRef(selectedId);
+  const poppingRef = useRef(false); // set while applying a browser back/forward
   useEffect(() => {
     const qs = encodeState(origin, filters, selectedId);
     const url = `${window.location.pathname}?${qs}`;
-    const opening = prevSelectedRef.current === undefined && selectedId !== undefined;
+    // Only a genuine user-initiated open pushes; a state change caused by
+    // popstate must replace, or Forward-navigation would re-push a duplicate.
+    const opening =
+      !poppingRef.current && prevSelectedRef.current === undefined && selectedId !== undefined;
     prevSelectedRef.current = selectedId;
+    poppingRef.current = false;
     if (opening) window.history.pushState(null, "", url);
     else window.history.replaceState(null, "", url);
   }, [origin, filters, selectedId]);
@@ -54,6 +59,7 @@ export default function App() {
   // Back/forward restores the encoded view and closes any open panel.
   useEffect(() => {
     const onPop = () => {
+      poppingRef.current = true;
       const s = decodeState(new URLSearchParams(window.location.search));
       if (s.origin) setOrigin(s.origin);
       setFilters(s.filters);
