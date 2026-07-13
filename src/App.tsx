@@ -5,6 +5,7 @@ import { loadOrigin, saveOrigin } from "./lib/origin";
 import { DEFAULT_FILTERS, applyFilters, type FilterState } from "./lib/filters";
 import { discoverPeaks } from "./lib/overpass";
 import { decodeState, encodeState } from "./lib/urlState";
+import { PRESET_ORIGINS } from "./lib/cities";
 import type { FeedbackKind } from "./lib/feedback";
 import TrekMap from "./components/TrekMap";
 import FilterBar from "./components/FilterBar";
@@ -103,6 +104,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin.id]);
 
+  const inDiscovery = curated.length === 0;
   const baseTreks = curated.length > 0 ? curated : discovery;
   const visible = useMemo(
     () => applyFilters(baseTreks, origin, filters),
@@ -186,6 +188,27 @@ export default function App() {
           ref={asideRef}
           className="order-2 flex w-full flex-col overflow-y-auto border-trail-100 dark:border-slate-700 lg:order-1 lg:w-80 lg:border-r"
         >
+          {/* Preset origin chips — quick jumps to a few regions (spec 03). */}
+          <div className="flex flex-wrap gap-2 border-b border-trail-100 p-4 dark:border-slate-700">
+            {PRESET_ORIGINS.map((c) => {
+              const active = c.id === origin.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => pickOrigin(c)}
+                  aria-pressed={active}
+                  className={`rounded-full border px-3 py-1 text-xs transition ${
+                    active
+                      ? "border-transparent bg-trail-600 text-white shadow-sm"
+                      : "border-trail-200 bg-white text-trail-700 hover:border-trail-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500"
+                  }`}
+                >
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
           <div className="border-b border-trail-100 dark:border-slate-700 p-4">
             <FilterBar
               filters={filters}
@@ -195,6 +218,11 @@ export default function App() {
               showDuration={showDuration}
             />
           </div>
+          {inDiscovery && !discovering && visible.length > 0 && (
+            <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
+              Showing unverified community peaks near {origin.name} from OpenStreetMap.
+            </p>
+          )}
           <ul className="flex-1 divide-y divide-trail-50 dark:divide-slate-700">
             {discovering && (
               <li className="p-4 text-sm text-trail-500 dark:text-slate-400">
