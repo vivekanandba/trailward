@@ -149,15 +149,25 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setSelectedId(t.id)}
-                  className={`block w-full px-4 py-3 text-left hover:bg-trail-50 ${
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-trail-50 ${
                     t.id === selectedId ? "bg-trail-50" : ""
                   }`}
                 >
-                  <span className="font-medium text-trail-900">{t.name}</span>
-                  <span className="block text-xs text-trail-500">
-                    {t.difficulty ?? "Unverified"}
-                    {t.elevationM ? ` · ${t.elevationM} m` : ""}
-                    {t.nearestTown ? ` · ${t.nearestTown}` : ""}
+                  {t.image && (
+                    <img
+                      src={t.image.url}
+                      alt=""
+                      loading="lazy"
+                      className="h-10 w-10 flex-none rounded object-cover"
+                    />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-trail-900">{t.name}</span>
+                    <span className="block text-xs text-trail-500">
+                      {t.difficulty ?? "Unverified"}
+                      {t.elevationM ? ` · ${t.elevationM} m` : ""}
+                      {t.nearestTown ? ` · ${t.nearestTown}` : ""}
+                    </span>
                   </span>
                 </button>
               </li>

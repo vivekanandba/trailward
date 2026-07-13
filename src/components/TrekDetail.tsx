@@ -21,6 +21,20 @@ function hostnameOf(url: string): string {
   }
 }
 
+// Split an attribution string into leading text + a trailing URL (if any) so
+// the credit can link to the license/file page. Falls back to plain text.
+function splitAttribution(attribution: string): { text: string; url?: string } {
+  const m = attribution.match(/(https?:\/\/\S+)\s*$/);
+  if (!m) return { text: attribution };
+  return {
+    text: attribution
+      .slice(0, m.index)
+      .replace(/[—\-:\s]+$/, "")
+      .trim(),
+    url: m[1],
+  };
+}
+
 // One labelled fact row; renders nothing when the value is absent (spec 06).
 function Fact({ label, value }: { label: string; value?: string | number | null }) {
   if (value === undefined || value === null || value === "") return null;
@@ -35,11 +49,14 @@ function Fact({ label, value }: { label: string; value?: string | number | null 
 export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   const [weather, setWeather] = useState<WeatherNow | null>(null);
   const [weatherFailed, setWeatherFailed] = useState(false);
+  // Hide the hero if the image URL 404s so a dead photo never leaves a gap.
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
     setWeather(null);
     setWeatherFailed(false);
+    setImageFailed(false);
     getWeather(trek.lat, trek.lng)
       .then((w) => active && setWeather(w))
       .catch(() => active && setWeatherFailed(true));
@@ -89,6 +106,37 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {trek.image && !imageFailed && (
+          <figure className="mb-3">
+            <img
+              src={trek.image.url}
+              alt={`${trek.name}`}
+              loading="lazy"
+              onError={() => setImageFailed(true)}
+              className="h-44 w-full rounded-lg object-cover"
+            />
+            <figcaption className="mt-1 text-[11px] text-trail-500">
+              {(() => {
+                const { text, url } = splitAttribution(trek.image.attribution);
+                return url ? (
+                  <>
+                    {text}{" "}
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline hover:text-trail-700"
+                    >
+                      source
+                    </a>
+                  </>
+                ) : (
+                  text
+                );
+              })()}
+            </figcaption>
+          </figure>
+        )}
         {trek.highlights && <p className="text-sm text-trail-700">{trek.highlights}</p>}
 
         <dl className="mt-3 divide-y divide-trail-50">
