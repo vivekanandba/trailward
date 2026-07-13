@@ -34,8 +34,14 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(loadTheme);
   useEffect(() => {
     applyTheme(theme);
-    saveTheme(theme);
   }, [theme]);
+  // Persist ONLY on an explicit toggle, so a first-time visitor keeps following
+  // their OS light/dark preference until they actually choose.
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    saveTheme(next);
+  };
 
   // Curated treks for this origin; otherwise discover peaks live (spec 03).
   const curated = useMemo(() => ALL_TREKS.filter((t) => t.cityId === origin.id), [origin.id]);
@@ -170,10 +176,7 @@ export default function App() {
         >
           Feedback
         </button>
-        <ThemeToggle
-          theme={theme}
-          onToggle={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-        />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
 
       {/* Body */}

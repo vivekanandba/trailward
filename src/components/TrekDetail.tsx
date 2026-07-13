@@ -130,7 +130,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                     href={credit.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="underline hover:text-trail-700"
+                    className="underline hover:text-trail-700 dark:hover:text-slate-200"
                   >
                     source
                   </a>
