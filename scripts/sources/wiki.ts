@@ -19,10 +19,36 @@ interface WikiSummaryResponse {
   content_urls?: { desktop?: { page?: unknown } };
 }
 
+/**
+ * Derive the Wikimedia Commons *file* page (where the license + author live)
+ * from an upload.wikimedia.org URL, so the attribution links the licensing page
+ * rather than the Wikipedia article. Handles both direct and /thumb/ URLs:
+ *   .../commons/a/a8/Skandagiri.jpg                    → File:Skandagiri.jpg
+ *   .../commons/thumb/a/a8/Skandagiri.jpg/330px-..jpg  → File:Skandagiri.jpg
+ * Returns undefined if the URL isn't a recognisable Commons upload.
+ */
+export function commonsFilePage(uploadUrl: string): string | undefined {
+  let path: string;
+  try {
+    path = new URL(uploadUrl).pathname;
+  } catch {
+    return undefined;
+  }
+  const segs = path.split("/").filter(Boolean);
+  // Only Commons uploads live at a File: page on commons.wikimedia.org. Local
+  // (e.g. /wikipedia/en/...) uploads don't, so don't fabricate a dead link.
+  if (!segs.includes("commons")) return undefined;
+  // The original filename is the last segment, or the second-to-last for thumbs.
+  const file = segs.includes("thumb") ? segs[segs.length - 2] : segs[segs.length - 1];
+  if (!file) return undefined;
+  return `https://commons.wikimedia.org/wiki/File:${file}`;
+}
+
 function imageFrom(json: WikiSummaryResponse): TrekImage | undefined {
   const src = json.originalimage?.source ?? json.thumbnail?.source;
-  const page = json.content_urls?.desktop?.page;
   if (typeof src !== "string" || !src.includes("upload.wikimedia.org")) return undefined;
+  // Prefer the Commons file page (license/author); fall back to the article.
+  const page = commonsFilePage(src) ?? (json.content_urls?.desktop?.page as string | undefined);
   const credit = typeof page === "string" ? `Wikimedia Commons — ${page}` : "Wikimedia Commons";
   return { url: src, attribution: credit };
 }

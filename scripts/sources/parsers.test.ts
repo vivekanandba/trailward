@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { parsePeaks } from "./overpass";
 import { parseElevations } from "./elevation";
 import { parseRoute } from "./route";
-import { parseWikiSummary, titleFromWikiUrl } from "./wiki";
+import { parseWikiSummary, titleFromWikiUrl, commonsFilePage } from "./wiki";
 import { parseDetails } from "./scrape";
 import { assertAllowedHost, isAllowedHost } from "./http";
 
@@ -65,6 +65,27 @@ describe("parseWikiSummary", () => {
       thumbnail: { source: "https://example.com/x.jpg" },
     });
     expect(info.image).toBeUndefined();
+  });
+
+  it("derives the Commons file page from an upload URL (attribution links the license)", () => {
+    expect(
+      commonsFilePage("https://upload.wikimedia.org/wikipedia/commons/a/a8/Skandagiri.jpg"),
+    ).toBe("https://commons.wikimedia.org/wiki/File:Skandagiri.jpg");
+    expect(
+      commonsFilePage(
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Skandagiri.jpg/330px-Skandagiri.jpg",
+      ),
+    ).toBe("https://commons.wikimedia.org/wiki/File:Skandagiri.jpg");
+    expect(commonsFilePage("not a url")).toBeUndefined();
+  });
+
+  it("attributes a Commons image to its file page, not the article", () => {
+    const info = parseWikiSummary({
+      extract: "x",
+      originalimage: { source: "https://upload.wikimedia.org/wikipedia/commons/a/a8/Foo.jpg" },
+      content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Foo" } },
+    });
+    expect(info.image?.attribution).toContain("commons.wikimedia.org/wiki/File:Foo.jpg");
   });
 
   it("derives a page title from a Wikipedia URL", () => {
