@@ -12,6 +12,13 @@
   }
   body {
     @apply bg-trail-50 text-trail-900 antialiased;
+    @apply dark:bg-slate-900 dark:text-slate-100;
+  }
+  :root {
+    color-scheme: light;
+  }
+  :root.dark {
+    color-scheme: dark;
   }
 }
 
@@ -21,4 +28,19 @@
   width: 100%;
   background: #e8eef0;
   font-family: inherit;
+}
+.dark .leaflet-container {
+  background: #0f172a; /* slate-900 */
+}
+/* Tone the default (light) Leaflet controls + attribution for dark tiles. */
+.dark .leaflet-bar a,
+.dark .leaflet-control-attribution {
+  background: #1e293b; /* slate-800 */
+  color: #cbd5e1; /* slate-300 */
+}
+.dark .leaflet-bar a {
+  border-bottom-color: #334155; /* slate-700 */
+}
+.dark .leaflet-control-attribution a {
+  color: #93c5fd; /* blue-300 */
 }

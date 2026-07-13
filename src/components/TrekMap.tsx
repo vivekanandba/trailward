@@ -11,7 +11,14 @@ interface TrekMapProps {
   treks: Trek[]; // already filtered (→ 05)
   selectedId?: string;
   onSelect(id: string): void;
+  theme?: "light" | "dark";
 }
+
+// CARTO basemaps: Voyager in light, Dark Matter in dark.
+const TILES = {
+  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+} as const;
 
 // Reframe the map whenever the origin or radius changes so the ring stays in
 // view. Honour prefers-reduced-motion: this fires on every radius-slider nudge,
@@ -28,7 +35,14 @@ function FitToRadius({ origin, radiusKm }: { origin: Origin; radiusKm: number })
   return null;
 }
 
-export default function TrekMap({ origin, radiusKm, treks, selectedId, onSelect }: TrekMapProps) {
+export default function TrekMap({
+  origin,
+  radiusKm,
+  treks,
+  selectedId,
+  onSelect,
+  theme = "light",
+}: TrekMapProps) {
   return (
     <MapContainer
       center={[origin.lat, origin.lng]}
@@ -38,7 +52,8 @@ export default function TrekMap({ origin, radiusKm, treks, selectedId, onSelect 
       aria-label="Map of treks"
     >
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        key={theme}
+        url={theme === "dark" ? TILES.dark : TILES.light}
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
       />
 

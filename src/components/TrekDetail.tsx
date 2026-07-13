@@ -40,8 +40,8 @@ function Fact({ label, value }: { label: string; value?: string | number | null 
   if (value === undefined || value === null || value === "") return null;
   return (
     <div className="flex justify-between gap-4 py-1.5 text-sm">
-      <dt className="text-trail-600">{label}</dt>
-      <dd className="text-right font-medium text-trail-900">{value}</dd>
+      <dt className="text-trail-600 dark:text-slate-400">{label}</dt>
+      <dd className="text-right font-medium text-trail-900 dark:text-slate-100">{value}</dd>
     </div>
   );
 }
@@ -71,9 +71,12 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3 border-b border-trail-100 p-4">
+      <div className="flex items-start justify-between gap-3 border-b border-trail-100 dark:border-slate-700 p-4">
         <div>
-          <h2 id="trek-detail-title" className="font-display text-xl font-semibold text-trail-900">
+          <h2
+            id="trek-detail-title"
+            className="font-display text-xl font-semibold text-trail-900 dark:text-slate-100"
+          >
             {trek.name}
           </h2>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -91,7 +94,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             {trek.type?.map((t) => (
               <span
                 key={t}
-                className="rounded-full border border-trail-200 bg-trail-50 px-2 py-0.5 text-xs text-trail-700"
+                className="rounded-full border border-trail-200 dark:border-slate-600 bg-trail-50 dark:bg-slate-800 px-2 py-0.5 text-xs text-trail-700 dark:text-slate-300"
               >
                 {t}
               </span>
@@ -102,7 +105,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           type="button"
           onClick={onClose}
           aria-label="Close details"
-          className="rounded-md p-1 text-trail-500 hover:bg-trail-50"
+          className="rounded-md p-1 text-trail-500 dark:text-slate-400 hover:bg-trail-50 dark:hover:bg-slate-800"
         >
           ✕
         </button>
@@ -118,7 +121,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
               onError={() => setImageFailed(true)}
               className="h-44 w-full rounded-lg object-cover"
             />
-            <figcaption className="mt-1 text-[11px] text-trail-500">
+            <figcaption className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
               {credit?.text}
               {credit?.url && (
                 <>
@@ -127,7 +130,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                     href={credit.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="underline hover:text-trail-700"
+                    className="underline hover:text-trail-700 dark:hover:text-slate-200"
                   >
                     source
                   </a>
@@ -136,9 +139,11 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             </figcaption>
           </figure>
         )}
-        {trek.highlights && <p className="text-sm text-trail-700">{trek.highlights}</p>}
+        {trek.highlights && (
+          <p className="text-sm text-trail-700 dark:text-slate-300">{trek.highlights}</p>
+        )}
 
-        <dl className="mt-3 divide-y divide-trail-50">
+        <dl className="mt-3 divide-y divide-trail-50 dark:divide-slate-700">
           <Fact label={`Distance from ${origin.name}`} value={`~${km} km`} />
           <Fact label="Elevation" value={trek.elevationM ? `${trek.elevationM} m` : undefined} />
           <Fact label="Best season" value={trek.bestSeason} />
@@ -164,15 +169,17 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
 
         {/* Weather (optional, fills in or degrades silently) */}
         {weather && (
-          <div className="mt-4 rounded-lg bg-trail-50 p-3">
+          <div className="mt-4 rounded-lg bg-trail-50 dark:bg-slate-800 p-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-trail-800">Weather now</span>
-              <span className="text-sm text-trail-700">
+              <span className="text-sm font-medium text-trail-800 dark:text-slate-100">
+                Weather now
+              </span>
+              <span className="text-sm text-trail-700 dark:text-slate-300">
                 {Math.round(weather.tempC)}°C · {weather.summary}
               </span>
             </div>
             {weather.next3d.length > 0 && (
-              <div className="mt-2 flex gap-3 text-xs text-trail-600">
+              <div className="mt-2 flex gap-3 text-xs text-trail-600 dark:text-slate-400">
                 {weather.next3d.map((d) => (
                   <span key={d.date} className="tabular-nums">
                     {Math.round(d.minC)}–{Math.round(d.maxC)}°
@@ -183,11 +190,13 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           </div>
         )}
         {weatherFailed && (
-          <p className="mt-4 text-xs text-trail-500">Weather unavailable right now.</p>
+          <p className="mt-4 text-xs text-trail-500 dark:text-slate-400">
+            Weather unavailable right now.
+          </p>
         )}
       </div>
 
-      <div className="border-t border-trail-100 p-4">
+      <div className="border-t border-trail-100 dark:border-slate-700 p-4">
         <a
           href={googleMapsDirectionsUrl(origin, trek)}
           target="_blank"
@@ -197,7 +206,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           Directions
         </a>
         {trek.sources.length > 0 && (
-          <div className="mt-3 text-xs text-trail-600">
+          <div className="mt-3 text-xs text-trail-600 dark:text-slate-400">
             Sources:{" "}
             {trek.sources.map((url, i) => (
               <span key={url}>
@@ -206,7 +215,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                   href={url}
                   target="_blank"
                   rel="noreferrer"
-                  className="underline hover:text-trail-800"
+                  className="underline hover:text-trail-800 dark:hover:text-slate-200"
                 >
                   {hostnameOf(url)}
                 </a>

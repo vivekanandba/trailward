@@ -81,7 +81,7 @@ export default function FeedbackForm({ onClose, initialKind, initialTrekName }: 
           <span className="text-3xl" aria-hidden>
             ✅
           </span>
-          <p className="text-sm text-trail-700">
+          <p className="text-sm text-trail-700 dark:text-slate-300">
             Your {kind === "suggest-trek" ? "suggestion" : "feedback"} is on its way. Thank you!
           </p>
           <button
@@ -118,7 +118,7 @@ export default function FeedbackForm({ onClose, initialKind, initialTrekName }: 
               className={`flex-1 rounded-lg border px-3 py-1.5 text-sm transition ${
                 kind === k
                   ? "border-transparent bg-trail-600 text-white shadow-sm"
-                  : "border-trail-200 bg-white text-trail-700 hover:border-trail-400"
+                  : "border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-trail-700 dark:text-slate-300 hover:border-trail-400 dark:hover:border-slate-500"
               }`}
             >
               {k === "feedback" ? "Feedback" : "Suggest a trek"}
@@ -129,7 +129,7 @@ export default function FeedbackForm({ onClose, initialKind, initialTrekName }: 
         {!configured && (
           <p
             role="status"
-            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
           >
             Feedback isn't configured yet — set <code>VITE_WEB3FORMS_KEY</code> in your environment
             (see <code>.env.example</code>) to enable sending.
@@ -173,7 +173,7 @@ export default function FeedbackForm({ onClose, initialKind, initialTrekName }: 
               className={`${inputClass} resize-y`}
             />
           </Field>
-          <span className="mt-1 block text-right text-xs tabular-nums text-trail-400">
+          <span className="mt-1 block text-right text-xs tabular-nums text-trail-400 dark:text-slate-500">
             {message.length}/{MESSAGE_MAX}
           </span>
         </div>
@@ -218,12 +218,12 @@ export default function FeedbackForm({ onClose, initialKind, initialTrekName }: 
 }
 
 const inputClass =
-  "w-full rounded-lg border border-trail-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300";
+  "w-full rounded-lg border border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1 block font-medium text-trail-800">{label}</span>
+      <span className="mb-1 block font-medium text-trail-800 dark:text-slate-100">{label}</span>
       {children}
     </label>
   );
@@ -231,15 +231,18 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Header({ title, onClose }: { title: string; onClose(): void }) {
   return (
-    <div className="flex items-center justify-between border-b border-trail-100 p-4">
-      <h2 id="feedback-title" className="font-display text-xl font-semibold text-trail-900">
+    <div className="flex items-center justify-between border-b border-trail-100 dark:border-slate-700 p-4">
+      <h2
+        id="feedback-title"
+        className="font-display text-xl font-semibold text-trail-900 dark:text-slate-100"
+      >
         {title}
       </h2>
       <button
         type="button"
         onClick={onClose}
         aria-label="Close feedback"
-        className="rounded-md p-1 text-trail-500 hover:bg-trail-50"
+        className="rounded-md p-1 text-trail-500 dark:text-slate-400 hover:bg-trail-50 dark:hover:bg-slate-800"
       >
         ✕
       </button>
