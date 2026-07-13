@@ -4,6 +4,7 @@ import type { Trek } from "./lib/trek";
 import { loadOrigin, saveOrigin } from "./lib/origin";
 import { DEFAULT_FILTERS, applyFilters, type FilterState } from "./lib/filters";
 import { discoverPeaks } from "./lib/overpass";
+import { decodeState, encodeState } from "./lib/urlState";
 import type { FeedbackKind } from "./lib/feedback";
 import TrekMap from "./components/TrekMap";
 import FilterBar from "./components/FilterBar";
@@ -15,9 +16,12 @@ import Panel from "./components/Panel";
 const ALL_TREKS = treksRaw as Trek[];
 
 export default function App() {
-  const [origin, setOrigin] = useState(loadOrigin);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [selectedId, setSelectedId] = useState<string | undefined>();
+  // Seed from the URL (shareable / reload-restorable), falling back to the
+  // persisted origin and defaults (spec 03/05).
+  const [initial] = useState(() => decodeState(new URLSearchParams(window.location.search)));
+  const [origin, setOrigin] = useState(() => initial.origin ?? loadOrigin());
+  const [filters, setFilters] = useState<FilterState>(() => initial.filters);
+  const [selectedId, setSelectedId] = useState<string | undefined>(() => initial.selectedId);
   const [discovery, setDiscovery] = useState<Trek[]>([]);
   const [discovering, setDiscovering] = useState(false);
   // When set, the feedback panel is open in the given mode (spec 07).
@@ -32,6 +36,39 @@ export default function App() {
   useEffect(() => {
     radiusRef.current = filters.radiusKm;
   }, [filters.radiusKm]);
+
+  // Mirror origin/filters/selection into the URL so the view is shareable and
+  // survives reload. Opening the detail panel pushes a history entry (so Back
+  // closes it); everything else replaces, to avoid spamming history on every
+  // filter nudge.
+  const prevSelectedRef = useRef(selectedId);
+  const poppingRef = useRef(false); // set while applying a browser back/forward
+  useEffect(() => {
+    const qs = encodeState(origin, filters, selectedId);
+    const url = `${window.location.pathname}?${qs}`;
+    // Only a genuine user-initiated open pushes; a state change caused by
+    // popstate must replace, or Forward-navigation would re-push a duplicate.
+    const opening =
+      !poppingRef.current && prevSelectedRef.current === undefined && selectedId !== undefined;
+    prevSelectedRef.current = selectedId;
+    poppingRef.current = false;
+    if (opening) window.history.pushState(null, "", url);
+    else window.history.replaceState(null, "", url);
+  }, [origin, filters, selectedId]);
+
+  // Back/forward restores the encoded view and closes any open panel.
+  useEffect(() => {
+    const onPop = () => {
+      poppingRef.current = true;
+      const s = decodeState(new URLSearchParams(window.location.search));
+      if (s.origin) setOrigin(s.origin);
+      setFilters(s.filters);
+      setSelectedId(s.selectedId);
+      setFeedbackKind(null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   useEffect(() => {
     if (curated.length > 0) {

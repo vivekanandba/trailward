@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trailward</title>
+    <!--
+      GitHub Pages SPA fallback: any unknown path under /trailward/ 404s to this
+      page. Redirect to the app root, preserving the query string + hash so
+      deep-linked/shared state (see src/lib/urlState.ts) still resolves.
+    -->
+    <script>
+      (function () {
+        var base = "/trailward/";
+        var target = base + window.location.search + window.location.hash;
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <a href="/trailward/">Trailward — open the map</a>
+    </noscript>
+  </body>
+</html>
