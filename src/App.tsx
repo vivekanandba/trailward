@@ -47,13 +47,6 @@ export default function App() {
   // Curated treks for this origin; otherwise discover peaks live (spec 03).
   const curated = useMemo(() => ALL_TREKS.filter((t) => t.cityId === origin.id), [origin.id]);
 
-  // Track the current radius without re-querying Overpass on every slider nudge;
-  // discovery re-runs on origin change and reads the latest radius from the ref.
-  const radiusRef = useRef(filters.radiusKm);
-  useEffect(() => {
-    radiusRef.current = filters.radiusKm;
-  }, [filters.radiusKm]);
-
   // Mirror origin/filters/selection into the URL so the view is shareable and
   // survives reload. Opening the detail panel pushes a history entry (so Back
   // closes it); everything else replaces, to avoid spamming history on every
@@ -94,15 +87,21 @@ export default function App() {
     }
     let active = true;
     setDiscovering(true);
-    discoverPeaks(origin, radiusRef.current)
-      .then((d) => active && setDiscovery(d))
-      .finally(() => active && setDiscovering(false));
+    // Debounce so dragging the radius slider/ring doesn't hammer Overpass; the
+    // radius genuinely changes the query, so discovery must re-run on it (the
+    // empty-state even tells users to widen the radius).
+    const handle = setTimeout(() => {
+      discoverPeaks(origin, filters.radiusKm)
+        .then((d) => active && setDiscovery(d))
+        .finally(() => active && setDiscovering(false));
+    }, 500);
     return () => {
       active = false;
+      clearTimeout(handle);
     };
-    // Re-discover when the origin changes (not on every radius nudge).
+    // Re-discover on origin OR radius change (origin.id keys the origin).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin.id]);
+  }, [origin.id, filters.radiusKm]);
 
   const inDiscovery = curated.length === 0;
   const baseTreks = curated.length > 0 ? curated : discovery;
