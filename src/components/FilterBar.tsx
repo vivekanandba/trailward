@@ -108,15 +108,17 @@ export default function FilterBar({
           value={filters.query}
           onChange={(e) => patch({ query: e.target.value })}
           placeholder="Search by name or town…"
-          className="w-full rounded-lg border border-trail-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300"
+          className="w-full rounded-lg border border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300"
         />
       </div>
 
       {/* Radius */}
       <div>
         <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-trail-800">Within radius</span>
-          <span className="tabular-nums text-trail-600">{filters.radiusKm} km</span>
+          <span className="font-medium text-trail-800 dark:text-slate-100">Within radius</span>
+          <span className="tabular-nums text-trail-600 dark:text-slate-400">
+            {filters.radiusKm} km
+          </span>
         </div>
         <input
           type="range"
@@ -132,7 +134,7 @@ export default function FilterBar({
 
       {/* Difficulty chips */}
       <div>
-        <span className="text-sm font-medium text-trail-800">Difficulty</span>
+        <span className="text-sm font-medium text-trail-800 dark:text-slate-100">Difficulty</span>
         <div className="mt-2 flex flex-wrap gap-2">
           {DIFFICULTIES.map((d) => {
             const active = filters.difficulties.includes(d);
@@ -145,7 +147,7 @@ export default function FilterBar({
                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition ${
                   active
                     ? "border-transparent text-white shadow-sm"
-                    : "border-trail-200 bg-white text-trail-700 hover:border-trail-400"
+                    : "border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-trail-700 dark:text-slate-300 hover:border-trail-400 dark:hover:border-slate-500"
                 }`}
                 style={active ? { backgroundColor: DIFFICULTY_COLORS[d] } : undefined}
               >
@@ -163,7 +165,7 @@ export default function FilterBar({
 
       {/* Type chips */}
       <div>
-        <span className="text-sm font-medium text-trail-800">Type</span>
+        <span className="text-sm font-medium text-trail-800 dark:text-slate-100">Type</span>
         <div className="mt-2 flex flex-wrap gap-2">
           {TYPES.map((t) => {
             const active = filters.types.includes(t);
@@ -176,7 +178,7 @@ export default function FilterBar({
                 className={`rounded-full border px-3 py-1 text-sm transition ${
                   active
                     ? "border-transparent bg-trail-600 text-white shadow-sm"
-                    : "border-trail-200 bg-white text-trail-700 hover:border-trail-400"
+                    : "border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-trail-700 dark:text-slate-300 hover:border-trail-400 dark:hover:border-slate-500"
                 }`}
               >
                 {t}
@@ -189,8 +191,8 @@ export default function FilterBar({
       {/* Elevation range */}
       <div>
         <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-trail-800">Elevation</span>
-          <span className="tabular-nums text-trail-600">
+          <span className="font-medium text-trail-800 dark:text-slate-100">Elevation</span>
+          <span className="tabular-nums text-trail-600 dark:text-slate-400">
             {elevMin <= ELEV_MIN && elevMax >= ELEV_MAX ? "Any" : `${elevMin}–${elevMax} m`}
           </span>
         </div>
@@ -222,8 +224,8 @@ export default function FilterBar({
       {showTrailLength && (
         <div>
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-trail-800">Max trail length</span>
-            <span className="tabular-nums text-trail-600">
+            <span className="font-medium text-trail-800 dark:text-slate-100">Max trail length</span>
+            <span className="tabular-nums text-trail-600 dark:text-slate-400">
               {filters.trailLengthMaxKm === undefined ? "Any" : `${filters.trailLengthMaxKm} km`}
             </span>
           </div>
@@ -244,8 +246,8 @@ export default function FilterBar({
       {showDuration && (
         <div>
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-trail-800">Max duration</span>
-            <span className="tabular-nums text-trail-600">
+            <span className="font-medium text-trail-800 dark:text-slate-100">Max duration</span>
+            <span className="tabular-nums text-trail-600 dark:text-slate-400">
               {filters.durationMaxHrs === undefined ? "Any" : `${filters.durationMaxHrs} h`}
             </span>
           </div>
@@ -269,7 +271,7 @@ export default function FilterBar({
         aria-label={PERMIT_LABEL[permitKey(filters.permitRequired)]}
         className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
           filters.permitRequired === undefined
-            ? "border-trail-200 bg-white text-trail-700 hover:border-trail-400"
+            ? "border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-trail-700 dark:text-slate-300 hover:border-trail-400 dark:hover:border-slate-500"
             : "border-transparent bg-trail-600 text-white shadow-sm"
         }`}
       >
@@ -284,7 +286,7 @@ export default function FilterBar({
       </button>
 
       {/* Night trek toggle */}
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-trail-800">
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-trail-800 dark:text-slate-100">
         <input
           type="checkbox"
           checked={filters.nightOnly}
@@ -295,16 +297,19 @@ export default function FilterBar({
       </label>
 
       {/* Count + reset */}
-      <div className="flex items-center justify-between border-t border-trail-100 pt-3 text-sm">
-        <span className="text-trail-700">
-          <span className="font-semibold tabular-nums text-trail-900">{resultCount}</span> trek
+      <div className="flex items-center justify-between border-t border-trail-100 dark:border-slate-700 pt-3 text-sm">
+        <span className="text-trail-700 dark:text-slate-300">
+          <span className="font-semibold tabular-nums text-trail-900 dark:text-slate-100">
+            {resultCount}
+          </span>{" "}
+          trek
           {resultCount === 1 ? "" : "s"}
         </span>
         <button
           type="button"
           onClick={() => onChange(DEFAULT_FILTERS)}
           disabled={isDefault}
-          className="rounded-md px-2 py-1 text-trail-600 hover:bg-trail-50 disabled:opacity-40"
+          className="rounded-md px-2 py-1 text-trail-600 dark:text-slate-400 hover:bg-trail-50 dark:hover:bg-slate-800 disabled:opacity-40"
         >
           Reset
         </button>

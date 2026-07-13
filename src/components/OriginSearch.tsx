@@ -94,16 +94,18 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
         aria-controls={listboxId}
         aria-autocomplete="list"
         aria-activedescendant={active >= 0 ? `origin-opt-${active}` : undefined}
-        className="w-full rounded-lg border border-trail-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300"
+        className="w-full rounded-lg border border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300"
       />
       {open && (results.length > 0 || (!loading && query.trim().length >= 3)) && (
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-[1200] mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-trail-200 bg-white shadow-lg"
+          className="absolute z-[1200] mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-lg"
         >
           {results.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-trail-500">No place found.</li>
+            <li className="px-3 py-2 text-sm text-trail-500 dark:text-slate-400">
+              No place found.
+            </li>
           ) : (
             results.map((r, i) => (
               <li
@@ -117,12 +119,14 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
                   tabIndex={-1}
                   onClick={() => pick(r)}
                   onMouseEnter={() => setActive(i)}
-                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-trail-50 ${
-                    i === active ? "bg-trail-50" : ""
+                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-trail-50 dark:hover:bg-slate-800 ${
+                    i === active ? "bg-trail-50 dark:bg-slate-800" : ""
                   }`}
                 >
-                  <span className="font-medium text-trail-900">{r.name}</span>
-                  <span className="block truncate text-xs text-trail-500">{r.displayName}</span>
+                  <span className="font-medium text-trail-900 dark:text-slate-100">{r.name}</span>
+                  <span className="block truncate text-xs text-trail-500 dark:text-slate-400">
+                    {r.displayName}
+                  </span>
                 </button>
               </li>
             ))

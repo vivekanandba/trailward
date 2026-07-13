@@ -12,6 +12,13 @@
   }
   body {
     @apply bg-trail-50 text-trail-900 antialiased;
+    @apply dark:bg-slate-900 dark:text-slate-100;
+  }
+  :root {
+    color-scheme: light;
+  }
+  :root.dark {
+    color-scheme: dark;
   }
 }
 
@@ -21,4 +28,7 @@
   width: 100%;
   background: #e8eef0;
   font-family: inherit;
+}
+.dark .leaflet-container {
+  background: #0f172a; /* slate-900 */
 }
