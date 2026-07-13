@@ -13,12 +13,17 @@ interface TrekMapProps {
   onSelect(id: string): void;
 }
 
-// Reframe the map whenever the origin or radius changes so the ring stays in view.
+// Reframe the map whenever the origin or radius changes so the ring stays in
+// view. Honour prefers-reduced-motion: this fires on every radius-slider nudge,
+// so an animated pan each time is jarring for motion-sensitive users.
 function FitToRadius({ origin, radiusKm }: { origin: Origin; radiusKm: number }) {
   const map = useMap();
   useEffect(() => {
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const bounds = L.latLng(origin.lat, origin.lng).toBounds(radiusKm * 2 * 1000);
-    map.fitBounds(bounds, { padding: [24, 24], animate: true });
+    map.fitBounds(bounds, { padding: [24, 24], animate: !reduceMotion });
   }, [map, origin.lat, origin.lng, radiusKm]);
   return null;
 }

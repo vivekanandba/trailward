@@ -10,6 +10,7 @@ import FilterBar from "./components/FilterBar";
 import TrekDetail from "./components/TrekDetail";
 import OriginSearch from "./components/OriginSearch";
 import FeedbackForm from "./components/FeedbackForm";
+import Panel from "./components/Panel";
 
 const ALL_TREKS = treksRaw as Trek[];
 
@@ -84,10 +85,26 @@ export default function App() {
     setFeedbackKind(kind);
   };
 
+  // When a dialog Panel is open, mark the rest of the app inert so assistive
+  // tech and pointer/keyboard can't reach the backdrop behind the modal.
+  // (`inert` isn't in this @types/react yet, so toggle the DOM property.)
+  const panelOpen = Boolean(selected) || feedbackKind !== null;
+  const headerRef = useRef<HTMLElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    for (const el of [headerRef.current, asideRef.current, mapRef.current]) {
+      if (el) el.inert = panelOpen;
+    }
+  }, [panelOpen]);
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="z-[1100] flex flex-wrap items-center gap-3 border-b border-trail-100 bg-white px-4 py-3 shadow-sm">
+      <header
+        ref={headerRef}
+        className="z-[1100] flex flex-wrap items-center gap-3 border-b border-trail-100 bg-white px-4 py-3 shadow-sm"
+      >
         <div className="flex items-center gap-2">
           <span className="text-2xl" aria-hidden>
             🥾
@@ -111,7 +128,10 @@ export default function App() {
       {/* Body */}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Filters + list rail */}
-        <aside className="order-2 flex w-full flex-col overflow-y-auto border-trail-100 lg:order-1 lg:w-80 lg:border-r">
+        <aside
+          ref={asideRef}
+          className="order-2 flex w-full flex-col overflow-y-auto border-trail-100 lg:order-1 lg:w-80 lg:border-r"
+        >
           <div className="border-b border-trail-100 p-4">
             <FilterBar
               filters={filters}
@@ -177,30 +197,40 @@ export default function App() {
 
         {/* Map + detail */}
         <main className="relative order-1 h-[55vh] flex-1 lg:order-2 lg:h-auto">
-          <TrekMap
-            origin={origin}
-            radiusKm={filters.radiusKm}
-            treks={visible}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-          />
+          <div ref={mapRef} className="h-full w-full">
+            <TrekMap
+              origin={origin}
+              radiusKm={filters.radiusKm}
+              treks={visible}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
+          </div>
           {selected && (
-            <div className="absolute inset-y-0 right-0 z-[1000] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl">
+            <Panel
+              onClose={() => setSelectedId(undefined)}
+              labelledBy="trek-detail-title"
+              className="absolute inset-y-0 right-0 z-[1000] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl focus:outline-none"
+            >
               <TrekDetail
                 trek={selected}
                 origin={origin}
                 onClose={() => setSelectedId(undefined)}
               />
-            </div>
+            </Panel>
           )}
           {feedbackKind && (
-            <div className="absolute inset-y-0 right-0 z-[1050] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl">
+            <Panel
+              onClose={() => setFeedbackKind(null)}
+              labelledBy="feedback-title"
+              className="absolute inset-y-0 right-0 z-[1050] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl focus:outline-none"
+            >
               <FeedbackForm
                 key={feedbackKind}
                 initialKind={feedbackKind}
                 onClose={() => setFeedbackKind(null)}
               />
-            </div>
+            </Panel>
           )}
         </main>
       </div>

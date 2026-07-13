@@ -232,7 +232,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Header({ title, onClose }: { title: string; onClose(): void }) {
   return (
     <div className="flex items-center justify-between border-b border-trail-100 p-4">
-      <h2 className="font-display text-xl font-semibold text-trail-900">{title}</h2>
+      <h2 id="feedback-title" className="font-display text-xl font-semibold text-trail-900">
+        {title}
+      </h2>
       <button
         type="button"
         onClick={onClose}

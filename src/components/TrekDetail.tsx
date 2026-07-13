@@ -73,7 +73,9 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
     <div className="flex h-full flex-col">
       <div className="flex items-start justify-between gap-3 border-b border-trail-100 p-4">
         <div>
-          <h2 className="font-display text-xl font-semibold text-trail-900">{trek.name}</h2>
+          <h2 id="trek-detail-title" className="font-display text-xl font-semibold text-trail-900">
+            {trek.name}
+          </h2>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span
               className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
