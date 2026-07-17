@@ -7,6 +7,19 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "/trailward/",
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        // One stable vendor chunk (react + leaflet stacks): app-code edits no
+        // longer invalidate the ~300 KB of rarely-changing dependencies in
+        // caches. (Separate react/leaflet chunks don't work here — react-dom
+        // gets hoisted into the react-leaflet graph, leaving an empty facade.)
+        manualChunks: {
+          vendor: ["react", "react-dom", "leaflet", "react-leaflet"],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: "jsdom",
