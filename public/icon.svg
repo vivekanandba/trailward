@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Trailward app icon: forest-green tile with a simple mountain + sun. -->
+  <rect width="128" height="128" rx="24" fill="#2f6b3f"/>
+  <circle cx="92" cy="40" r="12" fill="#fbbf24"/>
+  <path d="M12 100 L52 44 L72 72 L84 56 L116 100 Z" fill="#f0f7f1"/>
+  <path d="M52 44 L64 61 L58 69 L44 55 Z" fill="#bcdcc4"/>
+</svg>

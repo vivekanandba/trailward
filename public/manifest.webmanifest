@@ -1,0 +1,25 @@
+{
+  "name": "Trailward — treks near you",
+  "short_name": "Trailward",
+  "description": "Discover treks within a radius of any place. Bangalore by default.",
+  "start_url": "/trailward/",
+  "scope": "/trailward/",
+  "display": "standalone",
+  "background_color": "#f0f7f1",
+  "theme_color": "#2f6b3f",
+  "icons": [
+    {
+      "src": "/trailward/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    { "src": "/trailward/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    {
+      "src": "/trailward/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
