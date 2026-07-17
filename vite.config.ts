@@ -17,6 +17,14 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["src/**", "scripts/**"],
+      // Gate below current levels (≈76% lines / 80% branch / 66% funcs) so the
+      // suite can't silently regress; raise as coverage grows.
+      thresholds: {
+        lines: 70,
+        branches: 72,
+        functions: 60,
+        statements: 70,
+      },
     },
   },
 });

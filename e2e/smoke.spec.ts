@@ -20,3 +20,22 @@ test("selecting a trek opens its detail with a directions link", async ({ page }
   await expect(page.getByRole("heading", { name: "Skandagiri" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Directions" })).toBeVisible();
 });
+
+test("difficulty filter narrows the list", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("Skandagiri")).toBeVisible(); // Moderate trek, present by default
+  await page.getByRole("button", { name: "Hard", exact: true }).click();
+  // Filtering to Hard drops the Moderate Skandagiri and keeps a Hard trek.
+  await expect(page.getByText("Skandagiri")).toHaveCount(0);
+  await expect(page.getByText("Savandurga")).toBeVisible();
+});
+
+test("a shared URL restores filters and the open trek", async ({ page }) => {
+  await page.goto("/?oid=bangalore&olat=12.97160&olng=77.59460&on=Bengaluru&d=Hard&sel=savandurga");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Savandurga" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hard", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
