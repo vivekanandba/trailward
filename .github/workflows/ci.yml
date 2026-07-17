@@ -7,6 +7,18 @@ on:
     branches: [main]
 
 jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+
   validate-data:
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +40,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
+      # Runs the suite with coverage; thresholds in vite.config.ts gate regressions.
+      - run: npm run coverage
 
   e2e:
     runs-on: ubuntu-latest
@@ -39,5 +52,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Cache the Playwright browser download across runs.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e -- --project=chromium
+      # Both projects: desktop chromium AND the Pixel-7 mobile project.
+      - run: npm run e2e
