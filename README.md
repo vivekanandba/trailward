@@ -9,13 +9,18 @@ be **hosted free on GitHub Pages** with **no backend**.
 
 ## Status
 
-🚧 **Phase A — specs under review.** The repo is scaffolded with the full TDD framework and CI,
-but feature code is intentionally **not written yet**. Development follows two gates:
+✅ **Live** at [vivekanandba.github.io/trailward](https://vivekanandba.github.io/trailward/) —
+map + filters + trek detail with photos and live weather, shareable deep-link URLs, dark mode,
+full-screen mobile detail, marker clustering, a draggable radius ring, preset city chips with
+live OSM discovery, and offline support (installable PWA).
+
+Development still follows the two original gates:
 
 1. **Spec gate** — every module is specified in [`specs/`](./specs) before any code.
 2. **TDD per spec** — failing test → implement → green → refactor.
 
-See [`specs/README.md`](./specs/README.md) for the spec index, and the approved plan for context.
+See [`specs/README.md`](./specs/README.md) for the spec index, and
+[`docs/pr-workflow.md`](./docs/pr-workflow.md) for how changes land (the `/ship` review loop).
 
 ## Architecture (in one breath)
 
