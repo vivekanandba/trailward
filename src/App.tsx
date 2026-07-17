@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import treksRaw from "./data/treks.json";
 import type { Trek } from "./lib/trek";
 import { loadOrigin, saveOrigin } from "./lib/origin";
@@ -11,10 +11,23 @@ import TrekMap from "./components/TrekMap";
 import FilterBar from "./components/FilterBar";
 import TrekDetail from "./components/TrekDetail";
 import OriginSearch from "./components/OriginSearch";
-import FeedbackForm from "./components/FeedbackForm";
 import Panel from "./components/Panel";
 import ThemeToggle from "./components/ThemeToggle";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
+
+// The feedback panel is only mounted on demand, so its code (form, validation,
+// Web3Forms client) stays out of the initial bundle. A failed chunk load (stale
+// tab across a deploy, flaky network) must not crash the app — there is no
+// error boundary above — so fall back to a small retry hint instead.
+const FeedbackForm = lazy(() =>
+  import("./components/FeedbackForm").catch(() => ({
+    default: () => (
+      <p className="p-4 text-sm text-trail-500 dark:text-slate-400" role="alert">
+        Couldn't load the feedback form. Check your connection and reload the page.
+      </p>
+    ),
+  })),
+);
 
 const ALL_TREKS = treksRaw as Trek[];
 
@@ -312,11 +325,17 @@ export default function App() {
               labelledBy="feedback-title"
               className="fixed inset-0 z-[1250] overflow-hidden bg-white shadow-2xl focus:outline-none dark:bg-slate-900 lg:absolute lg:inset-y-0 lg:left-auto lg:right-0 lg:z-[1050] lg:w-full lg:max-w-sm lg:border-l lg:border-trail-100 dark:lg:border-slate-700"
             >
-              <FeedbackForm
-                key={feedbackKind}
-                initialKind={feedbackKind}
-                onClose={() => setFeedbackKind(null)}
-              />
+              <Suspense
+                fallback={
+                  <p className="p-4 text-sm text-trail-500 dark:text-slate-400">Loading…</p>
+                }
+              >
+                <FeedbackForm
+                  key={feedbackKind}
+                  initialKind={feedbackKind}
+                  onClose={() => setFeedbackKind(null)}
+                />
+              </Suspense>
             </Panel>
           )}
         </main>
