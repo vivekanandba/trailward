@@ -14,8 +14,18 @@ import OriginSearch from "./components/OriginSearch";
 import Panel from "./components/Panel";
 
 // The feedback panel is only mounted on demand, so its code (form, validation,
-// Web3Forms client) stays out of the initial bundle.
-const FeedbackForm = lazy(() => import("./components/FeedbackForm"));
+// Web3Forms client) stays out of the initial bundle. A failed chunk load (stale
+// tab across a deploy, flaky network) must not crash the app — there is no
+// error boundary above — so fall back to a small retry hint instead.
+const FeedbackForm = lazy(() =>
+  import("./components/FeedbackForm").catch(() => ({
+    default: () => (
+      <p className="p-4 text-sm text-trail-500 dark:text-slate-400" role="alert">
+        Couldn't load the feedback form. Check your connection and reload the page.
+      </p>
+    ),
+  })),
+);
 import ThemeToggle from "./components/ThemeToggle";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 
