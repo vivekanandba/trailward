@@ -12,6 +12,8 @@ import FilterBar from "./components/FilterBar";
 import TrekDetail from "./components/TrekDetail";
 import OriginSearch from "./components/OriginSearch";
 import Panel from "./components/Panel";
+import ThemeToggle from "./components/ThemeToggle";
+import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 
 // The feedback panel is only mounted on demand, so its code (form, validation,
 // Web3Forms client) stays out of the initial bundle. A failed chunk load (stale
@@ -26,8 +28,6 @@ const FeedbackForm = lazy(() =>
     ),
   })),
 );
-import ThemeToggle from "./components/ThemeToggle";
-import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 
 const ALL_TREKS = treksRaw as Trek[];
 
