@@ -66,7 +66,15 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   }, [trek.id, trek.lat, trek.lng]);
 
   const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
-  const color = difficultyColor(trek.difficulty);
+  // For discovery peaks with no curated difficulty, colour + label by the
+  // terrain-estimated difficulty (kept honest with an "est." prefix).
+  const shownDifficulty = trek.difficulty ?? trek.estimatedDifficulty;
+  const color = difficultyColor(shownDifficulty);
+  const difficultyText = trek.difficulty
+    ? difficultyLabel(trek.difficulty)
+    : trek.estimatedDifficulty
+      ? `est. ${trek.estimatedDifficulty}`
+      : "Unverified";
   const credit = trek.image ? splitAttribution(trek.image.attribution) : null;
 
   return (
@@ -84,7 +92,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
               className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
               style={{ backgroundColor: color }}
             >
-              {difficultyLabel(trek.difficulty)}
+              {difficultyText}
             </span>
             {trek.tier === "discovery" && (
               <span className="rounded-full bg-difficulty-discovery px-2 py-0.5 text-xs font-medium text-white">
@@ -166,6 +174,39 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           />
           <Fact label="Night trek" value={trek.nightTrek ? "Popular" : undefined} />
         </dl>
+
+        {/* Terrain — computed from the DEM for discovery peaks (spec 11). */}
+        {trek.reliefM !== undefined && (
+          <div className="mt-4 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-trail-800 dark:text-slate-100">
+                Terrain
+              </span>
+              {trek.discoveryScore !== undefined && (
+                <span className="text-xs text-trail-600 dark:text-slate-400">
+                  hidden-gem score {Math.round(trek.discoveryScore * 100)}/100
+                </span>
+              )}
+            </div>
+            <dl className="mt-1 divide-y divide-trail-100 dark:divide-slate-700">
+              <Fact label="Local relief" value={`~${trek.reliefM} m`} />
+              <Fact
+                label="Mean slope"
+                value={trek.meanSlopeDeg !== undefined ? `${trek.meanSlopeDeg}°` : undefined}
+              />
+              <Fact
+                label="Prominence (approx)"
+                value={
+                  trek.prominenceProxyM !== undefined ? `~${trek.prominenceProxyM} m` : undefined
+                }
+              />
+              <Fact label="Estimated difficulty" value={trek.estimatedDifficulty} />
+            </dl>
+            <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
+              Estimated from the Copernicus 90 m DEM — unverified, may miss small features.
+            </p>
+          </div>
+        )}
 
         {/* Weather (optional, fills in or degrades silently) */}
         {weather && (

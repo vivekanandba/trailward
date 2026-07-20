@@ -25,6 +25,8 @@ async function fetchOverpass(query: string): Promise<unknown> {
         method: "POST",
         body: query,
         headers: { "content-type": "text/plain" },
+        // Overpass can be slow on dense regions; give it more than the default 15s.
+        timeoutMs: 45_000,
       });
       return JSON.parse(text);
     } catch (err) {

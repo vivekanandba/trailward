@@ -57,8 +57,10 @@ export default function App() {
     saveTheme(next);
   };
 
-  // Curated treks for this origin; otherwise discover peaks live (spec 03).
-  const curated = useMemo(() => ALL_TREKS.filter((t) => t.cityId === origin.id), [origin.id]);
+  // Records baked for this origin — curated (Bangalore) OR precomputed
+  // topography-ranked discovery (preset regions, spec 11). Only a truly unknown
+  // origin (none baked) falls through to live discovery (spec 03).
+  const localTreks = useMemo(() => ALL_TREKS.filter((t) => t.cityId === origin.id), [origin.id]);
 
   // Mirror origin/filters/selection into the URL so the view is shareable and
   // survives reload. Opening the detail panel pushes a history entry (so Back
@@ -94,7 +96,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (curated.length > 0) {
+    if (localTreks.length > 0) {
       setDiscovery([]);
       return;
     }
@@ -116,8 +118,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin.id, filters.radiusKm]);
 
-  const inDiscovery = curated.length === 0;
-  const baseTreks = curated.length > 0 ? curated : discovery;
+  const baseTreks = localTreks.length > 0 ? localTreks : discovery;
+  // Discovery mode = nothing curated for this origin (baked discovery counts too).
+  const inDiscovery = baseTreks.length === 0 || baseTreks.every((t) => t.tier === "discovery");
+  // Precomputed regions carry a topography rank; live-discovered peaks don't.
+  const topoRanked = baseTreks.some((t) => t.discoveryScore !== undefined);
   const visible = useMemo(
     () => applyFilters(baseTreks, origin, filters),
     [baseTreks, origin, filters],
@@ -232,7 +237,9 @@ export default function App() {
           </div>
           {inDiscovery && !discovering && visible.length > 0 && (
             <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
-              Showing unverified community peaks near {origin.name} from OpenStreetMap.
+              {topoRanked
+                ? `Peaks near ${origin.name} ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`
+                : `Showing unverified community peaks near ${origin.name} from OpenStreetMap.`}
             </p>
           )}
           <ul className="flex-1 divide-y divide-trail-50 dark:divide-slate-700">
@@ -282,9 +289,14 @@ export default function App() {
                       {t.name}
                     </span>
                     <span className="block text-xs text-trail-500 dark:text-slate-400">
-                      {t.difficulty ?? "Unverified"}
+                      {t.difficulty ??
+                        (t.estimatedDifficulty ? `est. ${t.estimatedDifficulty}` : "Unverified")}
                       {t.elevationM ? ` · ${t.elevationM} m` : ""}
-                      {t.nearestTown ? ` · ${t.nearestTown}` : ""}
+                      {t.reliefM !== undefined
+                        ? ` · ${t.reliefM} m relief`
+                        : t.nearestTown
+                          ? ` · ${t.nearestTown}`
+                          : ""}
                     </span>
                   </span>
                 </button>

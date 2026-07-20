@@ -144,25 +144,38 @@ function TrekPin({
   selected: boolean;
   onSelect(id: string): void;
 }) {
-  const color = difficultyColor(trek.difficulty);
   const isDiscovery = trek.tier === "discovery";
+  // Colour discovery peaks by their terrain-estimated difficulty when we have
+  // one; only truly unknown peaks stay hollow white.
+  const shownDifficulty = trek.difficulty ?? trek.estimatedDifficulty;
+  const color = difficultyColor(shownDifficulty);
   const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
+  // Size discovery pins by their hidden-gem score so top picks read first.
+  const baseRadius =
+    isDiscovery && trek.discoveryScore !== undefined ? 6 + Math.round(trek.discoveryScore * 5) : 8;
+  const label = trek.difficulty
+    ? difficultyLabel(trek.difficulty)
+    : trek.estimatedDifficulty
+      ? `est. ${trek.estimatedDifficulty}`
+      : "Unverified";
   return (
     <CircleMarker
       center={[trek.lat, trek.lng]}
-      radius={selected ? 11 : 8}
+      radius={selected ? 11 : baseRadius}
       pathOptions={{
         color: selected ? "#1c3927" : "#ffffff",
         weight: selected ? 3 : 1.5,
-        fillColor: isDiscovery ? "#ffffff" : color,
-        fillOpacity: isDiscovery ? 0.5 : 0.95,
+        fillColor: shownDifficulty ? color : "#ffffff",
+        fillOpacity: isDiscovery ? 0.75 : 0.95,
+        // Dashed outline keeps discovery pins visually "unverified" even when coloured.
+        dashArray: isDiscovery ? "2 3" : undefined,
       }}
       eventHandlers={{ click: () => onSelect(trek.id) }}
     >
       <Tooltip direction="top" offset={[0, -6]}>
         <span className="font-semibold">{trek.name}</span>
         <br />
-        {difficultyLabel(trek.difficulty)} · ~{km} km
+        {label} · ~{km} km
         {trek.elevationM ? ` · ${trek.elevationM} m` : ""}
       </Tooltip>
     </CircleMarker>
