@@ -39,3 +39,18 @@ test("a shared URL restores filters and the open trek", async ({ page }) => {
     "true",
   );
 });
+
+// Regression: on narrow viewports the map used to collapse to 0px because the
+// list rail consumed the whole column, leaving nothing for the flex-basis-0 map
+// (App.tsx body layout). The map must occupy a real slice of the viewport.
+test("map is actually visible on a mobile viewport", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("img.leaflet-tile").first()).toBeVisible();
+  const map = page.locator(".leaflet-container");
+  const box = await map.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box, "map container should have a layout box").not.toBeNull();
+  // At least a third of the viewport height, so it's genuinely usable — not a sliver.
+  expect(box!.height).toBeGreaterThan((viewport?.height ?? 0) / 3);
+  expect(box!.width).toBeGreaterThan(0);
+});

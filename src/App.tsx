@@ -198,7 +198,7 @@ export default function App() {
         {/* Filters + list rail */}
         <aside
           ref={asideRef}
-          className="order-2 flex w-full flex-col overflow-y-auto border-trail-100 dark:border-slate-700 lg:order-1 lg:w-80 lg:border-r"
+          className="order-2 flex min-h-0 w-full flex-1 flex-col overflow-y-auto border-trail-100 dark:border-slate-700 lg:order-1 lg:w-80 lg:flex-none lg:border-r"
         >
           {/* Preset origin chips — quick jumps to a few regions (spec 03). */}
           <div className="flex flex-wrap gap-2 border-b border-trail-100 p-4 dark:border-slate-700">
@@ -294,7 +294,7 @@ export default function App() {
         </aside>
 
         {/* Map + detail */}
-        <main className="relative order-1 h-[55vh] flex-1 lg:order-2 lg:h-auto">
+        <main className="relative order-1 h-[52dvh] min-h-[260px] flex-none lg:order-2 lg:h-auto lg:min-h-0 lg:flex-1">
           <div ref={mapRef} className="h-full w-full">
             <TrekMap
               origin={origin}
