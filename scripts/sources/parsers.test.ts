@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { parsePeaks } from "./overpass";
-import { parseElevations } from "./elevation";
+import { parsePeaks, parseLatLngs } from "./overpass";
+import { parseElevations, chunk } from "./elevation";
+import { parseGeoSearchCount } from "./geosearch";
 import { parseRoute } from "./route";
 import { parseWikiSummary, titleFromWikiUrl, commonsFilePage } from "./wiki";
 import { parseDetails } from "./scrape";
@@ -34,6 +35,41 @@ describe("parseElevations (Open-Meteo)", () => {
   });
   it("returns [] for a malformed response", () => {
     expect(parseElevations({})).toEqual([]);
+  });
+});
+
+describe("chunk", () => {
+  it("splits into fixed-size groups with a shorter tail", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+  });
+  it("returns [] for an empty input", () => {
+    expect(chunk([], 100)).toEqual([]);
+  });
+});
+
+describe("parseLatLngs (Overpass)", () => {
+  it("reads node coords and way/relation centroids, dropping invalid ones", () => {
+    const pts = parseLatLngs({
+      elements: [
+        { type: "node", lat: 18.5, lon: 73.8 },
+        { type: "way", center: { lat: 19.0, lon: 72.9 } },
+        { type: "node", lat: "bad", lon: 1 },
+      ],
+    });
+    expect(pts).toEqual([
+      { lat: 18.5, lng: 73.8 },
+      { lat: 19.0, lng: 72.9 },
+    ]);
+  });
+});
+
+describe("parseGeoSearchCount (Wikipedia)", () => {
+  it("counts nearby articles", () => {
+    expect(parseGeoSearchCount({ query: { geosearch: [{ title: "A" }, { title: "B" }] } })).toBe(2);
+  });
+  it("returns 0 for an empty or malformed response", () => {
+    expect(parseGeoSearchCount({ query: { geosearch: [] } })).toBe(0);
+    expect(parseGeoSearchCount({})).toBe(0);
   });
 });
 

@@ -13,6 +13,7 @@ const USER_AGENT =
 // are deliberately absent — scraping them violates their ToS (spec 02).
 export const ALLOWED_HOSTS = new Set<string>([
   "overpass-api.de",
+  "overpass.kumi.systems", // Overpass mirror — failover when the main endpoint 429/504s
   "api.open-meteo.com",
   "router.project-osrm.org",
   "en.wikipedia.org",

@@ -21,6 +21,7 @@
     "typecheck": "tsc -b",
     "quality:check": "npm run typecheck && npm run lint && npm run format:check",
     "build:data": "tsx scripts/build-data.ts",
+    "build:discovery": "tsx scripts/discover-precompute.ts",
     "validate:data": "tsx scripts/validate-data.ts"
   },
   "dependencies": {
