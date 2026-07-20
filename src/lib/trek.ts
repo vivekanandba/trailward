@@ -27,6 +27,14 @@ export interface Trek {
   trailType?: "one-way" | "round-trip";
   durationHrs?: string; // "2–3"
 
+  // Topography (computed at build time for discovery peaks; spec 11)
+  reliefM?: number; // local relief (max − min) over the sampled DEM window
+  prominenceProxyM?: number; // summit − lowest neighbour (windowed proxy)
+  meanSlopeDeg?: number;
+  terrainConfidence?: number; // [0,1]; low for sub-DEM-noise-floor relief
+  discoveryScore?: number; // [0,1]; topography × obscurity rank
+  estimatedDifficulty?: Difficulty; // terrain-derived; NOT the curated difficulty
+
   // Classification & planning (rich = curated)
   difficulty?: Difficulty;
   type?: TrekType[];
@@ -119,6 +127,29 @@ export function validateTrek(input: unknown): ValidateResult {
   }
   if (input.difficulty !== undefined && !DIFFICULTIES.includes(input.difficulty as Difficulty)) {
     return fail("difficulty", "must be one of Easy, Moderate, Hard");
+  }
+
+  // Topography fields (spec 11) — optional; range-checked like elevationM.
+  const inRange = (field: string, lo: number, hi: number): ValidateResult | null => {
+    const v = input[field];
+    if (v === undefined) return null;
+    if (typeof v !== "number" || Number.isNaN(v) || v < lo || v > hi) {
+      return fail(field, `must be a number in [${lo}, ${hi}]`);
+    }
+    return null;
+  };
+  const rangeError =
+    inRange("reliefM", 0, 9000) ??
+    inRange("prominenceProxyM", 0, 9000) ??
+    inRange("meanSlopeDeg", 0, 90) ??
+    inRange("terrainConfidence", 0, 1) ??
+    inRange("discoveryScore", 0, 1);
+  if (rangeError) return rangeError;
+  if (
+    input.estimatedDifficulty !== undefined &&
+    !DIFFICULTIES.includes(input.estimatedDifficulty as Difficulty)
+  ) {
+    return fail("estimatedDifficulty", "must be one of Easy, Moderate, Hard");
   }
 
   // Image: a url requires an attribution (licensing requirement).

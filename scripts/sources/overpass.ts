@@ -3,16 +3,16 @@
  * same pure `parsePeaks` the browser uses for live discovery (spec 03) — one
  * parser, two callers. This module only adds the build-time fetch wrapper.
  */
-import type { Origin, Trek } from "../../src/lib/trek";
-import { parsePeaks } from "../../src/lib/overpass";
+import type { Origin } from "../../src/lib/trek";
+import { parsePeaks, type ParsedPeak } from "../../src/lib/overpass";
 import { fetchText } from "./http";
 
 export { parsePeaks };
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
-/** Fetch peaks within radiusKm of an origin as partial treks. */
-export async function fetchPeaks(origin: Origin, radiusKm: number): Promise<Partial<Trek>[]> {
+/** Fetch peaks within radiusKm of an origin as parsed peaks (coords + tags). */
+export async function fetchPeaks(origin: Origin, radiusKm: number): Promise<ParsedPeak[]> {
   const query = `[out:json][timeout:25];node(around:${radiusKm * 1000},${origin.lat},${origin.lng})[natural=peak];out;`;
   const text = await fetchText(OVERPASS_URL, {
     method: "POST",

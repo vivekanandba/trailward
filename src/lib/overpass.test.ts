@@ -20,6 +20,21 @@ const overpassFixture = {
     },
     {
       type: "node",
+      id: 126,
+      lat: 13.36,
+      lon: 77.68,
+      tags: {
+        name: "Nandi",
+        "name:en": "Nandi Hills",
+        natural: "peak",
+        ele: "1478",
+        wikipedia: "en:Nandi Hills, India",
+        wikidata: "Q3336720",
+        prominence: "600",
+      },
+    },
+    {
+      type: "node",
       id: 125,
       lat: "bad",
       lon: 77.0,
@@ -36,7 +51,7 @@ afterEach(() => {
 describe("parsePeaks (pure, shared with pipeline)", () => {
   it("turns Overpass nodes into partial treks with coords and elevation", () => {
     const peaks = parsePeaks(overpassFixture);
-    expect(peaks).toHaveLength(2);
+    expect(peaks).toHaveLength(3);
     expect(peaks[0]).toMatchObject({
       id: "osm-123",
       name: "Skandagiri",
@@ -44,6 +59,23 @@ describe("parsePeaks (pure, shared with pipeline)", () => {
       lng: 77.6911,
       elevationM: 1350,
     });
+  });
+
+  it("captures OSM notability + prominence tags", () => {
+    const nandi = parsePeaks(overpassFixture).find((p) => p.id === "osm-126")!;
+    expect(nandi.notability).toEqual({
+      hasWikipediaTag: true,
+      hasWikidataTag: true,
+      nameEn: "Nandi Hills",
+      osmProminenceM: 600,
+    });
+  });
+
+  it("reports absent notability tags as false/undefined", () => {
+    const skanda = parsePeaks(overpassFixture).find((p) => p.id === "osm-123")!;
+    expect(skanda.notability.hasWikipediaTag).toBe(false);
+    expect(skanda.notability.hasWikidataTag).toBe(false);
+    expect(skanda.notability.osmProminenceM).toBeUndefined();
   });
 
   it("names unnamed peaks and omits unparseable elevation", () => {
@@ -75,6 +107,8 @@ describe("discoverPeaks (runtime fetch)", () => {
       expect(t.verified).toBe(false);
       expect(t.cityId).toBe(DEFAULT_ORIGIN.id);
       expect(isTrek(t)).toBe(true);
+      // The pipeline-only notability blob must not leak into runtime treks.
+      expect("notability" in t).toBe(false);
     }
   });
 

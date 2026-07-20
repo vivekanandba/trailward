@@ -64,6 +64,19 @@ describe("validateTrek — acceptance", () => {
     const r = validateTrek({ ...curated, futureField: 42 });
     expect(r.ok).toBe(true);
   });
+
+  it("accepts a discovery trek with in-range topography fields", () => {
+    const r = validateTrek({
+      ...discovery,
+      reliefM: 420,
+      prominenceProxyM: 300,
+      meanSlopeDeg: 22.5,
+      terrainConfidence: 1,
+      discoveryScore: 0.73,
+      estimatedDifficulty: "Moderate",
+    });
+    expect(r.ok).toBe(true);
+  });
 });
 
 describe("validateTrek — rejection", () => {
@@ -76,6 +89,12 @@ describe("validateTrek — rejection", () => {
     ["missing name", { ...curated, name: undefined }],
     ["bad difficulty", { ...curated, difficulty: "Brutal" }],
     ["bad tier", { ...curated, tier: "made-up" }],
+    ["relief over 9000", { ...curated, reliefM: 9001 }],
+    ["negative prominence proxy", { ...curated, prominenceProxyM: -1 }],
+    ["slope over 90", { ...curated, meanSlopeDeg: 91 }],
+    ["confidence over 1", { ...curated, terrainConfidence: 1.5 }],
+    ["discoveryScore below 0", { ...curated, discoveryScore: -0.1 }],
+    ["bad estimatedDifficulty", { ...curated, estimatedDifficulty: "Brutal" }],
   ];
 
   it.each(cases)("rejects: %s", (_label, input) => {
