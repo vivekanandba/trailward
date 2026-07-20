@@ -93,6 +93,22 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+// Leaflet caches its container size at init and only recomputes on window
+// `resize`. On mobile the container also resizes without a window resize —
+// orientation changes, the dvh viewport shifting as the address bar hides, and
+// our own flex layout settling — which leaves tiles grey or half-rendered until
+// an interaction. Observe the container and invalidate on any size change.
+function InvalidateOnResize() {
+  const map = useMap();
+  useEffect(() => {
+    const el = map.getContainer();
+    const ro = new ResizeObserver(() => map.invalidateSize({ animate: false }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [map]);
+  return null;
+}
+
 // Frame the radius ring AND every result marker, so treks just outside the ring
 // aren't off-screen and a lopsided result set isn't wasted to one corner.
 function FitToResults({
@@ -244,6 +260,7 @@ export default function TrekMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
       />
 
+      <InvalidateOnResize />
       <FitToResults origin={origin} radiusKm={radiusKm} treks={treks} />
 
       {/* Radius ring + origin marker */}
