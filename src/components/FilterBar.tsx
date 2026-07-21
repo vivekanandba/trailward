@@ -12,6 +12,9 @@ interface FilterBarProps {
   // true so the control shows unless explicitly suppressed.
   showTrailLength?: boolean;
   showDuration?: boolean;
+  // Upper bound of the radius slider (km). Bengaluru reaches 500 for its
+  // precomputed discovery peaks; other origins keep the default 150 (spec 11).
+  maxRadiusKm?: number;
 }
 
 const DIFFICULTIES: Difficulty[] = ["Easy", "Moderate", "Hard"];
@@ -44,6 +47,7 @@ export default function FilterBar({
   resultCount,
   showTrailLength = true,
   showDuration = true,
+  maxRadiusKm = 150,
 }: FilterBarProps) {
   const patch = (p: Partial<FilterState>) => onChange({ ...filters, ...p });
 
@@ -123,7 +127,7 @@ export default function FilterBar({
         <input
           type="range"
           min={10}
-          max={150}
+          max={maxRadiusKm}
           step={5}
           value={filters.radiusKm}
           onChange={(e) => patch({ radiusKm: Number(e.target.value) })}

@@ -203,7 +203,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
               <Fact label="Estimated difficulty" value={trek.estimatedDifficulty} />
             </dl>
             <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
-              Estimated from the Copernicus 90 m DEM — unverified, may miss small features.
+              Computed from the Copernicus 90 m DEM; may miss small features.
             </p>
           </div>
         )}

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parsePeaks, parseLatLngs } from "./overpass";
-import { parseElevations, chunk } from "./elevation";
+import { parseElevations, parseTopoData, chunk } from "./elevation";
 import { parseGeoSearchCount } from "./geosearch";
 import { parseRoute } from "./route";
 import { parseWikiSummary, titleFromWikiUrl, commonsFilePage } from "./wiki";
@@ -35,6 +35,20 @@ describe("parseElevations (Open-Meteo)", () => {
   });
   it("returns [] for a malformed response", () => {
     expect(parseElevations({})).toEqual([]);
+  });
+});
+
+describe("parseTopoData (OpenTopoData failover)", () => {
+  it("reads results[].elevation index-aligned, rejecting out-of-range", () => {
+    expect(
+      parseTopoData({
+        status: "OK",
+        results: [{ elevation: 931 }, { elevation: -5 }, { elevation: 1175 }],
+      }),
+    ).toEqual([931, undefined, 1175]);
+  });
+  it("returns [] for a malformed response", () => {
+    expect(parseTopoData({})).toEqual([]);
   });
 });
 

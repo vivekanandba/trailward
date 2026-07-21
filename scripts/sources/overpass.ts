@@ -25,8 +25,9 @@ async function fetchOverpass(query: string): Promise<unknown> {
         method: "POST",
         body: query,
         headers: { "content-type": "text/plain" },
-        // Overpass can be slow on dense regions; give it more than the default 15s.
-        timeoutMs: 45_000,
+        // Overpass can be slow on dense / large-radius regions (e.g. Bengaluru at
+        // 500 km); give it well over the query's own server-side timeout.
+        timeoutMs: 120_000,
       });
       return JSON.parse(text);
     } catch (err) {
@@ -38,7 +39,10 @@ async function fetchOverpass(query: string): Promise<unknown> {
 
 /** Fetch peaks within radiusKm of an origin as parsed peaks (coords + tags). */
 export async function fetchPeaks(origin: Origin, radiusKm: number): Promise<ParsedPeak[]> {
-  const query = `[out:json][timeout:25];node(around:${radiusKm * 1000},${origin.lat},${origin.lng})[natural=peak];out;`;
+  // Scale the server-side timeout with radius — a 500 km peak sweep needs far
+  // longer than the default 25 s or Overpass returns an empty/partial result.
+  const serverTimeout = radiusKm >= 300 ? 90 : 25;
+  const query = `[out:json][timeout:${serverTimeout}];node(around:${radiusKm * 1000},${origin.lat},${origin.lng})[natural=peak];out;`;
   return parsePeaks(await fetchOverpass(query));
 }
 
