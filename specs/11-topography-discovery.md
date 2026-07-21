@@ -15,8 +15,13 @@ consistent with the no-backend architecture (→ 00, 02).
 ## Scope
 
 - **Precompute-only.** Topography-aware discovery is computed at **build time** for the
-  non-curated preset regions (Pune, Mumbai, Hyderabad, Chikmagalur; Bengaluru stays
-  curated) and baked into `src/data/treks.json`, refreshed by the weekly cron (→ 10).
+  preset regions (Pune, Mumbai, Hyderabad, Chikmagalur, **and Bengaluru**) and baked into
+  `src/data/treks.json`, refreshed by the weekly cron (→ 10).
+- **Supplement, don't replace, curated.** For Bengaluru the ranked discovery peaks are
+  shown **alongside** the 16 curated treks (deduped against them within
+  `CURATED_DEDUP_KM`), so a local finds lesser-known peaks beyond the famous ones. The
+  banner reads "Plus N lesser-known peaks…"; curated treks keep precedence and their
+  verified badge.
 - **Peaks only** (`natural=peak`). Other feature classes (waterfalls, caves, forts) are
   out of scope this pass.
 - **Arbitrary typed origins are unchanged**: they keep the existing live `discoverPeaks`

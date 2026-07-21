@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { precomputeRegion, type DiscoverFetchers } from "./discover-precompute";
-import { validateTrek, type Origin } from "../src/lib/trek";
+import {
+  precomputeRegion,
+  dedupeAgainstCurated,
+  type DiscoverFetchers,
+} from "./discover-precompute";
+import { validateTrek, type Origin, type Trek } from "../src/lib/trek";
 import type { ParsedPeak } from "../src/lib/overpass";
 
 const PUNE: Origin = { id: "geo:18.5204,73.8567", name: "Pune", lat: 18.5204, lng: 73.8567 };
@@ -110,5 +114,33 @@ describe("precomputeRegion", () => {
         }),
       ),
     ).rejects.toThrow(/overpass/);
+  });
+});
+
+describe("dedupeAgainstCurated", () => {
+  const mk = (id: string, lat: number, lng: number, tier: Trek["tier"]): Trek => ({
+    id,
+    name: id,
+    lat,
+    lng,
+    cityId: "bangalore",
+    tier,
+    sources: tier === "curated" ? ["https://x"] : [],
+    verified: tier === "curated",
+  });
+
+  it("drops a discovery peak that sits on top of a curated trek", () => {
+    const curated = [mk("skandagiri", 13.5021, 77.6911, "curated")];
+    const discovery = [
+      mk("osm-1--bangalore", 13.5022, 77.6912, "discovery"), // ~15 m away → same summit
+      mk("osm-2--bangalore", 13.9, 77.9, "discovery"), // far → a genuine new peak
+    ];
+    const out = dedupeAgainstCurated(discovery, curated);
+    expect(out.map((t) => t.id)).toEqual(["osm-2--bangalore"]);
+  });
+
+  it("keeps everything when there are no curated treks", () => {
+    const discovery = [mk("osm-1--pune", 18.5, 73.8, "discovery")];
+    expect(dedupeAgainstCurated(discovery, [])).toHaveLength(1);
   });
 });

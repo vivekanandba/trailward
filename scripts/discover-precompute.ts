@@ -1,6 +1,7 @@
 /**
- * discover-precompute — topography-aware discovery for the non-curated preset
- * regions (spec 11). For each region it pulls OSM peaks, samples a DEM rosette
+ * discover-precompute — topography-aware discovery for the preset regions
+ * (spec 11), incl. Bengaluru where ranked peaks supplement the curated treks.
+ * For each region it pulls OSM peaks, samples a DEM rosette
  * around each, computes terrain + obscurity, scores/ranks, estimates a
  * difficulty, and emits discovery-tier Trek records baked into treks.json.
  *
@@ -13,7 +14,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Origin, Trek } from "../src/lib/trek";
-import { DEFAULT_ORIGIN, validateDataset } from "../src/lib/trek";
+import { validateDataset } from "../src/lib/trek";
 import { rosetteRing, computeTerrain, estimateDifficulty, type LatLng } from "../src/lib/terrain";
 import { scoreDiscovery } from "../src/lib/discoveryScore";
 import { distanceFrom } from "../src/lib/distance";
@@ -50,6 +51,16 @@ function slug(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+// A discovery peak this close to a curated trek is almost certainly the same
+// summit; drop it so Bangalore's famous curated hills aren't duplicated as
+// "unverified" pins on top of themselves.
+const CURATED_DEDUP_KM = 0.7;
+
+/** Drop discovery peaks that coincide with an already-curated trek. */
+export function dedupeAgainstCurated(discovery: Trek[], curated: Trek[]): Trek[] {
+  return discovery.filter((d) => !curated.some((c) => distanceFrom(c, d) <= CURATED_DEDUP_KM));
 }
 
 /**
@@ -180,7 +191,9 @@ async function main(): Promise<void> {
   const file = resolve(here, "../src/data/treks.json");
   const existing = JSON.parse(readFileSync(file, "utf8")) as Trek[];
 
-  const regions = PRESET_ORIGINS.filter((o) => o.id !== DEFAULT_ORIGIN.id);
+  // Every preset region gets topography discovery — including Bengaluru, where
+  // the ranked peaks SUPPLEMENT the curated treks (deduped against them).
+  const regions = PRESET_ORIGINS;
   const fetchers = liveFetchers();
   const recomputed = new Map<string, Trek[]>();
 
@@ -188,8 +201,12 @@ async function main(): Promise<void> {
     try {
       console.log(`[discover] ${origin.name}: discovering peaks within ${DISCOVERY_RADIUS_KM} km…`);
       const treks = await precomputeRegion(origin, DISCOVERY_RADIUS_KM, fetchers);
-      recomputed.set(origin.id, treks);
-      console.log(`[discover] ${origin.name}: ${treks.length} ranked discovery peaks.`);
+      // Don't duplicate curated treks as discovery pins (Bengaluru).
+      const curatedHere = existing.filter((t) => t.tier === "curated" && t.cityId === origin.id);
+      const deduped = dedupeAgainstCurated(treks, curatedHere);
+      recomputed.set(origin.id, deduped);
+      const note = curatedHere.length ? ` (supplementing ${curatedHere.length} curated)` : "";
+      console.log(`[discover] ${origin.name}: ${deduped.length} ranked discovery peaks${note}.`);
     } catch (err) {
       console.warn(`[discover] ${origin.name} skipped: ${(err as Error).message}`);
     }

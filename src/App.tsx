@@ -119,14 +119,20 @@ export default function App() {
   }, [origin.id, filters.radiusKm]);
 
   const baseTreks = localTreks.length > 0 ? localTreks : discovery;
-  // Discovery mode = nothing curated for this origin (baked discovery counts too).
-  const inDiscovery = baseTreks.length === 0 || baseTreks.every((t) => t.tier === "discovery");
-  // Precomputed regions carry a topography rank; live-discovered peaks don't.
+  // Precomputed peaks carry a topography rank; live-discovered ones don't.
   const topoRanked = baseTreks.some((t) => t.discoveryScore !== undefined);
   const visible = useMemo(
     () => applyFilters(baseTreks, origin, filters),
     [baseTreks, origin, filters],
   );
+  // Curated vs discovery split of what's currently on screen, so the banner can
+  // say "N lesser-known peaks" whether they stand alone (a preset region) or
+  // supplement curated treks (Bangalore).
+  const discoveryCount = useMemo(
+    () => visible.filter((t) => t.tier === "discovery").length,
+    [visible],
+  );
+  const hasCurated = useMemo(() => visible.some((t) => t.tier === "curated"), [visible]);
 
   // Look up the selection among the currently-visible treks so the detail panel
   // closes automatically when active filters exclude the selected trek (#6).
@@ -235,11 +241,13 @@ export default function App() {
               showDuration={showDuration}
             />
           </div>
-          {inDiscovery && !discovering && visible.length > 0 && (
+          {discoveryCount > 0 && !discovering && (
             <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
-              {topoRanked
-                ? `Peaks near ${origin.name} ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`
-                : `Showing unverified community peaks near ${origin.name} from OpenStreetMap.`}
+              {!topoRanked
+                ? `Showing unverified community peaks near ${origin.name} from OpenStreetMap.`
+                : hasCurated
+                  ? `Plus ${discoveryCount} lesser-known ${discoveryCount === 1 ? "peak" : "peaks"} near ${origin.name}, ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`
+                  : `Peaks near ${origin.name} ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`}
             </p>
           )}
           <ul className="flex-1 divide-y divide-trail-50 dark:divide-slate-700">

@@ -423,6 +423,728 @@
     ]
   },
   {
+    "id": "osm-11886218018--bengaluru",
+    "name": "Malki Betta",
+    "lat": 11.9525721,
+    "lng": 77.1353263,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1465,
+    "reliefM": 254,
+    "prominenceProxyM": 254,
+    "meanSlopeDeg": 16.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/11886218018"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1134502252--bengaluru",
+    "name": "Sigekoppalu Betta",
+    "lat": 13.3738916,
+    "lng": 77.1660317,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1202,
+    "reliefM": 214,
+    "prominenceProxyM": 214,
+    "meanSlopeDeg": 19.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1134502252"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1134502261--bengaluru",
+    "name": "Hulkadi Betta",
+    "lat": 13.3397101,
+    "lng": 77.4203262,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1179,
+    "reliefM": 213,
+    "prominenceProxyM": 213,
+    "meanSlopeDeg": 18.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1134502261"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1134502255--bengaluru",
+    "name": "Ramadevara Betta",
+    "lat": 13.3234337,
+    "lng": 77.1642536,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1164,
+    "reliefM": 203,
+    "prominenceProxyM": 203,
+    "meanSlopeDeg": 16.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1134502255"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2087677721--bengaluru",
+    "name": "Nidagallu",
+    "lat": 14.1588647,
+    "lng": 77.0828478,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1061,
+    "reliefM": 256,
+    "prominenceProxyM": 256,
+    "meanSlopeDeg": 23.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/2087677721"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-818937898--bengaluru",
+    "name": "Kabbalu",
+    "lat": 12.4980389,
+    "lng": 77.2949846,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 982,
+    "reliefM": 231,
+    "prominenceProxyM": 231,
+    "meanSlopeDeg": 22,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/818937898"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8302167423--bengaluru",
+    "name": "Periyamalai Top",
+    "lat": 12.4324353,
+    "lng": 78.2878654,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 959,
+    "reliefM": 261,
+    "prominenceProxyM": 261,
+    "meanSlopeDeg": 20.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/8302167423"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-818936913--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.5010026,
+    "lng": 77.2586411,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 923,
+    "reliefM": 258,
+    "prominenceProxyM": 258,
+    "meanSlopeDeg": 20.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/818936913"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1445579613--bengaluru",
+    "name": "Kundura Betta",
+    "lat": 12.3076027,
+    "lng": 77.0848822,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 901,
+    "reliefM": 217,
+    "prominenceProxyM": 217,
+    "meanSlopeDeg": 18.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1445579613"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10738768972--bengaluru",
+    "name": "Kaiwara Betta",
+    "lat": 13.3549742,
+    "lng": 78.0088187,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1270,
+    "reliefM": 279,
+    "prominenceProxyM": 279,
+    "meanSlopeDeg": 27.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/10738768972"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-12098234885--bengaluru",
+    "name": "Harihara Betta (Pandava Betta)",
+    "lat": 13.4778663,
+    "lng": 77.715984,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1231,
+    "reliefM": 236,
+    "prominenceProxyM": 236,
+    "meanSlopeDeg": 19.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/12098234885"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9401821785--bengaluru",
+    "name": "Harihara Betta (Kaurava Betta)",
+    "lat": 13.4777931,
+    "lng": 77.7173676,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1205,
+    "reliefM": 207,
+    "prominenceProxyM": 207,
+    "meanSlopeDeg": 18.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/9401821785"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1132561849--bengaluru",
+    "name": "Madhugiri Betta",
+    "lat": 13.6514834,
+    "lng": 77.1996542,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1085,
+    "reliefM": 212,
+    "prominenceProxyM": 212,
+    "meanSlopeDeg": 20.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/1132561849"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2619434371--bengaluru",
+    "name": "Channarayaswamy Betta",
+    "lat": 13.3866463,
+    "lng": 77.667362,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1439,
+    "reliefM": 188,
+    "prominenceProxyM": 188,
+    "meanSlopeDeg": 19.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.982,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/2619434371"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13373603662--bengaluru",
+    "name": "Guthirayan Peak",
+    "lat": 12.2635009,
+    "lng": 77.8543875,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1375,
+    "reliefM": 185,
+    "prominenceProxyM": 185,
+    "meanSlopeDeg": 15.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.978,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13373603662"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1132723349--bengaluru",
+    "name": "Siddarabetta",
+    "lat": 13.5526903,
+    "lng": 77.1323893,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1268,
+    "reliefM": 212,
+    "prominenceProxyM": 212,
+    "meanSlopeDeg": 13.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.974,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1132723349"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-698911154--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.8271273,
+    "lng": 77.206864,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1003,
+    "reliefM": 174,
+    "prominenceProxyM": 174,
+    "meanSlopeDeg": 17.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.961,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/698911154"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1134502262--bengaluru",
+    "name": "Talavara Betta",
+    "lat": 13.3601587,
+    "lng": 77.1682527,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1166,
+    "reliefM": 236,
+    "prominenceProxyM": 185,
+    "meanSlopeDeg": 12.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.957,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1134502262"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-818837968--bengaluru",
+    "name": "Bhimana Kindi",
+    "lat": 12.4767157,
+    "lng": 77.2633632,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1023,
+    "reliefM": 208,
+    "prominenceProxyM": 208,
+    "meanSlopeDeg": 17.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.952,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/818837968"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8994102636--bengaluru",
+    "name": "Handigundi",
+    "lat": 12.7263172,
+    "lng": 77.3152569,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 909,
+    "reliefM": 189,
+    "prominenceProxyM": 189,
+    "meanSlopeDeg": 19.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.948,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/8994102636"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2452162685--bengaluru",
+    "name": "Kamanadurga",
+    "lat": 14.2512895,
+    "lng": 77.2755959,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1029,
+    "reliefM": 167,
+    "prominenceProxyM": 167,
+    "meanSlopeDeg": 13.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.921,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/2452162685"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-12025369207--bengaluru",
+    "name": "Aanebetta",
+    "lat": 13.3405911,
+    "lng": 77.6642579,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1147,
+    "reliefM": 156,
+    "prominenceProxyM": 156,
+    "meanSlopeDeg": 14.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.92,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/12025369207"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-818838292--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.4861014,
+    "lng": 77.270615,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 918,
+    "reliefM": 185,
+    "prominenceProxyM": 185,
+    "meanSlopeDeg": 11.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.92,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/818838292"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-4415294530--bengaluru",
+    "name": "Thenginakallu Betta",
+    "lat": 12.6106761,
+    "lng": 77.3227667,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 947,
+    "reliefM": 178,
+    "prominenceProxyM": 178,
+    "meanSlopeDeg": 12.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.919,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/4415294530"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8994102637--bengaluru",
+    "name": "Muthurayaswamy Betta",
+    "lat": 12.7091566,
+    "lng": 77.3096322,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 864,
+    "reliefM": 167,
+    "prominenceProxyM": 167,
+    "meanSlopeDeg": 13.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.917,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/8994102637"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3147946532--bengaluru",
+    "name": "Bhasmangi",
+    "lat": 13.7477288,
+    "lng": 77.0343011,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 858,
+    "reliefM": 141,
+    "prominenceProxyM": 141,
+    "meanSlopeDeg": 15.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.912,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3147946532"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3148784723--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.8309285,
+    "lng": 77.1681282,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 881,
+    "reliefM": 141,
+    "prominenceProxyM": 141,
+    "meanSlopeDeg": 14.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.901,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3148784723"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1134502250--bengaluru",
+    "name": "Kambati Kallu",
+    "lat": 13.4204322,
+    "lng": 77.2167102,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1113,
+    "reliefM": 228,
+    "prominenceProxyM": 179,
+    "meanSlopeDeg": 9.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.898,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/1134502250"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-447878377--bengaluru",
+    "name": "Kalawara Betta",
+    "lat": 13.4172558,
+    "lng": 77.6826686,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1417,
+    "reliefM": 304,
+    "prominenceProxyM": 304,
+    "meanSlopeDeg": 26,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.868,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/447878377"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-682012190--bengaluru",
+    "name": "Biligudda",
+    "lat": 12.916451,
+    "lng": 77.2886629,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1136,
+    "reliefM": 251,
+    "prominenceProxyM": 233,
+    "meanSlopeDeg": 20.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.868,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/682012190"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-819008637--bengaluru",
+    "name": "Bilikal Rangaswamy Betta",
+    "lat": 12.5549312,
+    "lng": 77.5118382,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1128,
+    "reliefM": 291,
+    "prominenceProxyM": 274,
+    "meanSlopeDeg": 17.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.868,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/819008637"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1489650827--bengaluru",
+    "name": "Pavagada",
+    "lat": 14.1054491,
+    "lng": 77.2750475,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 856,
+    "reliefM": 191,
+    "prominenceProxyM": 191,
+    "meanSlopeDeg": 17.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.867,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1489650827"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-12098253210--bengaluru",
+    "name": "Kunagalu Betta",
+    "lat": 12.6897575,
+    "lng": 77.3182622,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 798,
+    "reliefM": 131,
+    "prominenceProxyM": 131,
+    "meanSlopeDeg": 13.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.856,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/12098253210"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1134502251--bengaluru",
+    "name": "Devarayanadurga",
+    "lat": 13.3740537,
+    "lng": 77.2143445,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1160,
+    "reliefM": 205,
+    "prominenceProxyM": 205,
+    "meanSlopeDeg": 15.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.832,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1134502251"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-732234962--bengaluru",
+    "name": "Horsley Hills",
+    "lat": 13.6508702,
+    "lng": 78.3965255,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1250,
+    "reliefM": 284,
+    "prominenceProxyM": 284,
+    "meanSlopeDeg": 16.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.828,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/732234962"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1132723675--bengaluru",
+    "name": "Kaulibetta",
+    "lat": 13.6207607,
+    "lng": 77.1674637,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1052,
+    "reliefM": 162,
+    "prominenceProxyM": 129,
+    "meanSlopeDeg": 7.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.823,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/1132723675"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13371780300--bengaluru",
+    "name": "Gudibande Fort Top",
+    "lat": 13.6766303,
+    "lng": 77.7008681,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 977,
+    "reliefM": 155,
+    "prominenceProxyM": 155,
+    "meanSlopeDeg": 16.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.801,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13371780300"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1134502259--bengaluru",
+    "name": "Chinnagara Betta",
+    "lat": 13.399079,
+    "lng": 77.1695718,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1167,
+    "reliefM": 141,
+    "prominenceProxyM": 141,
+    "meanSlopeDeg": 6.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.792,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/1134502259"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-2950390579--pune",
     "name": "मांगनिमाता मंदिर",
     "lat": 19.2701272,
@@ -2224,6 +2946,766 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/2894717914"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13077633492--chikmagalur",
+    "name": "Merthigudda",
+    "lat": 13.2927991,
+    "lng": 75.3747013,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1586,
+    "reliefM": 325,
+    "prominenceProxyM": 325,
+    "meanSlopeDeg": 23.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/13077633492"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13420324200--chikmagalur",
+    "name": "Gangadikal",
+    "lat": 13.2487812,
+    "lng": 75.1835448,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1440,
+    "reliefM": 222,
+    "prominenceProxyM": 222,
+    "meanSlopeDeg": 18.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13420324200"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3052093189--chikmagalur",
+    "name": "Unnamed Peak",
+    "lat": 13.2707499,
+    "lng": 76.1445424,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1150,
+    "reliefM": 256,
+    "prominenceProxyM": 256,
+    "meanSlopeDeg": 17.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3052093189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3802160076--chikmagalur",
+    "name": "Kurinjal",
+    "lat": 13.2029628,
+    "lng": 75.1666906,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1133,
+    "reliefM": 332,
+    "prominenceProxyM": 332,
+    "meanSlopeDeg": 21.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/3802160076"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9192177100--chikmagalur",
+    "name": "Mogala Gudda (Mugila giri)",
+    "lat": 12.8569602,
+    "lng": 75.5937003,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1114,
+    "reliefM": 283,
+    "prominenceProxyM": 283,
+    "meanSlopeDeg": 21.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/9192177100"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8581315717--chikmagalur",
+    "name": "Patla Betta",
+    "lat": 12.7199745,
+    "lng": 75.7177949,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1099,
+    "reliefM": 219,
+    "prominenceProxyM": 219,
+    "meanSlopeDeg": 16.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/8581315717"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3802169816--chikmagalur",
+    "name": "Valikunja",
+    "lat": 13.3430465,
+    "lng": 75.0788585,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1021,
+    "reliefM": 409,
+    "prominenceProxyM": 409,
+    "meanSlopeDeg": 31.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/3802169816"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-370904196--chikmagalur",
+    "name": "Ombaattu Gudde",
+    "lat": 12.9408479,
+    "lng": 75.5851409,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 950,
+    "reliefM": 210,
+    "prominenceProxyM": 210,
+    "meanSlopeDeg": 17.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/370904196"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9007972362--chikmagalur",
+    "name": "Kannada Erikallu",
+    "lat": 13.0663497,
+    "lng": 75.454125,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 890,
+    "reliefM": 313,
+    "prominenceProxyM": 313,
+    "meanSlopeDeg": 23.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/9007972362"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2875951816--chikmagalur",
+    "name": "Balekallu Gudda",
+    "lat": 12.7053599,
+    "lng": 75.6632781,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 599,
+    "reliefM": 283,
+    "prominenceProxyM": 261,
+    "meanSlopeDeg": 18.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/2875951816"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9008195940--chikmagalur",
+    "name": "Baale Kallu",
+    "lat": 13.0974661,
+    "lng": 75.4679037,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1164,
+    "reliefM": 194,
+    "prominenceProxyM": 194,
+    "meanSlopeDeg": 16,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.991,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/9008195940"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1132723349--chikmagalur",
+    "name": "Siddarabetta",
+    "lat": 13.5526903,
+    "lng": 77.1323893,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1268,
+    "reliefM": 212,
+    "prominenceProxyM": 212,
+    "meanSlopeDeg": 13.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.974,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1132723349"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3347429143--chikmagalur",
+    "name": "Hemagiri",
+    "lat": 12.813244,
+    "lng": 77.0488442,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 932,
+    "reliefM": 184,
+    "prominenceProxyM": 184,
+    "meanSlopeDeg": 14.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.967,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3347429143"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2633689081--chikmagalur",
+    "name": "Mandalapatti",
+    "lat": 12.5460548,
+    "lng": 75.7019173,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1281,
+    "reliefM": 204,
+    "prominenceProxyM": 204,
+    "meanSlopeDeg": 12.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.957,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/2633689081"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-585952661--chikmagalur",
+    "name": "Ranipurm",
+    "lat": 12.4073703,
+    "lng": 75.3250637,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 753,
+    "reliefM": 228,
+    "prominenceProxyM": 226,
+    "meanSlopeDeg": 12.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.954,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/585952661"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3891509367--chikmagalur",
+    "name": "Narayanadurga",
+    "lat": 12.7125243,
+    "lng": 76.5858841,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1044,
+    "reliefM": 167,
+    "prominenceProxyM": 167,
+    "meanSlopeDeg": 17.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.951,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3891509367"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3820501589--chikmagalur",
+    "name": "Seege Gudda",
+    "lat": 13.1054208,
+    "lng": 76.0453761,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1217,
+    "reliefM": 188,
+    "prominenceProxyM": 142,
+    "meanSlopeDeg": 12.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.935,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3820501589"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3147946532--chikmagalur",
+    "name": "Bhasmangi",
+    "lat": 13.7477288,
+    "lng": 77.0343011,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 858,
+    "reliefM": 141,
+    "prominenceProxyM": 141,
+    "meanSlopeDeg": 15.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.912,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3147946532"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3923441717--chikmagalur",
+    "name": "Malambi Betta",
+    "lat": 12.6624544,
+    "lng": 75.9053838,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1289,
+    "reliefM": 175,
+    "prominenceProxyM": 175,
+    "meanSlopeDeg": 11.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.906,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/3923441717"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-4198870962--chikmagalur",
+    "name": "Bantemale",
+    "lat": 12.6313637,
+    "lng": 75.46726,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 680,
+    "reliefM": 184,
+    "prominenceProxyM": 160,
+    "meanSlopeDeg": 10.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.892,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/4198870962"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1906509532--chikmagalur",
+    "name": "Mullayyanagiri",
+    "lat": 13.3909217,
+    "lng": 75.7214034,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1879,
+    "reliefM": 244,
+    "prominenceProxyM": 244,
+    "meanSlopeDeg": 17.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1906509532"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1720160472--chikmagalur",
+    "name": "Kumara Parvatha",
+    "lat": 12.6620521,
+    "lng": 75.6864818,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1693,
+    "reliefM": 308,
+    "prominenceProxyM": 308,
+    "meanSlopeDeg": 23.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/1720160472"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1422424823--chikmagalur",
+    "name": "Kudremukha",
+    "lat": 13.1255691,
+    "lng": 75.2748196,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1678,
+    "reliefM": 487,
+    "prominenceProxyM": 316,
+    "meanSlopeDeg": 15.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1422424823"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1681305211--chikmagalur",
+    "name": "Kodachadri",
+    "lat": 13.8571828,
+    "lng": 74.8672111,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1309,
+    "reliefM": 372,
+    "prominenceProxyM": 372,
+    "meanSlopeDeg": 26.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/1681305211"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-4200725625--chikmagalur",
+    "name": "Unnamed Peak",
+    "lat": 12.9739072,
+    "lng": 75.5717622,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1193,
+    "reliefM": 239,
+    "prominenceProxyM": 239,
+    "meanSlopeDeg": 17.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/4200725625"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5238966281--chikmagalur",
+    "name": "Madathumala",
+    "lat": 12.4196178,
+    "lng": 75.3512225,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1022,
+    "reliefM": 209,
+    "prominenceProxyM": 209,
+    "meanSlopeDeg": 18.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/5238966281"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1703079281--chikmagalur",
+    "name": "Kundadri",
+    "lat": 13.5580148,
+    "lng": 75.1689994,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 967,
+    "reliefM": 283,
+    "prominenceProxyM": 283,
+    "meanSlopeDeg": 24.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/1703079281"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-390866017--chikmagalur",
+    "name": "Nishani Motte",
+    "lat": 12.4536646,
+    "lng": 75.6764059,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1312,
+    "reliefM": 167,
+    "prominenceProxyM": 167,
+    "meanSlopeDeg": 10.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.877,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/390866017"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2619352465--chikmagalur",
+    "name": "Gadaikallu",
+    "lat": 13.0267327,
+    "lng": 75.2959389,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 344,
+    "reliefM": 231,
+    "prominenceProxyM": 217,
+    "meanSlopeDeg": 14.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.871,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/2619352465"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3898777628--chikmagalur",
+    "name": "Bebi Betta",
+    "lat": 12.5102346,
+    "lng": 76.5761901,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 944,
+    "reliefM": 129,
+    "prominenceProxyM": 129,
+    "meanSlopeDeg": 12.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.858,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3898777628"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3818396096--chikmagalur",
+    "name": "Unnamed Peak",
+    "lat": 13.1699074,
+    "lng": 76.0280522,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1034,
+    "reliefM": 119,
+    "prominenceProxyM": 119,
+    "meanSlopeDeg": 12.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.834,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/3818396096"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-585821756--chikmagalur",
+    "name": "Patthalmala",
+    "lat": 12.1450653,
+    "lng": 75.5716628,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 628,
+    "reliefM": 196,
+    "prominenceProxyM": 196,
+    "meanSlopeDeg": 15.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.834,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/585821756"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3919013176--chikmagalur",
+    "name": "Mavinakere Betta",
+    "lat": 12.8529869,
+    "lng": 76.1817283,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 977,
+    "reliefM": 115,
+    "prominenceProxyM": 115,
+    "meanSlopeDeg": 11.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.803,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/3919013176"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3802160080--chikmagalur",
+    "name": "Narasimha Parvata",
+    "lat": 13.4264945,
+    "lng": 75.1536137,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1106,
+    "reliefM": 153,
+    "prominenceProxyM": 117,
+    "meanSlopeDeg": 6.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.802,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/3802160080"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2711185547--chikmagalur",
+    "name": "Siddeshwara Betta",
+    "lat": 13.6874012,
+    "lng": 75.2246453,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 726,
+    "reliefM": 114,
+    "prominenceProxyM": 114,
+    "meanSlopeDeg": 11.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.797,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/2711185547"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-674558699--chikmagalur",
+    "name": "Brahmagiri",
+    "lat": 12.3868578,
+    "lng": 75.490746,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1307,
+    "reliefM": 158,
+    "prominenceProxyM": 158,
+    "meanSlopeDeg": 11.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.763,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/674558699"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-3055297227--chikmagalur",
+    "name": "Unnamed Peak",
+    "lat": 13.3147934,
+    "lng": 76.1549597,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 951,
+    "reliefM": 119,
+    "prominenceProxyM": 113,
+    "meanSlopeDeg": 7.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.74,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/3055297227"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1132556461--chikmagalur",
+    "name": "Tadiandamol",
+    "lat": 12.2175641,
+    "lng": 75.608815,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1687,
+    "reliefM": 235,
+    "prominenceProxyM": 235,
+    "meanSlopeDeg": 21.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.72,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/1132556461"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1906512258--chikmagalur",
+    "name": "Baba Budangiri",
+    "lat": 13.4210884,
+    "lng": 75.7606996,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 1783,
+    "reliefM": 173,
+    "prominenceProxyM": 109,
+    "meanSlopeDeg": 6.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.69,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/1906512258"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1646602331--chikmagalur",
+    "name": "Vindhyagiri",
+    "lat": 12.8542347,
+    "lng": 76.4851748,
+    "cityId": "geo:13.3161,75.7720",
+    "tier": "discovery",
+    "elevationM": 975,
+    "reliefM": 110,
+    "prominenceProxyM": 110,
+    "meanSlopeDeg": 12.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.679,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1646602331"
     ],
     "verified": false
   }
