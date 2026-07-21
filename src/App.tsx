@@ -31,6 +31,11 @@ const FeedbackForm = lazy(() =>
 
 const ALL_TREKS = treksRaw as Trek[];
 
+// Bengaluru's discovery peaks are precomputed out to 500 km; other origins keep
+// the default 150 km (spec 11). One helper so the slider max and the on-switch
+// clamp can't drift apart.
+const maxRadiusForOrigin = (originId: string): number => (originId === "bangalore" ? 500 : 150);
+
 export default function App() {
   // Seed from the URL (shareable / reload-restorable), falling back to the
   // persisted origin and defaults (spec 03/05).
@@ -133,9 +138,7 @@ export default function App() {
     [visible],
   );
   const hasCurated = useMemo(() => visible.some((t) => t.tier === "curated"), [visible]);
-  // Bengaluru's discovery peaks are precomputed out to 500 km, so let its radius
-  // reach that far; other origins keep the default 150 km (spec 11).
-  const maxRadiusKm = origin.id === "bangalore" ? 500 : 150;
+  const maxRadiusKm = maxRadiusForOrigin(origin.id);
 
   // Look up the selection among the currently-visible treks so the detail panel
   // closes automatically when active filters exclude the selected trek (#6).
@@ -157,6 +160,10 @@ export default function App() {
     setOrigin(o);
     saveOrigin(o);
     setSelectedId(undefined);
+    // Clamp the radius to the new origin's max so a 500 km Bengaluru setting
+    // doesn't carry a mismatched slider/ring onto a 150 km-max origin.
+    const max = maxRadiusForOrigin(o.id);
+    if (filters.radiusKm > max) setFilters((f) => ({ ...f, radiusKm: max }));
   };
 
   // Opening the feedback panel closes any open trek detail so the two
