@@ -10,7 +10,7 @@ import { validateTrek, type Origin, type Trek } from "../src/lib/trek";
 import type { ParsedPeak } from "../src/lib/overpass";
 
 const PUNE: Origin = { id: "geo:18.5204,73.8567", name: "Pune", lat: 18.5204, lng: 73.8567 };
-const CFG: RegionConfig = { radiusKm: 150, maxCandidates: 60, maxResults: 40, enrichLimit: 40 };
+const CFG: RegionConfig = { radiusKm: 150, maxCandidates: 60, enrichLimit: 40 };
 
 // A rugged, undocumented peak and a flat, famous one — the point is that
 // scoring, not elevation, decides the final rank (every candidate is scored).

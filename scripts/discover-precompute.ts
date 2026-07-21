@@ -46,12 +46,14 @@ export interface DiscoverFetchers {
 }
 
 /** Per-region knobs (spec 11). We DEM-score every candidate (no elevation
- *  pre-filter — that dropped low Eastern-Ghats hills), keep the top `maxResults`
- *  by score, and enrich the top `enrichLimit` with photos/summary/town. */
+ *  pre-filter) and KEEP THEM ALL — the UI filters (radius/difficulty/type/
+ *  elevation) do the narrowing, not a server-side top-N. `maxCandidates` is only
+ *  a high safety ceiling (warns if exceeded); `enrichLimit` bounds the expensive
+ *  photo/summary/town enrichment to the top-ranked, since it's several throttled
+ *  network calls per peak (the long tail still ships terrain + score). */
 export interface RegionConfig {
   radiusKm: number;
   maxCandidates: number; // safety ceiling on DEM-scored candidates (warns if exceeded)
-  maxResults: number; // keep this many pins (top by score); no silent cap
   enrichLimit: number; // enrich this many (top by score) with photo/summary/town
 }
 
@@ -61,8 +63,8 @@ const AMENITY_RADIUS_KM = 1;
 
 export function configFor(origin: Origin): RegionConfig {
   return origin.id === DEFAULT_ORIGIN.id
-    ? { radiusKm: 500, maxCandidates: 3000, maxResults: 400, enrichLimit: 120 } // home: cast wide
-    : { radiusKm: 150, maxCandidates: 1200, maxResults: 150, enrichLimit: 50 };
+    ? { radiusKm: 500, maxCandidates: 20000, enrichLimit: 150 } // home: cast the widest net
+    : { radiusKm: 150, maxCandidates: 20000, enrichLimit: 60 };
 }
 
 const round = (x: number, dp = 0): number => {
@@ -190,26 +192,19 @@ export async function precomputeRegion(
       (b.elevationM ?? 0) - (a.elevationM ?? 0),
   );
 
-  let kept = results;
-  if (results.length > config.maxResults) {
-    console.warn(
-      `[discover] ${origin.name}: ${results.length} scored peaks; keeping top ${config.maxResults} by score.`,
-    );
-    kept = results.slice(0, config.maxResults);
-  }
-
+  // Keep every scored peak — the UI filters do the capping (user's call).
   // Enrich only the top `enrichLimit` (photo / nearby-article summary / nearest
   // town) — enrichment is several network calls per peak, so we spend it on the
   // best-ranked; the long tail still ships with terrain + score.
   if (fetchers.enrich) {
-    for (const t of kept.slice(0, config.enrichLimit)) {
+    for (const t of results.slice(0, config.enrichLimit)) {
       const e = await fetchers.enrich({ lat: t.lat, lng: t.lng });
       if (e.image) t.image = e.image;
       if (e.highlights) t.highlights = e.highlights;
       if (e.nearestTown) t.nearestTown = e.nearestTown;
     }
   }
-  return kept;
+  return results;
 }
 
 /**
