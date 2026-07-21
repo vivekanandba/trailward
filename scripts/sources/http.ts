@@ -13,6 +13,7 @@ const USER_AGENT =
 // are deliberately absent — scraping them violates their ToS (spec 02).
 export const ALLOWED_HOSTS = new Set<string>([
   "overpass-api.de",
+  "overpass.kumi.systems", // Overpass mirror — failover when the main endpoint 429/504s
   "api.open-meteo.com",
   "router.project-osrm.org",
   "en.wikipedia.org",
@@ -63,6 +64,8 @@ interface GetOptions {
   body?: string;
   headers?: Record<string, string>;
   retries?: number;
+  /** Per-attempt network timeout override (ms). Defaults to REQUEST_TIMEOUT_MS. */
+  timeoutMs?: number;
 }
 
 /** Fetch a URL's text, enforcing the allowlist, rate limit, and retries. */
@@ -75,13 +78,14 @@ export async function fetchText(url: string, opts: GetOptions = {}): Promise<str
   for (let attempt = 0; attempt <= retries; attempt++) {
     await throttle(host);
     try {
+      const timeout = opts.timeoutMs ?? REQUEST_TIMEOUT_MS;
       const res = await request(url, {
         method: opts.method ?? "GET",
         body: opts.body,
         headers: { "user-agent": USER_AGENT, ...opts.headers },
         // Bound each attempt so one stalled host can't hang the whole build.
-        headersTimeout: REQUEST_TIMEOUT_MS,
-        bodyTimeout: REQUEST_TIMEOUT_MS,
+        headersTimeout: timeout,
+        bodyTimeout: timeout,
       });
       // request() does not follow redirects, so a 3xx body is just a stub —
       // returning it would feed garbage to JSON.parse. 3xx and 4xx won't change

@@ -81,6 +81,15 @@ describe("applyFilters — difficulty (unknown excluded only when active)", () =
     const out = applyFilters(treks, origin, filters({ difficulties: ["Easy"] }));
     expect(out.map((t) => t.id)).toEqual(["easy"]);
   });
+
+  it("matches a discovery trek by its terrain-estimated difficulty", () => {
+    const disc = [
+      trek({ id: "est-mod", distanceKm: 1, tier: "discovery", estimatedDifficulty: "Moderate" }),
+      trek({ id: "est-easy", distanceKm: 1, tier: "discovery", estimatedDifficulty: "Easy" }),
+    ];
+    const out = applyFilters(disc, origin, filters({ difficulties: ["Moderate"] }));
+    expect(out.map((t) => t.id)).toEqual(["est-mod"]);
+  });
 });
 
 describe("applyFilters — elevation range (inclusive bounds)", () => {

@@ -40,6 +40,23 @@ test("a shared URL restores filters and the open trek", async ({ page }) => {
   );
 });
 
+test("a preset region shows topography-ranked discovery peaks", async ({ page }) => {
+  await page.goto("/");
+  // Jump to a precomputed preset region (baked discovery, no live call needed).
+  await page.getByRole("button", { name: "Pune" }).click();
+
+  // The topography banner and estimated-difficulty labels appear.
+  await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
+  await expect(page.getByText(/est\./i).first()).toBeVisible();
+
+  // Opening a discovery peak shows the computed Terrain section.
+  await page.getByText(/est\./i).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByText("Terrain", { exact: true })).toBeVisible();
+  await expect(page.getByText(/hidden-gem score/i)).toBeVisible();
+  await expect(page.getByText(/community · unverified/i)).toBeVisible();
+});
+
 // Regression: on narrow viewports the map used to collapse to 0px because the
 // list rail consumed the whole column, leaving nothing for the flex-basis-0 map
 // (App.tsx body layout). The map must occupy a real slice of the viewport.

@@ -421,5 +421,1810 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Huliyurdurga"
     ]
+  },
+  {
+    "id": "osm-2950390579--pune",
+    "name": "मांगनिमाता मंदिर",
+    "lat": 19.2701272,
+    "lng": 73.8208502,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1074,
+    "reliefM": 223,
+    "prominenceProxyM": 223,
+    "meanSlopeDeg": 15.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/2950390579"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5382761413--pune",
+    "name": "Gunya",
+    "lat": 19.3329741,
+    "lng": 73.7737362,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 986,
+    "reliefM": 445,
+    "prominenceProxyM": 445,
+    "meanSlopeDeg": 25.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/5382761413"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8792023088--pune",
+    "name": "Tahuli",
+    "lat": 19.134869,
+    "lng": 73.1982248,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 735,
+    "reliefM": 257,
+    "prominenceProxyM": 257,
+    "meanSlopeDeg": 22.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/8792023088"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8797252337--pune",
+    "name": "Malanggad",
+    "lat": 19.110181,
+    "lng": 73.1786833,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 696,
+    "reliefM": 304,
+    "prominenceProxyM": 304,
+    "meanSlopeDeg": 27.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/8797252337"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7181859946--pune",
+    "name": "Peb/Vikatgad",
+    "lat": 19.0290166,
+    "lng": 73.2771034,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 639,
+    "reliefM": 321,
+    "prominenceProxyM": 321,
+    "meanSlopeDeg": 27,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7181859946"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7187973323--pune",
+    "name": "Chanderi",
+    "lat": 19.06434,
+    "lng": 73.2458069,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 635,
+    "reliefM": 334,
+    "prominenceProxyM": 334,
+    "meanSlopeDeg": 25.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7187973323"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-6154711376--pune",
+    "name": "Unnamed Peak",
+    "lat": 18.8862957,
+    "lng": 73.2945174,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 472,
+    "reliefM": 256,
+    "prominenceProxyM": 256,
+    "meanSlopeDeg": 19.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/6154711376"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-11042624587--pune",
+    "name": "Mama Bhanja",
+    "lat": 19.2124918,
+    "lng": 72.9388645,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 396,
+    "reliefM": 198,
+    "prominenceProxyM": 198,
+    "meanSlopeDeg": 15.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.997,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/11042624587"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1067930909--pune",
+    "name": "Haji Malanggad",
+    "lat": 19.1134218,
+    "lng": 73.1789358,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 572,
+    "reliefM": 302,
+    "prominenceProxyM": 193,
+    "meanSlopeDeg": 14.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.993,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1067930909"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7780079651--pune",
+    "name": "Karnala",
+    "lat": 18.8813486,
+    "lng": 73.1181665,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 356,
+    "reliefM": 194,
+    "prominenceProxyM": 191,
+    "meanSlopeDeg": 16.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.991,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7780079651"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10706350151--pune",
+    "name": "Bale Killa",
+    "lat": 19.391482,
+    "lng": 73.7937648,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1359,
+    "reliefM": 269,
+    "prominenceProxyM": 269,
+    "meanSlopeDeg": 16.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/10706350151"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1351390046--pune",
+    "name": "Bhimashankar",
+    "lat": 19.0617704,
+    "lng": 73.5322986,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1017,
+    "reliefM": 383,
+    "prominenceProxyM": 383,
+    "meanSlopeDeg": 15.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1351390046"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1067904284--pune",
+    "name": "Duke's Nose",
+    "lat": 18.7407839,
+    "lng": 73.3597905,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 680,
+    "reliefM": 257,
+    "prominenceProxyM": 257,
+    "meanSlopeDeg": 15.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1067904284"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-12408774304--pune",
+    "name": "Bhojgiri Peak",
+    "lat": 19.3297536,
+    "lng": 73.7629442,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1103,
+    "reliefM": 537,
+    "prominenceProxyM": 537,
+    "meanSlopeDeg": 25.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.987,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/12408774304"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5382761415--pune",
+    "name": "Unnamed Peak",
+    "lat": 19.3123708,
+    "lng": 73.8280831,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 966,
+    "reliefM": 191,
+    "prominenceProxyM": 191,
+    "meanSlopeDeg": 18.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.987,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/5382761415"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9307874095--pune",
+    "name": "Mahuli",
+    "lat": 19.4901433,
+    "lng": 73.2492931,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 786,
+    "reliefM": 304,
+    "prominenceProxyM": 304,
+    "meanSlopeDeg": 14.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.984,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/9307874095"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-974330624--pune",
+    "name": "Tikona peak",
+    "lat": 18.6319782,
+    "lng": 73.5124988,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 994,
+    "reliefM": 187,
+    "prominenceProxyM": 187,
+    "meanSlopeDeg": 20.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.981,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/974330624"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-800602094--pune",
+    "name": "Unnamed Peak",
+    "lat": 18.786452,
+    "lng": 73.4018809,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 824,
+    "reliefM": 220,
+    "prominenceProxyM": 220,
+    "meanSlopeDeg": 16.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.976,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/800602094"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10720656094--pune",
+    "name": "Ratangarh Dongar",
+    "lat": 19.499161,
+    "lng": 73.7023401,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1216,
+    "reliefM": 385,
+    "prominenceProxyM": 377,
+    "meanSlopeDeg": 21.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.952,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/10720656094"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1067930914--pune",
+    "name": "Unnamed Peak",
+    "lat": 19.1259106,
+    "lng": 73.1991918,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 651,
+    "reliefM": 375,
+    "prominenceProxyM": 240,
+    "meanSlopeDeg": 12,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.948,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1067930914"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-696874699--pune",
+    "name": "Saat Pir Baba",
+    "lat": 19.1096845,
+    "lng": 73.1767155,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 552,
+    "reliefM": 256,
+    "prominenceProxyM": 211,
+    "meanSlopeDeg": 11.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.944,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/696874699"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5923884842--pune",
+    "name": "Jambulmal",
+    "lat": 19.2163897,
+    "lng": 72.92009,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 481,
+    "reliefM": 159,
+    "prominenceProxyM": 159,
+    "meanSlopeDeg": 12.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.885,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/5923884842"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7400492386--pune",
+    "name": "Vajragad",
+    "lat": 18.2843837,
+    "lng": 73.9891417,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1307,
+    "reliefM": 240,
+    "prominenceProxyM": 240,
+    "meanSlopeDeg": 22.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7400492386"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9726945605--pune",
+    "name": "Prachitgad",
+    "lat": 17.2255683,
+    "lng": 73.692068,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 821,
+    "reliefM": 406,
+    "prominenceProxyM": 365,
+    "meanSlopeDeg": 22.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/9726945605"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5910872204--pune",
+    "name": "Irshalgad",
+    "lat": 18.9348297,
+    "lng": 73.2325914,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 533,
+    "reliefM": 215,
+    "prominenceProxyM": 215,
+    "meanSlopeDeg": 16.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/5910872204"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-914733502--pune",
+    "name": "Sarasghar",
+    "lat": 18.5429705,
+    "lng": 73.2271271,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 275,
+    "reliefM": 234,
+    "prominenceProxyM": 219,
+    "meanSlopeDeg": 15.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/914733502"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1065083092--pune",
+    "name": "Rajgad",
+    "lat": 18.2452367,
+    "lng": 73.6828893,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1295,
+    "reliefM": 285,
+    "prominenceProxyM": 285,
+    "meanSlopeDeg": 23.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.868,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/1065083092"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8742166459--pune",
+    "name": "Jivdhan",
+    "lat": 19.2784689,
+    "lng": 73.6872379,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1069,
+    "reliefM": 263,
+    "prominenceProxyM": 258,
+    "meanSlopeDeg": 19.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.868,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/8742166459"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9843077183--pune",
+    "name": "Mahuli-Bhandargad-Palasgad",
+    "lat": 19.4864395,
+    "lng": 73.2502754,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 752,
+    "reliefM": 179,
+    "prominenceProxyM": 146,
+    "meanSlopeDeg": 8.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.856,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/9843077183"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10855965882--pune",
+    "name": "Ghoradeshwar",
+    "lat": 18.6920014,
+    "lng": 73.7058148,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 804,
+    "reliefM": 181,
+    "prominenceProxyM": 181,
+    "meanSlopeDeg": 15.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.851,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/10855965882"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7211134800--pune",
+    "name": "Malhargad",
+    "lat": 18.4120146,
+    "lng": 74.0493462,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 958,
+    "reliefM": 210,
+    "prominenceProxyM": 210,
+    "meanSlopeDeg": 13.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.847,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7211134800"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1065082306--pune",
+    "name": "Sinhagad",
+    "lat": 18.3651861,
+    "lng": 73.7549869,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1310,
+    "reliefM": 232,
+    "prominenceProxyM": 232,
+    "meanSlopeDeg": 19.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.844,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1065082306"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13541395257--pune",
+    "name": "Unnamed Peak",
+    "lat": 19.7067958,
+    "lng": 73.8057069,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 753,
+    "reliefM": 117,
+    "prominenceProxyM": 117,
+    "meanSlopeDeg": 13,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.833,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13541395257"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1065783473--pune",
+    "name": "Sudhagad",
+    "lat": 18.5403863,
+    "lng": 73.3206308,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 574,
+    "reliefM": 301,
+    "prominenceProxyM": 301,
+    "meanSlopeDeg": 12.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.833,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1065783473"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7187965438--pune",
+    "name": "Pratapgad/Bhorpyacha Dogar",
+    "lat": 17.9352289,
+    "lng": 73.5785838,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1063,
+    "reliefM": 258,
+    "prominenceProxyM": 258,
+    "meanSlopeDeg": 20.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.82,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7187965438"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5913741266--pune",
+    "name": "Raigad",
+    "lat": 18.2369566,
+    "lng": 73.4471601,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 859,
+    "reliefM": 428,
+    "prominenceProxyM": 428,
+    "meanSlopeDeg": 16.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.82,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/5913741266"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1219143780--pune",
+    "name": "Manranjan",
+    "lat": 18.8315698,
+    "lng": 73.3949891,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 772,
+    "reliefM": 208,
+    "prominenceProxyM": 208,
+    "meanSlopeDeg": 16.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.82,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1219143780"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10982167877--pune",
+    "name": "Marunji tekdi",
+    "lat": 18.6035585,
+    "lng": 73.7006149,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 790,
+    "reliefM": 123,
+    "prominenceProxyM": 118,
+    "meanSlopeDeg": 9.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.792,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/10982167877"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13983825787--pune",
+    "name": "Taramati Peak",
+    "lat": 19.3871347,
+    "lng": 73.7793915,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 1359,
+    "reliefM": 150,
+    "prominenceProxyM": 150,
+    "meanSlopeDeg": 13,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.77,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13983825787"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5382761414--pune",
+    "name": "Unnamed Peak",
+    "lat": 19.3141832,
+    "lng": 73.8165979,
+    "cityId": "geo:18.5204,73.8567",
+    "tier": "discovery",
+    "elevationM": 841,
+    "reliefM": 107,
+    "prominenceProxyM": 107,
+    "meanSlopeDeg": 8.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.721,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/5382761414"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-12278284892--mumbai",
+    "name": "Brahma Dongar",
+    "lat": 19.9132818,
+    "lng": 73.4822717,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1116,
+    "reliefM": 224,
+    "prominenceProxyM": 224,
+    "meanSlopeDeg": 18,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/12278284892"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2950390579--mumbai",
+    "name": "मांगनिमाता मंदिर",
+    "lat": 19.2701272,
+    "lng": 73.8208502,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1074,
+    "reliefM": 223,
+    "prominenceProxyM": 223,
+    "meanSlopeDeg": 15.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/2950390579"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7192682075--mumbai",
+    "name": "Bhorgad",
+    "lat": 20.1196576,
+    "lng": 73.7378234,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1059,
+    "reliefM": 303,
+    "prominenceProxyM": 303,
+    "meanSlopeDeg": 25.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7192682075"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5382761413--mumbai",
+    "name": "Gunya",
+    "lat": 19.3329741,
+    "lng": 73.7737362,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 986,
+    "reliefM": 445,
+    "prominenceProxyM": 445,
+    "meanSlopeDeg": 25.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/5382761413"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-700979771--mumbai",
+    "name": "Dehergad",
+    "lat": 20.1268849,
+    "lng": 73.7448754,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 973,
+    "reliefM": 217,
+    "prominenceProxyM": 217,
+    "meanSlopeDeg": 18.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/700979771"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8792023088--mumbai",
+    "name": "Tahuli",
+    "lat": 19.134869,
+    "lng": 73.1982248,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 735,
+    "reliefM": 257,
+    "prominenceProxyM": 257,
+    "meanSlopeDeg": 22.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/8792023088"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8797252337--mumbai",
+    "name": "Malanggad",
+    "lat": 19.110181,
+    "lng": 73.1786833,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 696,
+    "reliefM": 304,
+    "prominenceProxyM": 304,
+    "meanSlopeDeg": 27.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/8797252337"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7181859946--mumbai",
+    "name": "Peb/Vikatgad",
+    "lat": 19.0290166,
+    "lng": 73.2771034,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 639,
+    "reliefM": 321,
+    "prominenceProxyM": 321,
+    "meanSlopeDeg": 27,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7181859946"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7187973323--mumbai",
+    "name": "Chanderi",
+    "lat": 19.06434,
+    "lng": 73.2458069,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 635,
+    "reliefM": 334,
+    "prominenceProxyM": 334,
+    "meanSlopeDeg": 25.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 1,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7187973323"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1067930909--mumbai",
+    "name": "Haji Malanggad",
+    "lat": 19.1134218,
+    "lng": 73.1789358,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 572,
+    "reliefM": 302,
+    "prominenceProxyM": 193,
+    "meanSlopeDeg": 14.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.993,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1067930909"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10706350151--mumbai",
+    "name": "Bale Killa",
+    "lat": 19.391482,
+    "lng": 73.7937648,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1359,
+    "reliefM": 269,
+    "prominenceProxyM": 269,
+    "meanSlopeDeg": 16.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/10706350151"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1351390046--mumbai",
+    "name": "Bhimashankar",
+    "lat": 19.0617704,
+    "lng": 73.5322986,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1017,
+    "reliefM": 383,
+    "prominenceProxyM": 383,
+    "meanSlopeDeg": 15.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1351390046"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1067904284--mumbai",
+    "name": "Duke's Nose",
+    "lat": 18.7407839,
+    "lng": 73.3597905,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 680,
+    "reliefM": 257,
+    "prominenceProxyM": 257,
+    "meanSlopeDeg": 15.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.988,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1067904284"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-12408774304--mumbai",
+    "name": "Bhojgiri Peak",
+    "lat": 19.3297536,
+    "lng": 73.7629442,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1103,
+    "reliefM": 537,
+    "prominenceProxyM": 537,
+    "meanSlopeDeg": 25.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.987,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/12408774304"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5382761415--mumbai",
+    "name": "Unnamed Peak",
+    "lat": 19.3123708,
+    "lng": 73.8280831,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 966,
+    "reliefM": 191,
+    "prominenceProxyM": 191,
+    "meanSlopeDeg": 18.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.987,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/5382761415"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9307874095--mumbai",
+    "name": "Mahuli",
+    "lat": 19.4901433,
+    "lng": 73.2492931,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 786,
+    "reliefM": 304,
+    "prominenceProxyM": 304,
+    "meanSlopeDeg": 14.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.984,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/9307874095"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-974330624--mumbai",
+    "name": "Tikona peak",
+    "lat": 18.6319782,
+    "lng": 73.5124988,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 994,
+    "reliefM": 187,
+    "prominenceProxyM": 187,
+    "meanSlopeDeg": 20.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.981,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/974330624"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13448362983--mumbai",
+    "name": "Amba Dongar",
+    "lat": 19.9811735,
+    "lng": 73.4632587,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 846,
+    "reliefM": 204,
+    "prominenceProxyM": 204,
+    "meanSlopeDeg": 13.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.976,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13448362983"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-800602094--mumbai",
+    "name": "Unnamed Peak",
+    "lat": 18.786452,
+    "lng": 73.4018809,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 824,
+    "reliefM": 220,
+    "prominenceProxyM": 220,
+    "meanSlopeDeg": 16.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.976,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/800602094"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10720656094--mumbai",
+    "name": "Ratangarh Dongar",
+    "lat": 19.499161,
+    "lng": 73.7023401,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1216,
+    "reliefM": 385,
+    "prominenceProxyM": 377,
+    "meanSlopeDeg": 21.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.952,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/10720656094"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7192403513--mumbai",
+    "name": "Ramshej",
+    "lat": 20.1133953,
+    "lng": 73.7671899,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 909,
+    "reliefM": 168,
+    "prominenceProxyM": 168,
+    "meanSlopeDeg": 16.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.952,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7192403513"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1067930914--mumbai",
+    "name": "Unnamed Peak",
+    "lat": 19.1259106,
+    "lng": 73.1991918,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 651,
+    "reliefM": 375,
+    "prominenceProxyM": 240,
+    "meanSlopeDeg": 12,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.948,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1067930914"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-696874699--mumbai",
+    "name": "Saat Pir Baba",
+    "lat": 19.1096845,
+    "lng": 73.1767155,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 552,
+    "reliefM": 256,
+    "prominenceProxyM": 211,
+    "meanSlopeDeg": 11.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.944,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/696874699"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13447626987--mumbai",
+    "name": "Unnamed Peak",
+    "lat": 19.8865866,
+    "lng": 73.682642,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 834,
+    "reliefM": 145,
+    "prominenceProxyM": 145,
+    "meanSlopeDeg": 16.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.918,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13447626987"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7400492386--mumbai",
+    "name": "Vajragad",
+    "lat": 18.2843837,
+    "lng": 73.9891417,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1307,
+    "reliefM": 240,
+    "prominenceProxyM": 240,
+    "meanSlopeDeg": 22.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7400492386"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10579892792--mumbai",
+    "name": "Gambhirgad peak",
+    "lat": 20.0523666,
+    "lng": 73.0508214,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 618,
+    "reliefM": 270,
+    "prominenceProxyM": 270,
+    "meanSlopeDeg": 18.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.88,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/10579892792"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1065083092--mumbai",
+    "name": "Rajgad",
+    "lat": 18.2452367,
+    "lng": 73.6828893,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1295,
+    "reliefM": 285,
+    "prominenceProxyM": 285,
+    "meanSlopeDeg": 23.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.868,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/1065083092"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7818514419--mumbai",
+    "name": "Durg bhandar",
+    "lat": 19.9144405,
+    "lng": 73.5212749,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1174,
+    "reliefM": 262,
+    "prominenceProxyM": 262,
+    "meanSlopeDeg": 19.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.868,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7818514419"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8742166459--mumbai",
+    "name": "Jivdhan",
+    "lat": 19.2784689,
+    "lng": 73.6872379,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1069,
+    "reliefM": 263,
+    "prominenceProxyM": 258,
+    "meanSlopeDeg": 19.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.868,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/8742166459"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9843077183--mumbai",
+    "name": "Mahuli-Bhandargad-Palasgad",
+    "lat": 19.4864395,
+    "lng": 73.2502754,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 752,
+    "reliefM": 179,
+    "prominenceProxyM": 146,
+    "meanSlopeDeg": 8.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.856,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/9843077183"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-10855965882--mumbai",
+    "name": "Ghoradeshwar",
+    "lat": 18.6920014,
+    "lng": 73.7058148,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 804,
+    "reliefM": 181,
+    "prominenceProxyM": 181,
+    "meanSlopeDeg": 15.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.851,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/10855965882"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7211134800--mumbai",
+    "name": "Malhargad",
+    "lat": 18.4120146,
+    "lng": 74.0493462,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 958,
+    "reliefM": 210,
+    "prominenceProxyM": 210,
+    "meanSlopeDeg": 13.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.847,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7211134800"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-6020591125--mumbai",
+    "name": "Harihar Fort",
+    "lat": 19.906068,
+    "lng": 73.4721456,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 920,
+    "reliefM": 177,
+    "prominenceProxyM": 177,
+    "meanSlopeDeg": 7.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.846,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/6020591125"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1065082306--mumbai",
+    "name": "Sinhagad",
+    "lat": 18.3651861,
+    "lng": 73.7549869,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1310,
+    "reliefM": 232,
+    "prominenceProxyM": 232,
+    "meanSlopeDeg": 19.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.844,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1065082306"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13447604587--mumbai",
+    "name": "Unnamed Peak",
+    "lat": 20.0724083,
+    "lng": 73.819263,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 792,
+    "reliefM": 120,
+    "prominenceProxyM": 120,
+    "meanSlopeDeg": 12.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.843,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13447604587"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13541395257--mumbai",
+    "name": "Unnamed Peak",
+    "lat": 19.7067958,
+    "lng": 73.8057069,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 753,
+    "reliefM": 117,
+    "prominenceProxyM": 117,
+    "meanSlopeDeg": 13,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.833,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/13541395257"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1065783473--mumbai",
+    "name": "Sudhagad",
+    "lat": 18.5403863,
+    "lng": 73.3206308,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 574,
+    "reliefM": 301,
+    "prominenceProxyM": 301,
+    "meanSlopeDeg": 12.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.833,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1065783473"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7187965438--mumbai",
+    "name": "Pratapgad/Bhorpyacha Dogar",
+    "lat": 17.9352289,
+    "lng": 73.5785838,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 1063,
+    "reliefM": 258,
+    "prominenceProxyM": 258,
+    "meanSlopeDeg": 20.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.82,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7187965438"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-5913741266--mumbai",
+    "name": "Raigad",
+    "lat": 18.2369566,
+    "lng": 73.4471601,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 859,
+    "reliefM": 428,
+    "prominenceProxyM": 428,
+    "meanSlopeDeg": 16.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.82,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/5913741266"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1219143780--mumbai",
+    "name": "Manranjan",
+    "lat": 18.8315698,
+    "lng": 73.3949891,
+    "cityId": "geo:19.0760,72.8777",
+    "tier": "discovery",
+    "elevationM": 772,
+    "reliefM": 208,
+    "prominenceProxyM": 208,
+    "meanSlopeDeg": 16.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.82,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1219143780"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-9924599689--hyderabad",
+    "name": "Kothakonda Peak",
+    "lat": 18.0421552,
+    "lng": 79.3123728,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 475,
+    "reliefM": 162,
+    "prominenceProxyM": 102,
+    "meanSlopeDeg": 9.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.784,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/9924599689"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1808778809--hyderabad",
+    "name": "Unnamed Peak",
+    "lat": 17.191138,
+    "lng": 79.773687,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 270,
+    "reliefM": 104,
+    "prominenceProxyM": 104,
+    "meanSlopeDeg": 12.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.769,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1808778809"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13518937801--hyderabad",
+    "name": "Hill",
+    "lat": 16.9486794,
+    "lng": 78.8491764,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 460,
+    "reliefM": 81,
+    "prominenceProxyM": 81,
+    "meanSlopeDeg": 9.5,
+    "terrainConfidence": 0.76,
+    "discoveryScore": 0.597,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/13518937801"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1815959520--hyderabad",
+    "name": "Unnamed Peak",
+    "lat": 17.4693862,
+    "lng": 79.8941661,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 235,
+    "reliefM": 70,
+    "prominenceProxyM": 70,
+    "meanSlopeDeg": 8.3,
+    "terrainConfidence": 0.63,
+    "discoveryScore": 0.527,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/1815959520"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2714358969--hyderabad",
+    "name": "Devatala Gutta (MSL +630)",
+    "lat": 17.2957329,
+    "lng": 78.5132671,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 608,
+    "reliefM": 70,
+    "prominenceProxyM": 70,
+    "meanSlopeDeg": 6.2,
+    "terrainConfidence": 0.63,
+    "discoveryScore": 0.523,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/2714358969"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7380335857--hyderabad",
+    "name": "Unnamed Peak",
+    "lat": 17.3838509,
+    "lng": 78.3994245,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 602,
+    "reliefM": 79,
+    "prominenceProxyM": 79,
+    "meanSlopeDeg": 8.8,
+    "terrainConfidence": 0.74,
+    "discoveryScore": 0.421,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/7380335857"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-8378959681--hyderabad",
+    "name": "Halaya Betta",
+    "lat": 16.9757938,
+    "lng": 77.3169225,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 518,
+    "reliefM": 41,
+    "prominenceProxyM": 41,
+    "meanSlopeDeg": 4.8,
+    "terrainConfidence": 0.26,
+    "discoveryScore": 0.419,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/8378959681"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13336050740--hyderabad",
+    "name": "Yerragattu Gutta",
+    "lat": 18.0552441,
+    "lng": 79.5332829,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 318,
+    "reliefM": 55,
+    "prominenceProxyM": 55,
+    "meanSlopeDeg": 6.5,
+    "terrainConfidence": 0.44,
+    "discoveryScore": 0.404,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/13336050740"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7380335856--hyderabad",
+    "name": "Fakhruddin Gutta",
+    "lat": 17.4097891,
+    "lng": 78.3651835,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 610,
+    "reliefM": 67,
+    "prominenceProxyM": 67,
+    "meanSlopeDeg": 6.3,
+    "terrainConfidence": 0.59,
+    "discoveryScore": 0.378,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/7380335856"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2949063982--hyderabad",
+    "name": "Koh E Tur",
+    "lat": 17.3301504,
+    "lng": 78.4670185,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 585,
+    "reliefM": 64,
+    "prominenceProxyM": 64,
+    "meanSlopeDeg": 6.3,
+    "terrainConfidence": 0.55,
+    "discoveryScore": 0.366,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/2949063982"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2949063980--hyderabad",
+    "name": "Jalal Pahad",
+    "lat": 17.3258775,
+    "lng": 78.4528098,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 584,
+    "reliefM": 45,
+    "prominenceProxyM": 45,
+    "meanSlopeDeg": 4.7,
+    "terrainConfidence": 0.31,
+    "discoveryScore": 0.311,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/2949063980"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13686267235--hyderabad",
+    "name": "TV Tower",
+    "lat": 17.9723825,
+    "lng": 79.5153962,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 322,
+    "reliefM": 43,
+    "prominenceProxyM": 43,
+    "meanSlopeDeg": 4.9,
+    "terrainConfidence": 0.29,
+    "discoveryScore": 0.305,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/13686267235"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-13108193493--hyderabad",
+    "name": "TSIIC Hill Manchirevula",
+    "lat": 17.3768341,
+    "lng": 78.3464288,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 547,
+    "reliefM": 30,
+    "prominenceProxyM": 30,
+    "meanSlopeDeg": 2.7,
+    "terrainConfidence": 0.13,
+    "discoveryScore": 0.28,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/13108193493"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-4708831963--hyderabad",
+    "name": "BoddaGuta",
+    "lat": 17.9751474,
+    "lng": 79.515096,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 287,
+    "reliefM": 15,
+    "prominenceProxyM": 7,
+    "meanSlopeDeg": 0.5,
+    "terrainConfidence": 0,
+    "discoveryScore": 0.28,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/4708831963"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-2894717914--hyderabad",
+    "name": "Naubat Pahad",
+    "lat": 17.4029373,
+    "lng": 78.4706085,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 544,
+    "reliefM": 30,
+    "prominenceProxyM": 30,
+    "meanSlopeDeg": 2.8,
+    "terrainConfidence": 0.13,
+    "discoveryScore": 0.16,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/2894717914"
+    ],
+    "verified": false
   }
 ]

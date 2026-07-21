@@ -50,7 +50,10 @@ export function applyFilters(treks: Trek[], origin: Origin, f: FilterState): Tre
     if (distanceKmOf(origin, t) > f.radiusKm) return false;
 
     if (f.difficulties.length > 0) {
-      if (!t.difficulty || !f.difficulties.includes(t.difficulty)) return false;
+      // Discovery peaks carry a terrain-derived estimatedDifficulty rather than a
+      // curated difficulty; fall back to it so the filter still works for them.
+      const diff = t.difficulty ?? t.estimatedDifficulty;
+      if (!diff || !f.difficulties.includes(diff)) return false;
     }
 
     if (f.elevation) {

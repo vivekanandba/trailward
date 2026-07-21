@@ -13,26 +13,63 @@ interface OverpassElement {
   id?: number;
   lat?: unknown;
   lon?: unknown;
+  center?: { lat?: unknown; lon?: unknown };
   tags?: Record<string, unknown>;
 }
 
-/** Pure parser: Overpass JSON → partial treks (id, name, coords, elevation). */
-export function parsePeaks(json: unknown): Partial<Trek>[] {
+/** Notability + opportunistic terrain signals read straight from OSM tags. */
+export interface PeakNotability {
+  hasWikipediaTag: boolean;
+  hasWikidataTag: boolean;
+  nameEn?: string;
+  osmProminenceM?: number; // from tags.prominence when present (rare but authoritative)
+}
+
+/**
+ * Parsed peak: the trek-shaped core (id, name, coords, elevation) plus OSM
+ * notability tags the precompute pipeline (spec 11) needs. `notability` is kept
+ * separate so runtime discovery can drop it and emit clean Trek objects.
+ */
+export interface ParsedPeak {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  elevationM?: number;
+  notability: PeakNotability;
+}
+
+/** Pure parser: Overpass JSON → parsed peaks (coords, elevation, notability). */
+export function parsePeaks(json: unknown): ParsedPeak[] {
   const elements = (json as { elements?: unknown })?.elements;
   if (!Array.isArray(elements)) return [];
 
-  const peaks: Partial<Trek>[] = [];
+  const peaks: ParsedPeak[] = [];
   for (const el of elements as OverpassElement[]) {
-    const lat = Number(el?.lat);
-    const lng = Number(el?.lon);
+    // Ways/relations (e.g. cliffs) carry a computed centroid under `center`.
+    const lat = Number(el?.lat ?? el?.center?.lat);
+    const lng = Number(el?.lon ?? el?.center?.lon);
     if (Number.isNaN(lat) || Number.isNaN(lng)) continue;
 
     const tags = el?.tags ?? {};
     const name = typeof tags.name === "string" && tags.name ? tags.name : "Unnamed Peak";
     const ele = Number(tags.ele);
     const elevationM = !Number.isNaN(ele) && ele >= 0 && ele <= 9000 ? ele : undefined;
+    const prom = Number(tags.prominence);
 
-    peaks.push({ id: `osm-${el.id}`, name, lat, lng, elevationM });
+    peaks.push({
+      id: `osm-${el.id}`,
+      name,
+      lat,
+      lng,
+      elevationM,
+      notability: {
+        hasWikipediaTag: typeof tags.wikipedia === "string" && tags.wikipedia.length > 0,
+        hasWikidataTag: typeof tags.wikidata === "string" && tags.wikidata.length > 0,
+        nameEn: typeof tags["name:en"] === "string" ? (tags["name:en"] as string) : undefined,
+        osmProminenceM: !Number.isNaN(prom) && prom >= 0 && prom <= 9000 ? prom : undefined,
+      },
+    });
   }
   return peaks;
 }
@@ -44,7 +81,7 @@ export function parsePeaks(json: unknown): Partial<Trek>[] {
  */
 export async function discoverPeaks(origin: Origin, radiusKm: number): Promise<Trek[]> {
   const query = `[out:json][timeout:25];node(around:${radiusKm * 1000},${origin.lat},${origin.lng})[natural=peak];out;`;
-  let parsed: Partial<Trek>[];
+  let parsed: ParsedPeak[];
   try {
     const res = await fetch(OVERPASS_URL, {
       method: "POST",
@@ -65,14 +102,16 @@ export async function discoverPeaks(origin: Origin, radiusKm: number): Promise<T
     parsed = parsed.slice(0, MAX_DISCOVERY);
   }
 
+  // Build the Trek explicitly (dropping the pipeline-only `notability` blob) so
+  // the live discovery record stays minimal, exactly as before.
   return parsed.map((p) => ({
-    ...p,
-    id: p.id as string,
-    name: p.name as string,
-    lat: p.lat as number,
-    lng: p.lng as number,
+    id: p.id,
+    name: p.name,
+    lat: p.lat,
+    lng: p.lng,
+    elevationM: p.elevationM,
     cityId: origin.id,
-    tier: "discovery",
+    tier: "discovery" as const,
     sources: [],
     verified: false,
   }));

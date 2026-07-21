@@ -21,6 +21,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build:data
+      - run: npm run build:discovery
       - run: npm run validate:data
       - name: Commit refreshed data if changed
         run: |
