@@ -31,8 +31,14 @@ consistent with the no-backend architecture (→ 00, 02).
   **Wikimedia Commons photo** (with attribution), a short **summary** when a Wikipedia
   article sits within ~800 m, and the **nearest town** (Nominatim reverse geocode). Any
   step that finds nothing is simply omitted — truly-unknown peaks get fewer of these.
-- **Peaks only** (`natural=peak`). Other feature classes (waterfalls, caves, forts) are
-  out of scope this pass.
+- **Summits: `natural=peak` + `natural=hill`** — many South-Indian hills (bettas, gundus,
+  kondas) are tagged `hill`, so peaks-only missed the Eastern-Ghats/Deccan ranges near
+  Vellore/Chittoor. Other classes (waterfalls, caves, forts) remain out of scope.
+- **Score every candidate — no elevation pre-filter.** An earlier top-N-by-elevation cap
+  silently dropped low-but-interesting hills over a large radius; now all summits within
+  radius are DEM-scored (up to a high safety ceiling that only warns), the top
+  `maxResults` are kept as pins, and the top `enrichLimit` get photo/summary/town. Bengaluru
+  keeps up to 400; other regions 150.
 - **Arbitrary typed origins are unchanged**: they keep the existing live `discoverPeaks`
   (elevation-sorted) as a graceful fallback (→ 03).
 

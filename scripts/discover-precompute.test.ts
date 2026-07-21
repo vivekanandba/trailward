@@ -10,11 +10,10 @@ import { validateTrek, type Origin, type Trek } from "../src/lib/trek";
 import type { ParsedPeak } from "../src/lib/overpass";
 
 const PUNE: Origin = { id: "geo:18.5204,73.8567", name: "Pune", lat: 18.5204, lng: 73.8567 };
-const CFG: RegionConfig = { radiusKm: 150, maxCandidates: 60, maxResults: 40 };
+const CFG: RegionConfig = { radiusKm: 150, maxCandidates: 60, maxResults: 40, enrichLimit: 40 };
 
-// A rugged, undocumented peak and a flat, famous one. The flat one is TALLER,
-// so it sorts first as a candidate — the point is that scoring, not elevation,
-// decides the final rank.
+// A rugged, undocumented peak and a flat, famous one — the point is that
+// scoring, not elevation, decides the final rank (every candidate is scored).
 const ruggedUnknown: ParsedPeak = {
   id: "osm-1",
   name: "Rugged Unknown",
@@ -32,13 +31,13 @@ const flatFamous: ParsedPeak = {
   notability: { hasWikipediaTag: true, hasWikidataTag: true },
 };
 
-// Elevations index-aligned to [flatFamous(center+8 ring), ruggedUnknown(center+8 ring)]
-// (candidates are sorted by elevation desc, so flatFamous comes first).
+// Elevations index-aligned to the candidate order (Overpass order = peaks array):
+// [ruggedUnknown(center+8 ring), flatFamous(center+8 ring)].
 const elevs = [
-  1500,
-  ...Array<number>(8).fill(1495), // flat: relief 5 → confidence 0 → topo 0
   1400,
   ...Array<number>(8).fill(1100), // rugged: relief 300, slope ~34° → topo ~1
+  1500,
+  ...Array<number>(8).fill(1495), // flat: relief 5 → confidence 0 → topo 0
 ];
 
 const fetchers = (over: Partial<DiscoverFetchers> = {}): DiscoverFetchers => ({

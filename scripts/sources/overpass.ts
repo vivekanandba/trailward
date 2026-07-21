@@ -26,8 +26,8 @@ async function fetchOverpass(query: string): Promise<unknown> {
         body: query,
         headers: { "content-type": "text/plain" },
         // Overpass can be slow on dense / large-radius regions (e.g. Bengaluru at
-        // 500 km); give it well over the query's own server-side timeout.
-        timeoutMs: 120_000,
+        // 500 km, peaks+hills); give it well over the query's server-side timeout.
+        timeoutMs: 240_000,
       });
       return JSON.parse(text);
     } catch (err) {
@@ -37,12 +37,16 @@ async function fetchOverpass(query: string): Promise<unknown> {
   throw lastErr instanceof Error ? lastErr : new Error("overpass request failed");
 }
 
-/** Fetch peaks within radiusKm of an origin as parsed peaks (coords + tags). */
+/**
+ * Fetch summits within radiusKm of an origin as parsed peaks. Includes both
+ * `natural=peak` AND `natural=hill` — many South-Indian hills (bettas, gundus,
+ * kondas) are tagged `hill`, so peaks-only misses them (spec 11). Server-side
+ * timeout scales with radius so a large sweep doesn't return empty.
+ */
 export async function fetchPeaks(origin: Origin, radiusKm: number): Promise<ParsedPeak[]> {
-  // Scale the server-side timeout with radius — a 500 km peak sweep needs far
-  // longer than the default 25 s or Overpass returns an empty/partial result.
-  const serverTimeout = radiusKm >= 300 ? 90 : 25;
-  const query = `[out:json][timeout:${serverTimeout}];node(around:${radiusKm * 1000},${origin.lat},${origin.lng})[natural=peak];out;`;
+  const serverTimeout = radiusKm >= 300 ? 180 : 60;
+  const around = `around:${radiusKm * 1000},${origin.lat},${origin.lng}`;
+  const query = `[out:json][timeout:${serverTimeout}];(node(${around})[natural=peak];node(${around})[natural=hill];);out;`;
   return parsePeaks(await fetchOverpass(query));
 }
 

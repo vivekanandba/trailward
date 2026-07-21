@@ -45,11 +45,14 @@ export interface DiscoverFetchers {
   enrich?(peak: { lat: number; lng: number }): Promise<PeakEnrichment>;
 }
 
-/** Per-region knobs — Bengaluru reaches further and keeps more (spec 11). */
+/** Per-region knobs (spec 11). We DEM-score every candidate (no elevation
+ *  pre-filter — that dropped low Eastern-Ghats hills), keep the top `maxResults`
+ *  by score, and enrich the top `enrichLimit` with photos/summary/town. */
 export interface RegionConfig {
   radiusKm: number;
-  maxCandidates: number; // DEM-sample this many (top by elevation)
-  maxResults: number; // keep + enrich this many (top by score); no silent cap
+  maxCandidates: number; // safety ceiling on DEM-scored candidates (warns if exceeded)
+  maxResults: number; // keep this many pins (top by score); no silent cap
+  enrichLimit: number; // enrich this many (top by score) with photo/summary/town
 }
 
 const ROSETTE_RADIUS_M = 450;
@@ -58,8 +61,8 @@ const AMENITY_RADIUS_KM = 1;
 
 export function configFor(origin: Origin): RegionConfig {
   return origin.id === DEFAULT_ORIGIN.id
-    ? { radiusKm: 500, maxCandidates: 160, maxResults: 80 } // Bengaluru: reach + depth
-    : { radiusKm: 150, maxCandidates: 60, maxResults: 40 };
+    ? { radiusKm: 500, maxCandidates: 3000, maxResults: 400, enrichLimit: 120 } // home: cast wide
+    : { radiusKm: 150, maxCandidates: 1200, maxResults: 150, enrichLimit: 50 };
 }
 
 const round = (x: number, dp = 0): number => {
@@ -107,9 +110,14 @@ export async function precomputeRegion(
   const peaks = await fetchers.peaks(origin, config.radiusKm);
   if (peaks.length === 0) return [];
 
-  const candidates = [...peaks]
-    .sort((a, b) => (b.elevationM ?? -1) - (a.elevationM ?? -1))
-    .slice(0, config.maxCandidates);
+  // Score EVERY candidate — no elevation pre-filter (that culled the low
+  // Eastern-Ghats hills). Only a high safety ceiling bounds pathological cases.
+  if (peaks.length > config.maxCandidates) {
+    console.warn(
+      `[discover] ${origin.name}: ${peaks.length} candidates exceed the ${config.maxCandidates} ceiling; scoring the first ${config.maxCandidates}.`,
+    );
+  }
+  const candidates = peaks.slice(0, config.maxCandidates);
 
   const samplePoints = rosetteSamples(candidates);
   const elevs = await fetchers.elevations(samplePoints);
@@ -182,25 +190,26 @@ export async function precomputeRegion(
       (b.elevationM ?? 0) - (a.elevationM ?? 0),
   );
 
-  let top = results;
+  let kept = results;
   if (results.length > config.maxResults) {
     console.warn(
       `[discover] ${origin.name}: ${results.length} scored peaks; keeping top ${config.maxResults} by score.`,
     );
-    top = results.slice(0, config.maxResults);
+    kept = results.slice(0, config.maxResults);
   }
 
-  // Enrich only the kept peaks (photo / nearby-article summary / nearest town).
+  // Enrich only the top `enrichLimit` (photo / nearby-article summary / nearest
+  // town) — enrichment is several network calls per peak, so we spend it on the
+  // best-ranked; the long tail still ships with terrain + score.
   if (fetchers.enrich) {
-    for (const t of top) {
+    for (const t of kept.slice(0, config.enrichLimit)) {
       const e = await fetchers.enrich({ lat: t.lat, lng: t.lng });
       if (e.image) t.image = e.image;
       if (e.highlights) t.highlights = e.highlights;
       if (e.nearestTown) t.nearestTown = e.nearestTown;
-      // A source-bearing enrichment: link the OSM node + any article we used.
     }
   }
-  return top;
+  return kept;
 }
 
 /**
