@@ -19,7 +19,7 @@
 # Requires: gh (authenticated), git. No external jq needed (uses gh --jq).
 set -euo pipefail
 
-die() { echo "pr-loop: $*" >&2; exit 1; }
+die() { echo "ship: $*" >&2; exit 1; }
 command -v gh >/dev/null || die "gh CLI not found on PATH"
 
 # owner/repo from the gh-resolved remote so this works on any clone.
@@ -68,7 +68,7 @@ _warn_if_truncated() {
   local num="$1" total
   total="$(_threads_json "$num" --jq '.data.repository.pullRequest.reviewThreads.totalCount')"
   [ "${total:-0}" -gt 100 ] &&
-    echo "pr-loop: warning: PR #$num has $total review threads; only the first 100 are processed" >&2
+    echo "ship: warning: PR #$num has $total review threads; only the first 100 are processed" >&2
   return 0
 }
 
@@ -101,7 +101,7 @@ cmd_resolve_all() {
       -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' \
       -F id="$tid" --jq '.data.resolveReviewThread.thread.isResolved' 2>/dev/null || echo false)"
     if [ "$resolved" = "true" ]; then ok=$((ok+1)); else
-      fail=$((fail+1)); echo "pr-loop: failed to resolve thread $tid" >&2
+      fail=$((fail+1)); echo "ship: failed to resolve thread $tid" >&2
     fi
   done <<< "$ids"
   echo "resolved $ok thread(s)${fail:+$([ "$fail" -gt 0 ] && echo ", $fail failed")}"
