@@ -34,11 +34,15 @@ consistent with the no-backend architecture (→ 00, 02).
 - **Summits: `natural=peak` + `natural=hill`** — many South-Indian hills (bettas, gundus,
   kondas) are tagged `hill`, so peaks-only missed the Eastern-Ghats/Deccan ranges near
   Vellore/Chittoor. Other classes (waterfalls, caves, forts) remain out of scope.
-- **Score every candidate — no elevation pre-filter.** An earlier top-N-by-elevation cap
-  silently dropped low-but-interesting hills over a large radius; now all summits within
-  radius are DEM-scored (up to a high safety ceiling that only warns), the top
-  `maxResults` are kept as pins, and the top `enrichLimit` get photo/summary/town. Bengaluru
-  keeps up to 400; other regions 150.
+- **Score every candidate, keep them all — filters do the capping.** No elevation
+  pre-filter and no top-N: every summit within radius is DEM-scored and kept (up to a high
+  safety ceiling that only warns). The UI radius/difficulty/type/elevation filters narrow
+  the view. Only the expensive photo/summary/town enrichment is bounded to the top
+  `enrichLimit` by score (the long tail still ships terrain + score). Bengaluru at 500 km
+  yields ~1,100+ peaks.
+- **Map viewport culling** keeps this cheap to render: `TrekMap` draws only markers within
+  the current (padded) view, so an uncapped set costs only what's on screen — clustering
+  still collapses dense zoomed-out views.
 - **Arbitrary typed origins are unchanged**: they keep the existing live `discoverPeaks`
   (elevation-sorted) as a graceful fallback (→ 03).
 

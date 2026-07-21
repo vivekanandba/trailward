@@ -194,17 +194,34 @@ function Markers({
 }: Omit<TrekMapProps, "radiusKm" | "theme">) {
   const map = useMap();
   const [zoom, setZoom] = useState(() => map.getZoom());
-  useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
+  const [bounds, setBounds] = useState(() => map.getBounds());
+  useMapEvents({
+    zoomend: () => {
+      setZoom(map.getZoom());
+      setBounds(map.getBounds());
+    },
+    moveend: () => setBounds(map.getBounds()),
+  });
 
-  const clustered = treks.length > CLUSTER_THRESHOLD && zoom < CLUSTER_MAX_ZOOM;
+  // Viewport culling: only markers within the current view (padded) are drawn,
+  // so an uncapped set (spec 11 — filters, not a top-N, do the capping) costs
+  // only what's on screen. The full set still drives the list + filters.
+  const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
+  const inView = useMemo(() => {
+    const padded = bounds.pad(0.25);
+    return treks.filter((t) => padded.contains([t.lat, t.lng]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [treks, bbox]);
+
+  const clustered = inView.length > CLUSTER_THRESHOLD && zoom < CLUSTER_MAX_ZOOM;
   // Grid cell shrinks as you zoom in, so clusters break apart naturally.
   const step = 0.7 / Math.pow(2, Math.max(0, zoom - 7));
   const groups = useMemo(
     () =>
       clustered
-        ? clusterByGrid(treks, step)
-        : treks.map((t) => ({ lat: t.lat, lng: t.lng, members: [t] })),
-    [treks, clustered, step],
+        ? clusterByGrid(inView, step)
+        : inView.map((t) => ({ lat: t.lat, lng: t.lng, members: [t] })),
+    [inView, clustered, step],
   );
 
   const clusters = groups.filter((g) => g.members.length > 1);
