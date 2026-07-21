@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 #
-# pr-loop.sh — deterministic gh/GitHub plumbing for the review→resolve→merge
+# ship.sh — deterministic gh/GitHub plumbing for the review→resolve→merge
 # loop described in docs/pr-workflow.md (and driven by the /ship slash command).
 #
 # The *judgement* (what to flag, how to fix) is Claude's; this script only does
 # the mechanical, scriptable GitHub steps so they behave the same every time.
 #
 # Usage:
-#   scripts/pr-loop.sh open   [base]        # open a PR from the current branch (base default: main)
-#   scripts/pr-loop.sh number                # print the PR number for the current branch
-#   scripts/pr-loop.sh status  [pr]          # CI state, mergeability, unresolved-thread count
-#   scripts/pr-loop.sh threads [pr]          # list review threads (resolved/unresolved + first comment)
-#   scripts/pr-loop.sh unresolved [pr]       # print the number of UNRESOLVED review threads
-#   scripts/pr-loop.sh resolve-all [pr]      # resolve every open review thread on the PR
-#   scripts/pr-loop.sh approve [pr]          # submit an approving review (best-effort; self-PRs can't self-approve)
-#   scripts/pr-loop.sh merge   [pr]          # squash-merge and delete the branch (requires checks green + threads resolved)
+#   scripts/ship.sh open   [base]        # open a PR from the current branch (base default: main)
+#   scripts/ship.sh number                # print the PR number for the current branch
+#   scripts/ship.sh status  [pr]          # CI state, mergeability, unresolved-thread count
+#   scripts/ship.sh threads [pr]          # list review threads (resolved/unresolved + first comment)
+#   scripts/ship.sh unresolved [pr]       # print the number of UNRESOLVED review threads
+#   scripts/ship.sh resolve-all [pr]      # resolve every open review thread on the PR
+#   scripts/ship.sh approve [pr]          # submit an approving review (best-effort; self-PRs can't self-approve)
+#   scripts/ship.sh merge   [pr]          # squash-merge and delete the branch (requires checks green + threads resolved)
 #
 # Requires: gh (authenticated), git. No external jq needed (uses gh --jq).
 set -euo pipefail
@@ -33,7 +33,7 @@ current_branch() { git rev-parse --abbrev-ref HEAD; }
 pr_number() {
   if [ "${1:-}" != "" ]; then echo "$1"; return; fi
   gh pr view --json number --jq .number 2>/dev/null \
-    || die "no PR for branch '$(current_branch)' — run 'pr-loop.sh open' first"
+    || die "no PR for branch '$(current_branch)' — run 'ship.sh open' first"
 }
 
 cmd_open() {
