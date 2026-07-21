@@ -21,7 +21,16 @@ consistent with the no-backend architecture (→ 00, 02).
   shown **alongside** the 16 curated treks (deduped against them within
   `CURATED_DEDUP_KM`), so a local finds lesser-known peaks beyond the famous ones. The
   banner reads "Plus N lesser-known peaks…"; curated treks keep precedence and their
-  verified badge.
+  verified badge. Curated treks are **also given terrain** (relief/slope/prominence) so
+  known and unknown peaks are described in the same objective terms — without altering
+  their curated difficulty or verified status.
+- **Per-region reach + depth** (`configFor`). Bengaluru is the home region: discovery
+  reaches **500 km** and keeps the top **80** by score (its radius slider goes to 500);
+  other regions stay at 150 km / top 40.
+- **Enrichment.** The kept (top-N) discovery peaks get, best-effort: a nearby CC-licensed
+  **Wikimedia Commons photo** (with attribution), a short **summary** when a Wikipedia
+  article sits within ~800 m, and the **nearest town** (Nominatim reverse geocode). Any
+  step that finds nothing is simply omitted — truly-unknown peaks get fewer of these.
 - **Peaks only** (`natural=peak`). Other feature classes (waterfalls, caves, forts) are
   out of scope this pass.
 - **Arbitrary typed origins are unchanged**: they keep the existing live `discoverPeaks`
@@ -47,9 +56,10 @@ consistent with the no-backend architecture (→ 00, 02).
    - `tri` = `sqrt(Σ(ringElev_i − centerElev)²)` (Riley Terrain Ruggedness Index).
    - `confidence = clamp((reliefM − 20) / 80, 0, 1)` — near 0 below ~20 m relief (90 m-DEM
      noise floor), 1 by ~100 m; also 0 when the center or < 3 ring samples are missing.
-4. **Obscurity signals** — `hasWikipediaTag` / `hasWikidataTag` (OSM), `nearbyAmenityCount`
-   (a light second Overpass count within ~1 km), `wikiArticlesWithin1km` (Wikipedia
-   GeoSearch, `gsradius=1000`; `-1` = not looked up → neutral).
+4. **Obscurity signals** — `hasWikipediaTag` / `hasWikidataTag` (OSM) and
+   `nearbyAmenityCount` (a light second Overpass count within ~1 km). Scored from these
+   alone (`wikiArticlesWithin1km` is passed `-1`/neutral) to avoid a per-candidate network
+   call; the nearby-article check now lives in enrichment for the kept peaks only.
 5. **Score** (`src/lib/discoveryScore.ts`, pure) — `score = 0.6·topo + 0.4·obscurity`:
    - `topo` uses **band functions** (adventurous-but-feasible): `relief` sweet-spot
      200–800 m, `prominenceProxy` 120–500 m, `meanSlope` 15–35°, each 0 outside a wide

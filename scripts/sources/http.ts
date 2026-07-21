@@ -15,10 +15,12 @@ export const ALLOWED_HOSTS = new Set<string>([
   "overpass-api.de",
   "overpass.kumi.systems", // Overpass mirror — failover when the main endpoint 429/504s
   "api.open-meteo.com",
+  "api.opentopodata.org", // elevation failover when Open-Meteo throttles (spec 11)
   "router.project-osrm.org",
   "en.wikipedia.org",
   "commons.wikimedia.org",
   "upload.wikimedia.org",
+  "nominatim.openstreetmap.org", // reverse geocode: nearest town for a discovery peak
 ]);
 
 export function isAllowedHost(url: string): boolean {

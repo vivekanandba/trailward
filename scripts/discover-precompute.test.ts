@@ -2,12 +2,15 @@ import { describe, it, expect } from "vitest";
 import {
   precomputeRegion,
   dedupeAgainstCurated,
+  enrichCuratedTerrain,
   type DiscoverFetchers,
+  type RegionConfig,
 } from "./discover-precompute";
 import { validateTrek, type Origin, type Trek } from "../src/lib/trek";
 import type { ParsedPeak } from "../src/lib/overpass";
 
 const PUNE: Origin = { id: "geo:18.5204,73.8567", name: "Pune", lat: 18.5204, lng: 73.8567 };
+const CFG: RegionConfig = { radiusKm: 150, maxCandidates: 60, maxResults: 40 };
 
 // A rugged, undocumented peak and a flat, famous one. The flat one is TALLER,
 // so it sorts first as a candidate — the point is that scoring, not elevation,
@@ -42,20 +45,19 @@ const fetchers = (over: Partial<DiscoverFetchers> = {}): DiscoverFetchers => ({
   peaks: async () => [ruggedUnknown, flatFamous],
   elevations: async () => elevs,
   tourismPoints: async () => [],
-  wikiArticles: async () => 0,
   ...over,
 });
 
 describe("precomputeRegion", () => {
   it("ranks a rugged, undocumented peak above a flat, famous, taller one", async () => {
-    const treks = await precomputeRegion(PUNE, 150, fetchers());
+    const treks = await precomputeRegion(PUNE, fetchers(), CFG);
     expect(treks).toHaveLength(2);
     expect(treks[0].name).toBe("Rugged Unknown");
     expect(treks[0].discoveryScore!).toBeGreaterThan(treks[1].discoveryScore!);
   });
 
   it("emits valid discovery-tier treks scoped to the region", async () => {
-    const [top] = await precomputeRegion(PUNE, 150, fetchers());
+    const [top] = await precomputeRegion(PUNE, fetchers(), CFG);
     expect(validateTrek(top).ok).toBe(true);
     expect(top.tier).toBe("discovery");
     expect(top.verified).toBe(false);
@@ -65,7 +67,7 @@ describe("precomputeRegion", () => {
   });
 
   it("computes and rounds the terrain fields + estimated difficulty", async () => {
-    const [top] = await precomputeRegion(PUNE, 150, fetchers());
+    const [top] = await precomputeRegion(PUNE, fetchers(), CFG);
     expect(top.reliefM).toBe(300);
     expect(top.prominenceProxyM).toBe(300);
     expect(top.meanSlopeDeg).toBeCloseTo(33.7, 0);
@@ -78,27 +80,44 @@ describe("precomputeRegion", () => {
       ...ruggedUnknown,
       notability: { ...ruggedUnknown.notability, osmProminenceM: 555 },
     };
-    const single = await precomputeRegion(PUNE, 150, {
-      peaks: async () => [withProm],
-      elevations: async () => [1400, ...Array<number>(8).fill(1100)], // DEM proxy would be 300
-      tourismPoints: async () => [],
-      wikiArticles: async () => 0,
-    });
+    const single = await precomputeRegion(
+      PUNE,
+      {
+        peaks: async () => [withProm],
+        elevations: async () => [1400, ...Array<number>(8).fill(1100)], // DEM proxy would be 300
+        tourismPoints: async () => [],
+      },
+      CFG,
+    );
     expect(single[0].prominenceProxyM).toBe(555);
+  });
+
+  it("enriches the kept peaks with a photo, summary, and nearest town", async () => {
+    const [top] = await precomputeRegion(
+      PUNE,
+      fetchers({
+        enrich: async () => ({
+          image: { url: "https://upload.wikimedia.org/x.jpg", attribution: "Commons" },
+          highlights: "A quiet ridge above the valley.",
+          nearestTown: "Lonavala",
+        }),
+      }),
+      CFG,
+    );
+    expect(top.image?.url).toContain("upload.wikimedia.org");
+    expect(top.highlights).toBe("A quiet ridge above the valley.");
+    expect(top.nearestTown).toBe("Lonavala");
+    expect(validateTrek(top).ok).toBe(true);
   });
 
   it("refuses to emit a region when elevations misalign with sample points", async () => {
     await expect(
-      precomputeRegion(
-        PUNE,
-        150,
-        fetchers({ elevations: async () => [1400, 1100] }), // far fewer than 2×9 points
-      ),
+      precomputeRegion(PUNE, fetchers({ elevations: async () => [1400, 1100] }), CFG),
     ).rejects.toThrow(/misaligned/);
   });
 
   it("returns [] when no peaks are found", async () => {
-    const treks = await precomputeRegion(PUNE, 150, fetchers({ peaks: async () => [] }));
+    const treks = await precomputeRegion(PUNE, fetchers({ peaks: async () => [] }), CFG);
     expect(treks).toEqual([]);
   });
 
@@ -106,14 +125,49 @@ describe("precomputeRegion", () => {
     await expect(
       precomputeRegion(
         PUNE,
-        150,
         fetchers({
           peaks: async () => {
             throw new Error("overpass 504");
           },
         }),
+        CFG,
       ),
     ).rejects.toThrow(/overpass/);
+  });
+});
+
+describe("enrichCuratedTerrain", () => {
+  const curated: Trek = {
+    id: "skandagiri",
+    name: "Skandagiri",
+    lat: 13.5021,
+    lng: 77.6911,
+    cityId: "bangalore",
+    tier: "curated",
+    elevationM: 1350,
+    difficulty: "Moderate",
+    sources: ["https://en.wikipedia.org/wiki/Skandagiri"],
+    verified: true,
+  };
+
+  it("attaches relief/slope/prominence without touching curated difficulty/verification", async () => {
+    const [out] = await enrichCuratedTerrain(
+      [curated],
+      async () => [1350, ...Array<number>(8).fill(1100)], // relief 250
+    );
+    expect(out.reliefM).toBe(250);
+    expect(out.prominenceProxyM).toBe(250);
+    expect(out.difficulty).toBe("Moderate"); // unchanged
+    expect(out.discoveryScore).toBeUndefined(); // curated never gets a gem score
+    expect(out.verified).toBe(true);
+  });
+
+  it("leaves a trek unchanged when the DEM can't resolve relief", async () => {
+    const [out] = await enrichCuratedTerrain(
+      [curated],
+      async () => Array<number>(9).fill(1350), // flat → relief 0
+    );
+    expect(out.reliefM).toBeUndefined();
   });
 });
 

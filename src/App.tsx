@@ -133,6 +133,9 @@ export default function App() {
     [visible],
   );
   const hasCurated = useMemo(() => visible.some((t) => t.tier === "curated"), [visible]);
+  // Bengaluru's discovery peaks are precomputed out to 500 km, so let its radius
+  // reach that far; other origins keep the default 150 km (spec 11).
+  const maxRadiusKm = origin.id === "bangalore" ? 500 : 150;
 
   // Look up the selection among the currently-visible treks so the detail panel
   // closes automatically when active filters exclude the selected trek (#6).
@@ -239,6 +242,7 @@ export default function App() {
               resultCount={visible.length}
               showTrailLength={showTrailLength}
               showDuration={showDuration}
+              maxRadiusKm={maxRadiusKm}
             />
           </div>
           {discoveryCount > 0 && !discovering && (
@@ -323,6 +327,7 @@ export default function App() {
               selectedId={selectedId}
               onSelect={setSelectedId}
               onRadiusChange={(km) => setFilters((f) => ({ ...f, radiusKm: km }))}
+              maxRadiusKm={maxRadiusKm}
               theme={theme}
             />
           </div>

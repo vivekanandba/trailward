@@ -45,8 +45,8 @@ With Claude Code, just run the slash command from the feature branch:
 It orchestrates the whole thing. The deterministic GitHub steps it leans on
 live in [`scripts/ship.sh`](../scripts/ship.sh):
 
-| Command                       | What it does                                                               |
-| ----------------------------- | -------------------------------------------------------------------------- |
+| Command                    | What it does                                                               |
+| -------------------------- | -------------------------------------------------------------------------- |
 | `ship.sh open [base]`      | Open (or reuse) a PR from the current branch onto `base` (default `main`). |
 | `ship.sh status [pr]`      | CI state, mergeability, and unresolved-thread count.                       |
 | `ship.sh threads [pr]`     | List review threads with resolved/unresolved status.                       |

@@ -22,11 +22,11 @@ interface TrekMapProps {
   selectedId?: string;
   onSelect(id: string): void;
   onRadiusChange?(km: number): void;
+  maxRadiusKm?: number;
   theme?: "light" | "dark";
 }
 
 const RADIUS_MIN = 10;
-const RADIUS_MAX = 150;
 const RADIUS_STEP = 5;
 
 // A draggable handle sitting on the ring's east edge; dragging it resizes the
@@ -36,10 +36,12 @@ function RadiusHandle({
   origin,
   radiusKm,
   onChange,
+  maxKm,
 }: {
   origin: Origin;
   radiusKm: number;
   onChange(km: number): void;
+  maxKm: number;
 }) {
   const lngPerKm = 1 / (111.32 * Math.cos((origin.lat * Math.PI) / 180));
   const edge: [number, number] = [origin.lat, origin.lng + radiusKm * lngPerKm];
@@ -64,7 +66,7 @@ function RadiusHandle({
           const p = (e.target as L.Marker).getLatLng();
           const raw = distanceFrom(origin, { lat: p.lat, lng: p.lng });
           const snapped = Math.round(raw / RADIUS_STEP) * RADIUS_STEP;
-          onChange(Math.max(RADIUS_MIN, Math.min(RADIUS_MAX, snapped)));
+          onChange(Math.max(RADIUS_MIN, Math.min(maxKm, snapped)));
         },
       }}
     >
@@ -257,6 +259,7 @@ export default function TrekMap({
   selectedId,
   onSelect,
   onRadiusChange,
+  maxRadiusKm = 150,
   theme = "light",
 }: TrekMapProps) {
   return (
@@ -283,7 +286,12 @@ export default function TrekMap({
         pathOptions={{ color: "#2f6b3f", weight: 1.5, fillColor: "#2f6b3f", fillOpacity: 0.06 }}
       />
       {onRadiusChange && (
-        <RadiusHandle origin={origin} radiusKm={radiusKm} onChange={onRadiusChange} />
+        <RadiusHandle
+          origin={origin}
+          radiusKm={radiusKm}
+          onChange={onRadiusChange}
+          maxKm={maxRadiusKm}
+        />
       )}
       <CircleMarker
         center={[origin.lat, origin.lng]}
