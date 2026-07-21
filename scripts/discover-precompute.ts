@@ -76,6 +76,14 @@ export async function precomputeRegion(
     samplePoints.push(...rosetteRing({ lat: c.lat, lng: c.lng }, ROSETTE_RADIUS_M));
   }
   const elevs = await fetchers.elevations(samplePoints);
+  // Terrain is sliced per candidate by index, so a short/long elevation response
+  // would silently misalign every downstream peak. Refuse rather than commit
+  // corrupt terrain — the caller skips the region and keeps its prior records.
+  if (elevs.length !== samplePoints.length) {
+    throw new Error(
+      `elevation count ${elevs.length} ≠ ${samplePoints.length} sample points; refusing misaligned terrain`,
+    );
+  }
   const tourism = (await fetchers.tourismPoints?.(origin, radiusKm)) ?? [];
   const regionSlug = slug(origin.name);
 

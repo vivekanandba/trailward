@@ -83,6 +83,16 @@ describe("precomputeRegion", () => {
     expect(single[0].prominenceProxyM).toBe(555);
   });
 
+  it("refuses to emit a region when elevations misalign with sample points", async () => {
+    await expect(
+      precomputeRegion(
+        PUNE,
+        150,
+        fetchers({ elevations: async () => [1400, 1100] }), // far fewer than 2×9 points
+      ),
+    ).rejects.toThrow(/misaligned/);
+  });
+
   it("returns [] when no peaks are found", async () => {
     const treks = await precomputeRegion(PUNE, 150, fetchers({ peaks: async () => [] }));
     expect(treks).toEqual([]);
