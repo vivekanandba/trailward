@@ -12,7 +12,7 @@ import { validateTrek, type Origin, type Trek } from "../src/lib/trek";
 import type { ParsedPeak } from "../src/lib/overpass";
 
 const PUNE: Origin = { id: "geo:18.5204,73.8567", name: "Pune", lat: 18.5204, lng: 73.8567 };
-const CFG: RegionConfig = { radiusKm: 150, maxCandidates: 60, enrichLimit: 40 };
+const CFG: RegionConfig = { radiusKm: 150, maxCandidates: 60, enrichLimit: 40, trailLimit: 40 };
 
 // A rugged, undocumented peak and a flat, famous one — the point is that
 // scoring, not elevation, decides the final rank (every candidate is scored).
@@ -111,6 +111,27 @@ describe("precomputeRegion", () => {
     expect(validateTrek(top).ok).toBe(true);
   });
 
+  it("attaches a trail from the trail fetcher to top peaks (spec 14)", async () => {
+    const [top] = await precomputeRegion(
+      PUNE,
+      fetchers({
+        trail: async () => ({
+          coords: [
+            [18.51, 73.84],
+            [18.52, 73.85],
+          ],
+          lengthKm: 1.2,
+          gainM: 80,
+          profile: [700, 780],
+        }),
+      }),
+      CFG,
+    );
+    expect(top.trail?.lengthKm).toBe(1.2);
+    expect(top.trail?.gainM).toBe(80);
+    expect(validateTrek(top).ok).toBe(true);
+  });
+
   it("refuses to emit a region when elevations misalign with sample points", async () => {
     await expect(
       precomputeRegion(PUNE, fetchers({ elevations: async () => [1400, 1100] }), CFG),
@@ -186,7 +207,7 @@ describe("manual peaks (spec 12)", () => {
         elevations: async () => [1000, ...Array<number>(8).fill(700)], // relief 300
         tourismPoints: async () => [],
       },
-      { radiusKm: 500, maxCandidates: 20000, enrichLimit: 0 },
+      { radiusKm: 500, maxCandidates: 20000, enrichLimit: 0, trailLimit: 0 },
     );
     expect(trek.name).toBe("Puligundu");
     expect(trek.tier).toBe("discovery");
@@ -210,7 +231,7 @@ describe("manual peaks (spec 12)", () => {
           nearestTown: "Chittoor",
         }),
       },
-      { radiusKm: 500, maxCandidates: 20000, enrichLimit: 0 }, // rank-0 enrichment, yet manual still enriched
+      { radiusKm: 500, maxCandidates: 20000, enrichLimit: 0, trailLimit: 0 }, // rank-0 enrichment, yet manual still enriched
     );
     expect(trek.image?.url).toContain("upload.wikimedia.org");
     expect(trek.nearestTown).toBe("Chittoor");

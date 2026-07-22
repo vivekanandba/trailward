@@ -17,7 +17,7 @@ const OVERPASS_URLS = [
   "https://overpass.kumi.systems/api/interpreter",
 ];
 
-async function fetchOverpass(query: string): Promise<unknown> {
+export async function fetchOverpass(query: string): Promise<unknown> {
   let lastErr: unknown;
   for (const url of OVERPASS_URLS) {
     try {

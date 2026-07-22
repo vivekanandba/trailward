@@ -5,6 +5,7 @@ import {
   Circle,
   CircleMarker,
   Marker,
+  Polyline,
   Tooltip,
   useMap,
   useMapEvents,
@@ -303,6 +304,7 @@ export default function TrekMap({
     saveBasemap(b);
   };
   const tiles = basemap === "terrain" ? TILES.terrain : theme === "dark" ? TILES.dark : TILES.light;
+  const selectedTrail = treks.find((t) => t.id === selectedId)?.trail;
 
   return (
     <div className="relative h-full w-full">
@@ -346,6 +348,13 @@ export default function TrekMap({
             {origin.name} (origin)
           </Tooltip>
         </CircleMarker>
+
+        {selectedTrail && (
+          <Polyline
+            positions={selectedTrail.coords}
+            pathOptions={{ color: "#2f6b3f", weight: 4, opacity: 0.9 }}
+          />
+        )}
 
         <Markers origin={origin} treks={treks} selectedId={selectedId} onSelect={onSelect} />
       </MapContainer>
