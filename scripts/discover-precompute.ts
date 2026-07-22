@@ -23,6 +23,7 @@ import type { ParsedPeak } from "../src/lib/overpass";
 import { PRESET_ORIGINS } from "../src/lib/cities";
 import { fetchPeaks, fetchTourismPoints } from "./sources/overpass";
 import { manualPeaksNear } from "./seed/manual-peaks";
+import { fetchTrail } from "./sources/trails";
 import { fetchElevations } from "./sources/elevation";
 import { fetchNearestArticle } from "./sources/geosearch";
 import { fetchWiki } from "./sources/wiki";
@@ -46,6 +47,8 @@ export interface DiscoverFetchers {
   tourismPoints?(origin: Origin, radiusKm: number): Promise<LatLng[]>;
   /** Optional photo/summary/town enrichment for the top-ranked peaks. */
   enrich?(peak: { lat: number; lng: number }): Promise<PeakEnrichment>;
+  /** Optional nearest-trail lookup for the very top peaks (spec 14). */
+  trail?(peak: { lat: number; lng: number }): Promise<Trek["trail"] | undefined>;
 }
 
 // A manual peak this close to an OSM candidate is the same summit — drop the OSM
@@ -68,6 +71,7 @@ export interface RegionConfig {
   radiusKm: number;
   maxCandidates: number; // safety ceiling on DEM-scored candidates (warns if exceeded)
   enrichLimit: number; // enrich this many (top by score) with photo/summary/town
+  trailLimit: number; // fetch a nearest trail for this many (top by score) — extra calls each
 }
 
 const ROSETTE_RADIUS_M = 450;
@@ -76,8 +80,8 @@ const AMENITY_RADIUS_KM = 1;
 
 export function configFor(origin: Origin): RegionConfig {
   return origin.id === DEFAULT_ORIGIN.id
-    ? { radiusKm: 500, maxCandidates: 20000, enrichLimit: 150 } // home: cast the widest net
-    : { radiusKm: 150, maxCandidates: 20000, enrichLimit: 60 };
+    ? { radiusKm: 500, maxCandidates: 20000, enrichLimit: 150, trailLimit: 40 } // home: widest net
+    : { radiusKm: 150, maxCandidates: 20000, enrichLimit: 60, trailLimit: 20 };
 }
 
 const round = (x: number, dp = 0): number => {
@@ -225,6 +229,17 @@ export async function precomputeRegion(
       if (e.nearestTown) t.nearestTown = e.nearestTown;
     }
   }
+
+  // Attach a nearest OSM trail to the very top peaks + manual peaks (spec 14) —
+  // an extra Overpass + DEM call each, so kept to a small trailLimit.
+  if (fetchers.trail) {
+    const topTrail = results.slice(0, config.trailLimit);
+    const manualsT = results.filter((t) => t.id.startsWith("manual-") && !topTrail.includes(t));
+    for (const t of [...topTrail, ...manualsT]) {
+      const tr = await fetchers.trail({ lat: t.lat, lng: t.lng });
+      if (tr) t.trail = tr;
+    }
+  }
   return results;
 }
 
@@ -300,6 +315,7 @@ function liveFetchers(): DiscoverFetchers {
       if (town) out.nearestTown = town;
       return out;
     },
+    trail: (peak) => fetchTrail(peak, fetchElevations),
   };
 }
 

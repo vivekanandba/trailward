@@ -60,6 +60,34 @@ describe("TrekDetail image", () => {
   });
 });
 
+describe("TrekDetail trail + elevation profile", () => {
+  it("shows trail length, gain, and an elevation-profile chart", () => {
+    const trek: Trek = {
+      ...baseTrek,
+      trail: {
+        coords: [
+          [13.5, 77.69],
+          [13.502, 77.692],
+          [13.504, 77.694],
+        ],
+        lengthKm: 2.69,
+        gainM: 572,
+        profile: [700, 900, 1272],
+      },
+    };
+    render(<TrekDetail trek={trek} origin={origin} onClose={vi.fn()} />);
+    expect(screen.getByText("Trail length")).toBeInTheDocument();
+    expect(screen.getByText("~2.69 km")).toBeInTheDocument();
+    expect(screen.getByText("~572 m")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /elevation profile/i })).toBeInTheDocument();
+  });
+
+  it("renders no Trail section when the trek has no trail", () => {
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    expect(screen.queryByText("Trail length")).not.toBeInTheDocument();
+  });
+});
+
 describe("TrekDetail GPX export", () => {
   it("downloads a GPX file naming the trek", () => {
     const createURL = vi.fn<(b: Blob) => string>(() => "blob:gpx");

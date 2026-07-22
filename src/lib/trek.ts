@@ -34,8 +34,9 @@ export interface Trek {
   terrainConfidence?: number; // [0,1]; low for sub-DEM-noise-floor relief
   discoveryScore?: number; // [0,1]; topography × obscurity rank
   estimatedDifficulty?: Difficulty; // terrain-derived; NOT the curated difficulty
-  // Nearest OSM walking path to the summit (spec 14): polyline + measures.
-  trail?: { coords: [number, number][]; lengthKm: number; gainM: number };
+  // Nearest OSM walking path to the summit (spec 14): polyline + measures +
+  // optional per-vertex elevation (aligned to coords) for the profile chart.
+  trail?: { coords: [number, number][]; lengthKm: number; gainM: number; profile?: number[] };
 
   // Classification & planning (rich = curated)
   difficulty?: Difficulty;
@@ -173,6 +174,15 @@ export function validateTrek(input: unknown): ValidateResult {
     }
     if (typeof t.gainM !== "number" || t.gainM < 0) {
       return fail("trail.gainM", "must be a number ≥ 0");
+    }
+    if (
+      (t as { profile?: unknown }).profile !== undefined &&
+      !(
+        Array.isArray((t as { profile?: unknown }).profile) &&
+        ((t as { profile: unknown[] }).profile as unknown[]).every((n) => typeof n === "number")
+      )
+    ) {
+      return fail("trail.profile", "must be an array of numbers");
     }
   }
 

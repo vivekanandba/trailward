@@ -47,6 +47,57 @@ function Fact({ label, value }: { label: string; value?: string | number | null 
   );
 }
 
+// A single-series area sparkline of the trail's elevation profile (spec 14).
+// One brand hue via currentColor (theme-aware); the numbers live as Facts above,
+// so this is the visual layer, not the sole source of the data.
+function ElevationProfile({ trail }: { trail: NonNullable<Trek["trail"]> }) {
+  const prof = trail.profile;
+  if (!prof || prof.length < 2 || trail.coords.length !== prof.length) return null;
+
+  const dist = [0];
+  for (let i = 1; i < trail.coords.length; i++) {
+    const [aLat, aLng] = trail.coords[i - 1];
+    const [bLat, bLng] = trail.coords[i];
+    dist.push(
+      dist[i - 1] +
+        distanceFrom({ id: "", name: "", lat: aLat, lng: aLng }, { lat: bLat, lng: bLng }),
+    );
+  }
+  const W = 300;
+  const H = 72;
+  const pad = 4;
+  const maxD = dist[dist.length - 1] || 1;
+  const minE = Math.min(...prof);
+  const maxE = Math.max(...prof);
+  const span = maxE - minE || 1;
+  const px = (d: number) => pad + (d / maxD) * (W - 2 * pad);
+  const py = (e: number) => pad + (1 - (e - minE) / span) * (H - 2 * pad);
+  const pts = prof.map((e, i) => `${px(dist[i]).toFixed(1)},${py(e).toFixed(1)}`);
+  const line = `M ${pts.join(" L ")}`;
+  const area = `M ${px(0).toFixed(1)},${H - pad} L ${pts.join(" L ")} L ${px(maxD).toFixed(1)},${H - pad} Z`;
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className="mt-2 h-16 w-full text-trail-600 dark:text-trail-300"
+      role="img"
+      aria-label={`Elevation profile: ${Math.round(minE)}–${Math.round(maxE)} m over ~${trail.lengthKm} km`}
+    >
+      <path d={area} fill="currentColor" fillOpacity={0.15} />
+      <path
+        d={line}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
 export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   const [weather, setWeather] = useState<WeatherNow | null>(null);
   const [weatherFailed, setWeatherFailed] = useState(false);
@@ -216,6 +267,26 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             </dl>
             <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
               Computed from the Copernicus 90 m DEM; may miss small features.
+            </p>
+          </div>
+        )}
+
+        {/* Trail — nearest mapped OSM path + elevation profile (spec 14). */}
+        {trek.trail && (
+          <div className="mt-4 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-trail-800 dark:text-slate-100">Trail</span>
+              <span className="text-xs text-trail-600 dark:text-slate-400">
+                nearest mapped path
+              </span>
+            </div>
+            <dl className="mt-1 divide-y divide-trail-100 dark:divide-slate-700">
+              <Fact label="Trail length" value={`~${trek.trail.lengthKm} km`} />
+              <Fact label="Elevation gain" value={`~${trek.trail.gainM} m`} />
+            </dl>
+            <ElevationProfile trail={trek.trail} />
+            <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
+              Nearest OpenStreetMap path; elevation profile from the DEM.
             </p>
           </div>
         )}
