@@ -34,6 +34,8 @@ export interface Trek {
   terrainConfidence?: number; // [0,1]; low for sub-DEM-noise-floor relief
   discoveryScore?: number; // [0,1]; topography × obscurity rank
   estimatedDifficulty?: Difficulty; // terrain-derived; NOT the curated difficulty
+  // Nearest OSM walking path to the summit (spec 14): polyline + measures.
+  trail?: { coords: [number, number][]; lengthKm: number; gainM: number };
 
   // Classification & planning (rich = curated)
   difficulty?: Difficulty;
@@ -150,6 +152,28 @@ export function validateTrek(input: unknown): ValidateResult {
     !DIFFICULTIES.includes(input.estimatedDifficulty as Difficulty)
   ) {
     return fail("estimatedDifficulty", "must be one of Easy, Moderate, Hard");
+  }
+
+  // Trail (spec 14): a coords polyline + non-negative measures.
+  if (input.trail !== undefined) {
+    const t = input.trail as { coords?: unknown; lengthKm?: unknown; gainM?: unknown };
+    const okCoords =
+      Array.isArray(t.coords) &&
+      t.coords.length > 0 &&
+      t.coords.every(
+        (c) =>
+          Array.isArray(c) &&
+          c.length === 2 &&
+          typeof c[0] === "number" &&
+          typeof c[1] === "number",
+      );
+    if (!okCoords) return fail("trail.coords", "must be a non-empty array of [lat, lng] pairs");
+    if (typeof t.lengthKm !== "number" || t.lengthKm < 0) {
+      return fail("trail.lengthKm", "must be a number ≥ 0");
+    }
+    if (typeof t.gainM !== "number" || t.gainM < 0) {
+      return fail("trail.gainM", "must be a number ≥ 0");
+    }
   }
 
   // Image: a url requires an attribution (licensing requirement).

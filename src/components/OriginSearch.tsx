@@ -77,6 +77,33 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
     }
   };
 
+  // Geolocation origin — "peaks near me" (spec 13). Reuses the arbitrary-origin
+  // path (live discovery); handles denial/unsupported/timeout inline.
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      setGeoError("Location isn't available on this device.");
+      return;
+    }
+    setLocating(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        const { latitude: lat, longitude: lng } = pos.coords;
+        onPick({ id: `geo:${lat.toFixed(4)},${lng.toFixed(4)}`, name: "My location", lat, lng });
+        setQuery("");
+        setOpen(false);
+      },
+      () => {
+        setLocating(false);
+        setGeoError("Couldn't get your location.");
+      },
+      { timeout: 10000, maximumAge: 60000 },
+    );
+  };
+
   const listboxId = "origin-listbox";
 
   return (
@@ -94,8 +121,23 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
         aria-controls={listboxId}
         aria-autocomplete="list"
         aria-activedescendant={active >= 0 ? `origin-opt-${active}` : undefined}
-        className="w-full rounded-lg border border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300"
+        className="w-full rounded-lg border border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-2 pl-3 pr-11 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300"
       />
+      <button
+        type="button"
+        onClick={useMyLocation}
+        disabled={locating}
+        aria-label="Use my location"
+        title="Use my location"
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-base leading-none text-trail-600 hover:bg-trail-50 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        {locating ? "…" : "📍"}
+      </button>
+      {geoError && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
+          {geoError}
+        </p>
+      )}
       {open && (results.length > 0 || (!loading && query.trim().length >= 3)) && (
         <ul
           id={listboxId}

@@ -65,6 +65,21 @@ describe("validateTrek — acceptance", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("accepts a discovery trek with a valid trail", () => {
+    const r = validateTrek({
+      ...discovery,
+      trail: {
+        coords: [
+          [13.5, 77.6],
+          [13.51, 77.61],
+        ],
+        lengthKm: 1.4,
+        gainM: 120,
+      },
+    });
+    expect(r.ok).toBe(true);
+  });
+
   it("accepts a discovery trek with in-range topography fields", () => {
     const r = validateTrek({
       ...discovery,
@@ -95,6 +110,12 @@ describe("validateTrek — rejection", () => {
     ["confidence over 1", { ...curated, terrainConfidence: 1.5 }],
     ["discoveryScore below 0", { ...curated, discoveryScore: -0.1 }],
     ["bad estimatedDifficulty", { ...curated, estimatedDifficulty: "Brutal" }],
+    ["trail with empty coords", { ...curated, trail: { coords: [], lengthKm: 1, gainM: 1 } }],
+    [
+      "trail with negative length",
+      { ...curated, trail: { coords: [[1, 2]], lengthKm: -1, gainM: 1 } },
+    ],
+    ["trail with bad coord pair", { ...curated, trail: { coords: [[1]], lengthKm: 1, gainM: 1 } }],
   ];
 
   it.each(cases)("rejects: %s", (_label, input) => {
