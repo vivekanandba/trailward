@@ -59,3 +59,24 @@ describe("TrekDetail image", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });
+
+describe("TrekDetail GPX export", () => {
+  it("downloads a GPX file naming the trek", () => {
+    const createURL = vi.fn<(b: Blob) => string>(() => "blob:gpx");
+    const revokeURL = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL: createURL, revokeObjectURL: revokeURL });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(
+      <TrekDetail trek={{ ...baseTrek, elevationM: 1350 }} origin={origin} onClose={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "GPX" }));
+
+    expect(createURL).toHaveBeenCalledOnce();
+    const blob = createURL.mock.calls[0][0];
+    expect(blob.type).toBe("application/gpx+xml");
+    expect(clickSpy).toHaveBeenCalledOnce();
+    expect(revokeURL).toHaveBeenCalledWith("blob:gpx");
+    vi.unstubAllGlobals();
+  });
+});

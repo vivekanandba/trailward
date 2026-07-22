@@ -57,6 +57,36 @@ test("a preset region shows topography-ranked discovery peaks", async ({ page })
   await expect(page.getByText(/community · unverified/i)).toBeVisible();
 });
 
+test("basemap toggle switches to OpenTopoMap terrain tiles", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("img.leaflet-tile").first()).toBeVisible();
+  await page.getByRole("button", { name: "terrain", exact: true }).click();
+  // Leaflet creates <img> tiles for the new source even if a tile 404s.
+  await expect(page.locator('img.leaflet-tile[src*="opentopomap.org"]').first()).toBeVisible();
+});
+
+test("'use my location' sets the origin from geolocation", async ({ page, context }) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 15.85, longitude: 74.5 }); // near the W. Ghats
+  await page.goto("/");
+  await page.getByRole("button", { name: "Use my location" }).click();
+  await expect(page.getByLabel("Search for an origin place")).toHaveAttribute(
+    "placeholder",
+    /My location/,
+  );
+});
+
+test("a trek can be downloaded as GPX", async ({ page }) => {
+  await page.goto("/");
+  await page.getByText("Skandagiri").first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "GPX", exact: true }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("skandagiri.gpx");
+});
+
 // Regression: on narrow viewports the map used to collapse to 0px because the
 // list rail consumed the whole column, leaving nothing for the flex-basis-0 map
 // (App.tsx body layout). The map must occupy a real slice of the viewport.

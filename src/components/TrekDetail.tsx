@@ -4,6 +4,7 @@ import { distanceFrom } from "../lib/distance";
 import { difficultyColor, difficultyLabel } from "../lib/difficulty";
 import { googleMapsDirectionsUrl } from "../lib/directions";
 import { getWeather, type WeatherNow } from "../lib/weather";
+import { toGpx } from "../lib/gpx";
 
 interface TrekDetailProps {
   trek: Trek;
@@ -76,6 +77,17 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
       ? `est. ${trek.estimatedDifficulty}`
       : "Unverified";
   const credit = trek.image ? splitAttribution(trek.image.attribution) : null;
+
+  // Download the peak (and its trail, if any) as a GPX file for phone/GPS apps.
+  const downloadGpx = () => {
+    const blob = new Blob([toGpx(trek)], { type: "application/gpx+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${trek.id}.gpx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -238,14 +250,23 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
       </div>
 
       <div className="border-t border-trail-100 dark:border-slate-700 p-4">
-        <a
-          href={googleMapsDirectionsUrl(origin, trek)}
-          target="_blank"
-          rel="noreferrer"
-          className="block w-full rounded-lg bg-trail-600 py-2 text-center text-sm font-medium text-white hover:bg-trail-700"
-        >
-          Directions
-        </a>
+        <div className="flex gap-2">
+          <a
+            href={googleMapsDirectionsUrl(origin, trek)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex-1 rounded-lg bg-trail-600 py-2 text-center text-sm font-medium text-white hover:bg-trail-700"
+          >
+            Directions
+          </a>
+          <button
+            type="button"
+            onClick={downloadGpx}
+            className="rounded-lg border border-trail-200 px-3 py-2 text-sm font-medium text-trail-700 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            GPX
+          </button>
+        </div>
         {trek.sources.length > 0 && (
           <div className="mt-3 text-xs text-trail-600 dark:text-slate-400">
             Sources:{" "}

@@ -14,6 +14,7 @@ import type { Origin, Trek } from "../lib/trek";
 import { difficultyColor, difficultyLabel } from "../lib/difficulty";
 import { distanceFrom } from "../lib/distance";
 import { clusterByGrid } from "../lib/cluster";
+import { loadBasemap, saveBasemap, type Basemap } from "../lib/basemap";
 
 interface TrekMapProps {
   origin: Origin;
@@ -77,10 +78,27 @@ function RadiusHandle({
   );
 }
 
-// CARTO basemaps: Voyager in light, Dark Matter in dark.
+// CARTO street basemaps (Voyager light / Dark Matter dark) + an OpenTopoMap
+// terrain option (contours + hillshade). Attribution per source (spec 13).
+const CARTO_ATTRIB =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
 const TILES = {
-  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  light: {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution: CARTO_ATTRIB,
+    maxZoom: 20,
+  },
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution: CARTO_ATTRIB,
+    maxZoom: 20,
+  },
+  terrain: {
+    url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
+    maxZoom: 17,
+  },
 } as const;
 
 // Cluster only dense sets (live discovery can return up to 100 peaks) and only
@@ -279,48 +297,81 @@ export default function TrekMap({
   maxRadiusKm = 150,
   theme = "light",
 }: TrekMapProps) {
+  const [basemap, setBasemap] = useState<Basemap>(loadBasemap);
+  const pickBasemap = (b: Basemap) => {
+    setBasemap(b);
+    saveBasemap(b);
+  };
+  const tiles = basemap === "terrain" ? TILES.terrain : theme === "dark" ? TILES.dark : TILES.light;
+
   return (
-    <MapContainer
-      center={[origin.lat, origin.lng]}
-      zoom={9}
-      scrollWheelZoom
-      className="h-full w-full"
-      aria-label="Map of treks"
-    >
-      <TileLayer
-        key={theme}
-        url={theme === "dark" ? TILES.dark : TILES.light}
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-      />
-
-      <InvalidateOnResize />
-      <FitToResults origin={origin} radiusKm={radiusKm} treks={treks} />
-
-      {/* Radius ring + origin marker */}
-      <Circle
+    <div className="relative h-full w-full">
+      <MapContainer
         center={[origin.lat, origin.lng]}
-        radius={radiusKm * 1000}
-        pathOptions={{ color: "#2f6b3f", weight: 1.5, fillColor: "#2f6b3f", fillOpacity: 0.06 }}
-      />
-      {onRadiusChange && (
-        <RadiusHandle
-          origin={origin}
-          radiusKm={radiusKm}
-          onChange={onRadiusChange}
-          maxKm={maxRadiusKm}
-        />
-      )}
-      <CircleMarker
-        center={[origin.lat, origin.lng]}
-        radius={7}
-        pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#1c3927", fillOpacity: 1 }}
+        zoom={9}
+        scrollWheelZoom
+        className="h-full w-full"
+        aria-label="Map of treks"
       >
-        <Tooltip direction="top" offset={[0, -6]}>
-          {origin.name} (origin)
-        </Tooltip>
-      </CircleMarker>
+        <TileLayer
+          key={`${basemap}-${theme}`}
+          url={tiles.url}
+          attribution={tiles.attribution}
+          maxZoom={tiles.maxZoom}
+        />
 
-      <Markers origin={origin} treks={treks} selectedId={selectedId} onSelect={onSelect} />
-    </MapContainer>
+        <InvalidateOnResize />
+        <FitToResults origin={origin} radiusKm={radiusKm} treks={treks} />
+
+        {/* Radius ring + origin marker */}
+        <Circle
+          center={[origin.lat, origin.lng]}
+          radius={radiusKm * 1000}
+          pathOptions={{ color: "#2f6b3f", weight: 1.5, fillColor: "#2f6b3f", fillOpacity: 0.06 }}
+        />
+        {onRadiusChange && (
+          <RadiusHandle
+            origin={origin}
+            radiusKm={radiusKm}
+            onChange={onRadiusChange}
+            maxKm={maxRadiusKm}
+          />
+        )}
+        <CircleMarker
+          center={[origin.lat, origin.lng]}
+          radius={7}
+          pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#1c3927", fillOpacity: 1 }}
+        >
+          <Tooltip direction="top" offset={[0, -6]}>
+            {origin.name} (origin)
+          </Tooltip>
+        </CircleMarker>
+
+        <Markers origin={origin} treks={treks} selectedId={selectedId} onSelect={onSelect} />
+      </MapContainer>
+
+      {/* Basemap toggle — street map vs topographic terrain (spec 13). */}
+      <div
+        className="absolute right-2 top-2 z-[500] flex overflow-hidden rounded-lg border border-trail-200 bg-white text-xs font-medium shadow dark:border-slate-600 dark:bg-slate-800"
+        role="group"
+        aria-label="Basemap"
+      >
+        {(["map", "terrain"] as const).map((b) => (
+          <button
+            key={b}
+            type="button"
+            onClick={() => pickBasemap(b)}
+            aria-pressed={basemap === b}
+            className={`px-2.5 py-1 capitalize ${
+              basemap === b
+                ? "bg-trail-600 text-white"
+                : "text-trail-700 hover:bg-trail-50 dark:text-slate-200 dark:hover:bg-slate-700"
+            }`}
+          >
+            {b}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
