@@ -26,9 +26,9 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Skandagiri"
     ],
-    "reliefM": 326,
-    "prominenceProxyM": 149,
-    "meanSlopeDeg": 12.9,
+    "reliefM": 318,
+    "prominenceProxyM": 116,
+    "meanSlopeDeg": 13.4,
     "terrainConfidence": 1
   },
   {
@@ -58,9 +58,9 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Nandi_Hills,_India"
     ],
-    "reliefM": 234,
-    "prominenceProxyM": 234,
-    "meanSlopeDeg": 19.5,
+    "reliefM": 253,
+    "prominenceProxyM": 253,
+    "meanSlopeDeg": 16.6,
     "terrainConfidence": 1
   },
   {
@@ -89,9 +89,9 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Savandurga"
     ],
-    "reliefM": 337,
-    "prominenceProxyM": 234,
-    "meanSlopeDeg": 17.3,
+    "reliefM": 299,
+    "prominenceProxyM": 299,
+    "meanSlopeDeg": 18.9,
     "terrainConfidence": 1
   },
   {
@@ -120,9 +120,9 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Makalidurga"
     ],
-    "reliefM": 18,
-    "prominenceProxyM": 1,
-    "meanSlopeDeg": 1.5,
+    "reliefM": 19,
+    "prominenceProxyM": 8,
+    "meanSlopeDeg": 0.9,
     "terrainConfidence": 0
   },
   {
@@ -152,9 +152,9 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Antaragange"
     ],
-    "reliefM": 15,
-    "prominenceProxyM": 13,
-    "meanSlopeDeg": 0.6,
+    "reliefM": 17,
+    "prominenceProxyM": 11,
+    "meanSlopeDeg": 0.7,
     "terrainConfidence": 0
   },
   {
@@ -179,10 +179,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Ramadevarabetta"
     ],
-    "reliefM": 30,
-    "prominenceProxyM": 16,
-    "meanSlopeDeg": 1.5,
-    "terrainConfidence": 0.13
+    "reliefM": 15,
+    "prominenceProxyM": 5,
+    "meanSlopeDeg": 0.7,
+    "terrainConfidence": 0
   },
   {
     "id": "kunti-betta",
@@ -210,10 +210,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Kunti_Betta"
     ],
-    "reliefM": 58,
+    "reliefM": 40,
     "prominenceProxyM": 12,
-    "meanSlopeDeg": 2,
-    "terrainConfidence": 0.48
+    "meanSlopeDeg": 1.1,
+    "terrainConfidence": 0.25
   },
   {
     "id": "channarayana-durga",
@@ -241,10 +241,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Channarayana_Durga"
     ],
-    "reliefM": 22,
-    "prominenceProxyM": 19,
-    "meanSlopeDeg": 0.9,
-    "terrainConfidence": 0.03
+    "reliefM": 27,
+    "prominenceProxyM": 21,
+    "meanSlopeDeg": 1,
+    "terrainConfidence": 0.09
   },
   {
     "id": "devarayanadurga",
@@ -272,10 +272,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Devarayanadurga"
     ],
-    "reliefM": 22,
-    "prominenceProxyM": 12,
-    "meanSlopeDeg": 0.8,
-    "terrainConfidence": 0.03
+    "reliefM": 10,
+    "prominenceProxyM": 3,
+    "meanSlopeDeg": 0.4,
+    "terrainConfidence": 0
   },
   {
     "id": "madhugiri",
@@ -303,10 +303,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Madhugiri"
     ],
-    "reliefM": 34,
-    "prominenceProxyM": 15,
+    "reliefM": 20,
+    "prominenceProxyM": 6,
     "meanSlopeDeg": 1,
-    "terrainConfidence": 0.18
+    "terrainConfidence": 0
   },
   {
     "id": "shivagange",
@@ -334,10 +334,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Shivagange"
     ],
-    "reliefM": 47,
-    "prominenceProxyM": 45,
-    "meanSlopeDeg": 3.6,
-    "terrainConfidence": 0.34
+    "reliefM": 76,
+    "prominenceProxyM": 30,
+    "meanSlopeDeg": 2.2,
+    "terrainConfidence": 0.7
   },
   {
     "id": "kabbaladurga",
@@ -362,10 +362,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Kabbaladurga"
     ],
-    "reliefM": 30,
+    "reliefM": 24,
     "prominenceProxyM": 6,
-    "meanSlopeDeg": 1.3,
-    "terrainConfidence": 0.13
+    "meanSlopeDeg": 1.1,
+    "terrainConfidence": 0.05
   },
   {
     "id": "bilikal-rangaswamy-betta",
@@ -393,10 +393,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Bilikal_Rangaswamy_Betta"
     ],
-    "reliefM": 20,
-    "prominenceProxyM": 20,
+    "reliefM": 21,
+    "prominenceProxyM": 21,
     "meanSlopeDeg": 1.4,
-    "terrainConfidence": 0
+    "terrainConfidence": 0.01
   },
   {
     "id": "hutridurga",
@@ -424,10 +424,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Hutridurga"
     ],
-    "reliefM": 27,
-    "prominenceProxyM": 10,
-    "meanSlopeDeg": 1.2,
-    "terrainConfidence": 0.09
+    "reliefM": 30,
+    "prominenceProxyM": 12,
+    "meanSlopeDeg": 0.9,
+    "terrainConfidence": 0.13
   },
   {
     "id": "avalabetta",
@@ -450,10 +450,10 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Avalabetta"
     ],
-    "reliefM": 42,
-    "prominenceProxyM": 2,
-    "meanSlopeDeg": 1.5,
-    "terrainConfidence": 0.28
+    "reliefM": 53,
+    "prominenceProxyM": 8,
+    "meanSlopeDeg": 1.6,
+    "terrainConfidence": 0.41
   },
   {
     "id": "huliyurdurga",
@@ -481,9 +481,9 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Huliyurdurga"
     ],
-    "reliefM": 13,
-    "prominenceProxyM": 0,
-    "meanSlopeDeg": 0.9,
+    "reliefM": 14,
+    "prominenceProxyM": 2,
+    "meanSlopeDeg": 0.5,
     "terrainConfidence": 0
   },
   {
@@ -542,10 +542,10 @@
     "lng": 77.2044331,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 2556,
-    "reliefM": 421,
-    "prominenceProxyM": 421,
-    "meanSlopeDeg": 20.8,
+    "elevationM": 2579,
+    "reliefM": 420,
+    "prominenceProxyM": 420,
+    "meanSlopeDeg": 21.5,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Hard",
@@ -1052,10 +1052,10 @@
     "lng": 77.094038,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 2197,
-    "reliefM": 237,
-    "prominenceProxyM": 237,
-    "meanSlopeDeg": 19.1,
+    "elevationM": 2202,
+    "reliefM": 256,
+    "prominenceProxyM": 256,
+    "meanSlopeDeg": 19.6,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -1994,30 +1994,6 @@
     "nearestTown": "Kalkulam"
   },
   {
-    "id": "osm-7813787914--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 8.5990133,
-    "lng": 77.2665881,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1787,
-    "reliefM": 383,
-    "prominenceProxyM": 383,
-    "meanSlopeDeg": 33.8,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813787914"
-    ],
-    "verified": false,
-    "image": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Agasthyakoodam_-_panoramio.jpg/960px-Agasthyakoodam_-_panoramio.jpg",
-      "attribution": "ArUnSonY, CC BY 3.0 — Wikimedia Commons https://commons.wikimedia.org/wiki/File:Agasthyakoodam_-_panoramio.jpg"
-    },
-    "nearestTown": "Ambasamudram"
-  },
-  {
     "id": "osm-7813748867--bengaluru",
     "name": "Unnamed Peak",
     "lat": 8.5854345,
@@ -2131,6 +2107,30 @@
     "nearestTown": "Peerumade"
   },
   {
+    "id": "osm-7813787914--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 8.5990133,
+    "lng": 77.2665881,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1738,
+    "reliefM": 365,
+    "prominenceProxyM": 365,
+    "meanSlopeDeg": 30.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787914"
+    ],
+    "verified": false,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Agasthyakoodam_-_panoramio.jpg/960px-Agasthyakoodam_-_panoramio.jpg",
+      "attribution": "ArUnSonY, CC BY 3.0 — Wikimedia Commons https://commons.wikimedia.org/wiki/File:Agasthyakoodam_-_panoramio.jpg"
+    },
+    "nearestTown": "Ambasamudram"
+  },
+  {
     "id": "osm-3922107498--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.5402185,
@@ -2204,7 +2204,7 @@
     "elevationM": 1708,
     "reliefM": 297,
     "prominenceProxyM": 297,
-    "meanSlopeDeg": 19.3,
+    "meanSlopeDeg": 19.6,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -2696,10 +2696,10 @@
     "lng": 77.2682189,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1516,
-    "reliefM": 254,
-    "prominenceProxyM": 254,
-    "meanSlopeDeg": 17.1,
+    "elevationM": 1509,
+    "reliefM": 240,
+    "prominenceProxyM": 240,
+    "meanSlopeDeg": 15.2,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -2732,26 +2732,6 @@
       "attribution": "Prashanth bhat, CC BY-SA 4.0 — Wikimedia Commons https://commons.wikimedia.org/wiki/File:Kumara_parvatha.jpg"
     },
     "nearestTown": "Heggadahalli"
-  },
-  {
-    "id": "osm-7813787919--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 8.5612461,
-    "lng": 77.3164558,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1486,
-    "reliefM": 224,
-    "prominenceProxyM": 224,
-    "meanSlopeDeg": 19.3,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813787919"
-    ],
-    "verified": false,
-    "nearestTown": "Ambasamudram"
   },
   {
     "id": "osm-3922107496--bengaluru",
@@ -2812,6 +2792,26 @@
     ],
     "verified": false,
     "nearestTown": "Melmury"
+  },
+  {
+    "id": "osm-7813787919--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 8.5612461,
+    "lng": 77.3164558,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1477,
+    "reliefM": 236,
+    "prominenceProxyM": 236,
+    "meanSlopeDeg": 18.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787919"
+    ],
+    "verified": false,
+    "nearestTown": "Ambasamudram"
   },
   {
     "id": "osm-7813787892--bengaluru",
@@ -2962,6 +2962,26 @@
     "nearestTown": "Peerumade"
   },
   {
+    "id": "osm-7813788388--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.2141609,
+    "lng": 77.1550941,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1423,
+    "reliefM": 230,
+    "prominenceProxyM": 230,
+    "meanSlopeDeg": 18.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788388"
+    ],
+    "verified": false,
+    "nearestTown": "Konni"
+  },
+  {
     "id": "osm-7762618939--bengaluru",
     "name": "Unnamed Peak",
     "lat": 9.6169983,
@@ -3029,26 +3049,6 @@
     ],
     "verified": false,
     "nearestTown": "Kodaikanal"
-  },
-  {
-    "id": "osm-7813788388--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.2141609,
-    "lng": 77.1550941,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1406,
-    "reliefM": 201,
-    "prominenceProxyM": 201,
-    "meanSlopeDeg": 16.8,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788388"
-    ],
-    "verified": false,
-    "nearestTown": "Konni"
   },
   {
     "id": "osm-9464619358--bengaluru",
@@ -3213,10 +3213,10 @@
     "lng": 76.9022798,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1343,
-    "reliefM": 245,
-    "prominenceProxyM": 245,
-    "meanSlopeDeg": 16,
+    "elevationM": 1351,
+    "reliefM": 223,
+    "prominenceProxyM": 223,
+    "meanSlopeDeg": 15.1,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -3360,26 +3360,6 @@
     "nearestTown": "Mannarkad"
   },
   {
-    "id": "osm-802566378--bengaluru",
-    "name": "Maruthamalai",
-    "lat": 11.0558462,
-    "lng": 76.8221924,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1295,
-    "reliefM": 331,
-    "prominenceProxyM": 303,
-    "meanSlopeDeg": 19.9,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/802566378"
-    ],
-    "verified": false,
-    "nearestTown": "Coimbatore South"
-  },
-  {
     "id": "osm-5879603768--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.5449949,
@@ -3446,13 +3426,13 @@
     "lng": 76.8535709,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1259,
-    "reliefM": 277,
-    "prominenceProxyM": 277,
-    "meanSlopeDeg": 20.3,
+    "elevationM": 1261,
+    "reliefM": 243,
+    "prominenceProxyM": 243,
+    "meanSlopeDeg": 18.1,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
+    "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7814372425"
     ],
@@ -3812,7 +3792,8 @@
     "sources": [
       "https://www.openstreetmap.org/node/9192177100"
     ],
-    "verified": false
+    "verified": false,
+    "nearestTown": "Gundya"
   },
   {
     "id": "osm-9387287314--bengaluru",
@@ -3830,25 +3811,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/9387287314"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-370877929--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 11.2668338,
-    "lng": 78.4014816,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1119,
-    "reliefM": 367,
-    "prominenceProxyM": 367,
-    "meanSlopeDeg": 24.9,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/370877929"
     ],
     "verified": false
   },
@@ -3878,13 +3840,13 @@
     "lng": 77.1175861,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1109,
-    "reliefM": 249,
-    "prominenceProxyM": 249,
-    "meanSlopeDeg": 20.8,
+    "elevationM": 1106,
+    "reliefM": 251,
+    "prominenceProxyM": 251,
+    "meanSlopeDeg": 19.6,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
+    "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7813788225"
     ],
@@ -3967,19 +3929,38 @@
     "verified": false
   },
   {
+    "id": "osm-370877929--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 11.2668338,
+    "lng": 78.4014816,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1088,
+    "reliefM": 315,
+    "prominenceProxyM": 315,
+    "meanSlopeDeg": 19.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/370877929"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-7814372411--bengaluru",
     "name": "Unnamed Peak",
     "lat": 10.0985011,
     "lng": 76.9193816,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1093,
-    "reliefM": 242,
-    "prominenceProxyM": 242,
-    "meanSlopeDeg": 21.3,
+    "elevationM": 1087,
+    "reliefM": 227,
+    "prominenceProxyM": 227,
+    "meanSlopeDeg": 19.4,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
+    "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7814372411"
     ],
@@ -4020,25 +4001,6 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/7814413927"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813787912--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 8.8963501,
-    "lng": 77.2115707,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1083,
-    "reliefM": 221,
-    "prominenceProxyM": 221,
-    "meanSlopeDeg": 21.8,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813787912"
     ],
     "verified": false
   },
@@ -4096,6 +4058,25 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/3891509367"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813787912--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 8.8963501,
+    "lng": 77.2115707,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1077,
+    "reliefM": 250,
+    "prominenceProxyM": 250,
+    "meanSlopeDeg": 22.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787912"
     ],
     "verified": false
   },
@@ -4290,25 +4271,6 @@
     "verified": false
   },
   {
-    "id": "osm-818937898--bengaluru",
-    "name": "Kabbalu",
-    "lat": 12.4980389,
-    "lng": 77.2949846,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1040,
-    "reliefM": 293,
-    "prominenceProxyM": 293,
-    "meanSlopeDeg": 29.4,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/818937898"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-2087677721--bengaluru",
     "name": "Nidagallu",
     "lat": 14.1588647,
@@ -4343,25 +4305,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/3903467591"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-370771061--bengaluru",
-    "name": "Nagari Hills",
-    "lat": 13.5159104,
-    "lng": 79.6266922,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1026,
-    "reliefM": 403,
-    "prominenceProxyM": 403,
-    "meanSlopeDeg": 21.7,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/370771061"
     ],
     "verified": false
   },
@@ -4442,6 +4385,25 @@
     "verified": false
   },
   {
+    "id": "osm-370771061--bengaluru",
+    "name": "Nagari Hills",
+    "lat": 13.5159104,
+    "lng": 79.6266922,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1014,
+    "reliefM": 335,
+    "prominenceProxyM": 335,
+    "meanSlopeDeg": 19.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/370771061"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-5143179467--bengaluru",
     "name": "Sāmi Malai",
     "lat": 12.7034365,
@@ -4499,6 +4461,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813788224--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3751405,
+    "lng": 77.1040248,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 999,
+    "reliefM": 274,
+    "prominenceProxyM": 274,
+    "meanSlopeDeg": 16.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788224"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-9102591651--bengaluru",
     "name": "Unnamed Peak",
     "lat": 10.391648,
@@ -4533,25 +4514,6 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/9445611980"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-818838292--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 12.4861014,
-    "lng": 77.270615,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 988,
-    "reliefM": 231,
-    "prominenceProxyM": 231,
-    "meanSlopeDeg": 20.6,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/818838292"
     ],
     "verified": false
   },
@@ -4594,6 +4556,25 @@
     "verified": false
   },
   {
+    "id": "osm-818937898--bengaluru",
+    "name": "Kabbalu",
+    "lat": 12.4980389,
+    "lng": 77.2949846,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 982,
+    "reliefM": 231,
+    "prominenceProxyM": 231,
+    "meanSlopeDeg": 22,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/818937898"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-5157858334--bengaluru",
     "name": "Nadupurattan Malai",
     "lat": 12.5910465,
@@ -4609,6 +4590,25 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/5157858334"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813788386--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.1747201,
+    "lng": 77.055273,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 980,
+    "reliefM": 217,
+    "prominenceProxyM": 217,
+    "meanSlopeDeg": 15.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788386"
     ],
     "verified": false
   },
@@ -4723,25 +4723,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7763946571"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788386--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.1747201,
-    "lng": 77.055273,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 968,
-    "reliefM": 223,
-    "prominenceProxyM": 223,
-    "meanSlopeDeg": 16.3,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788386"
     ],
     "verified": false
   },
@@ -4904,10 +4885,10 @@
     "lng": 75.5851409,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 948,
-    "reliefM": 235,
-    "prominenceProxyM": 235,
-    "meanSlopeDeg": 19,
+    "elevationM": 950,
+    "reliefM": 210,
+    "prominenceProxyM": 210,
+    "meanSlopeDeg": 17.2,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -4936,21 +4917,21 @@
     "verified": false
   },
   {
-    "id": "osm-360213084--bengaluru",
-    "name": "Kanja Malai",
-    "lat": 11.6167962,
-    "lng": 78.0581131,
+    "id": "osm-7813788380--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.2816365,
+    "lng": 77.0377636,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 937,
-    "reliefM": 244,
-    "prominenceProxyM": 244,
-    "meanSlopeDeg": 17.4,
+    "elevationM": 945,
+    "reliefM": 288,
+    "prominenceProxyM": 288,
+    "meanSlopeDeg": 18.4,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
     "sources": [
-      "https://www.openstreetmap.org/node/360213084"
+      "https://www.openstreetmap.org/node/7813788380"
     ],
     "verified": false
   },
@@ -4974,21 +4955,21 @@
     "verified": false
   },
   {
-    "id": "osm-7813788380--bengaluru",
+    "id": "osm-818936913--bengaluru",
     "name": "Unnamed Peak",
-    "lat": 9.2816365,
-    "lng": 77.0377636,
+    "lat": 12.5010026,
+    "lng": 77.2586411,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 927,
-    "reliefM": 289,
-    "prominenceProxyM": 289,
-    "meanSlopeDeg": 17.1,
+    "elevationM": 923,
+    "reliefM": 258,
+    "prominenceProxyM": 258,
+    "meanSlopeDeg": 20.2,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
+    "estimatedDifficulty": "Hard",
     "sources": [
-      "https://www.openstreetmap.org/node/7813788380"
+      "https://www.openstreetmap.org/node/818936913"
     ],
     "verified": false
   },
@@ -5008,25 +4989,6 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/9445611979"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-818936913--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 12.5010026,
-    "lng": 77.2586411,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 919,
-    "reliefM": 238,
-    "prominenceProxyM": 238,
-    "meanSlopeDeg": 19.4,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/818936913"
     ],
     "verified": false
   },
@@ -5107,25 +5069,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813788385--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.1760758,
-    "lng": 77.0660876,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 897,
-    "reliefM": 201,
-    "prominenceProxyM": 201,
-    "meanSlopeDeg": 18,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788385"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-9477298692--bengaluru",
     "name": "Unnamed Peak",
     "lat": 14.7349692,
@@ -5160,25 +5103,6 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/1445579613"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788222--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3719224,
-    "lng": 77.0866012,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 894,
-    "reliefM": 267,
-    "prominenceProxyM": 267,
-    "meanSlopeDeg": 21.2,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788222"
     ],
     "verified": false
   },
@@ -5255,6 +5179,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7814372440"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813788222--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3719224,
+    "lng": 77.0866012,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 866,
+    "reliefM": 261,
+    "prominenceProxyM": 261,
+    "meanSlopeDeg": 15.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788222"
     ],
     "verified": false
   },
@@ -5398,10 +5341,10 @@
     "lng": 77.0261764,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 834,
-    "reliefM": 288,
-    "prominenceProxyM": 288,
-    "meanSlopeDeg": 18.5,
+    "elevationM": 837,
+    "reliefM": 253,
+    "prominenceProxyM": 253,
+    "meanSlopeDeg": 17.5,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -5468,6 +5411,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813788387--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.1914968,
+    "lng": 77.1064281,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 823,
+    "reliefM": 267,
+    "prominenceProxyM": 267,
+    "meanSlopeDeg": 20.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788387"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-7693274219--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.7678394,
@@ -5483,25 +5445,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7693274219"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788387--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.1914968,
-    "lng": 77.1064281,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 821,
-    "reliefM": 237,
-    "prominenceProxyM": 237,
-    "meanSlopeDeg": 19.6,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788387"
     ],
     "verified": false
   },
@@ -5664,9 +5607,9 @@
     "lng": 78.9721324,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 786,
-    "reliefM": 254,
-    "prominenceProxyM": 254,
+    "elevationM": 788,
+    "reliefM": 258,
+    "prominenceProxyM": 258,
     "meanSlopeDeg": 17.1,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
@@ -5715,35 +5658,16 @@
     "verified": false
   },
   {
-    "id": "osm-7814372427--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.9719362,
-    "lng": 77.0357465,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 780,
-    "reliefM": 282,
-    "prominenceProxyM": 282,
-    "meanSlopeDeg": 19.5,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7814372427"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-335868000--bengaluru",
     "name": "Venkatagiri",
     "lat": 13.9758465,
     "lng": 79.4664229,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 779,
-    "reliefM": 262,
-    "prominenceProxyM": 262,
-    "meanSlopeDeg": 25.3,
+    "elevationM": 773,
+    "reliefM": 261,
+    "prominenceProxyM": 261,
+    "meanSlopeDeg": 23.9,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Hard",
@@ -5759,10 +5683,10 @@
     "lng": 77.15209,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 774,
-    "reliefM": 265,
-    "prominenceProxyM": 265,
-    "meanSlopeDeg": 20.6,
+    "elevationM": 773,
+    "reliefM": 245,
+    "prominenceProxyM": 245,
+    "meanSlopeDeg": 20.5,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Hard",
@@ -5848,6 +5772,25 @@
     "verified": false
   },
   {
+    "id": "osm-390161054--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5746696,
+    "lng": 79.8609566,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 756,
+    "reliefM": 250,
+    "prominenceProxyM": 250,
+    "meanSlopeDeg": 17.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/390161054"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-10059099058--bengaluru",
     "name": "Unnamed Peak",
     "lat": 12.6081762,
@@ -5863,25 +5806,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/10059099058"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-390161054--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5746696,
-    "lng": 79.8609566,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 753,
-    "reliefM": 272,
-    "prominenceProxyM": 272,
-    "meanSlopeDeg": 18.6,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/390161054"
     ],
     "verified": false
   },
@@ -5939,6 +5863,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/5161700000"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7814372427--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.9719362,
+    "lng": 77.0357465,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 739,
+    "reliefM": 237,
+    "prominenceProxyM": 237,
+    "meanSlopeDeg": 16.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7814372427"
     ],
     "verified": false
   },
@@ -6015,25 +5958,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/13232996671"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7814372426--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.9401076,
-    "lng": 76.9836043,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 729,
-    "reliefM": 377,
-    "prominenceProxyM": 377,
-    "meanSlopeDeg": 28,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/7814372426"
     ],
     "verified": false
   },
@@ -6190,6 +6114,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813788226--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.386488,
+    "lng": 77.0303821,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 712,
+    "reliefM": 214,
+    "prominenceProxyM": 214,
+    "meanSlopeDeg": 18.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788226"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-13207282605--bengaluru",
     "name": "Unnamed Peak",
     "lat": 14.9941625,
@@ -6205,25 +6148,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/13207282605"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788220--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3999521,
-    "lng": 77.0563029,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 709,
-    "reliefM": 213,
-    "prominenceProxyM": 213,
-    "meanSlopeDeg": 17.9,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788220"
     ],
     "verified": false
   },
@@ -6285,21 +6209,40 @@
     "verified": false
   },
   {
-    "id": "osm-7813788226--bengaluru",
+    "id": "osm-7814372426--bengaluru",
     "name": "Unnamed Peak",
-    "lat": 9.386488,
-    "lng": 77.0303821,
+    "lat": 9.9401076,
+    "lng": 76.9836043,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 691,
-    "reliefM": 223,
-    "prominenceProxyM": 223,
-    "meanSlopeDeg": 17.9,
+    "elevationM": 699,
+    "reliefM": 381,
+    "prominenceProxyM": 381,
+    "meanSlopeDeg": 26.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/7814372426"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813788220--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3999521,
+    "lng": 77.0563029,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 698,
+    "reliefM": 207,
+    "prominenceProxyM": 207,
+    "meanSlopeDeg": 15.8,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
     "sources": [
-      "https://www.openstreetmap.org/node/7813788226"
+      "https://www.openstreetmap.org/node/7813788220"
     ],
     "verified": false
   },
@@ -6596,9 +6539,9 @@
     "cityId": "bangalore",
     "tier": "discovery",
     "elevationM": 643,
-    "reliefM": 236,
-    "prominenceProxyM": 236,
-    "meanSlopeDeg": 19.5,
+    "reliefM": 216,
+    "prominenceProxyM": 216,
+    "meanSlopeDeg": 17.6,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -6760,25 +6703,6 @@
     "verified": false
   },
   {
-    "id": "osm-370284755--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.6258086,
-    "lng": 79.8248219,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 594,
-    "reliefM": 301,
-    "prominenceProxyM": 301,
-    "meanSlopeDeg": 16.7,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/370284755"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-7738761778--bengaluru",
     "name": "Unnamed Peak",
     "lat": 14.2204159,
@@ -6813,6 +6737,25 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/13270974647"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813787910--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.0537861,
+    "lng": 77.0180225,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 589,
+    "reliefM": 239,
+    "prominenceProxyM": 239,
+    "meanSlopeDeg": 16.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787910"
     ],
     "verified": false
   },
@@ -6874,25 +6817,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813787910--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.0537861,
-    "lng": 77.0180225,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 573,
-    "reliefM": 232,
-    "prominenceProxyM": 232,
-    "meanSlopeDeg": 16.1,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813787910"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-9102591650--bengaluru",
     "name": "Unnamed Peak",
     "lat": 10.4779584,
@@ -6950,25 +6874,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813788221--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3742936,
-    "lng": 77.0650577,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 564,
-    "reliefM": 230,
-    "prominenceProxyM": 230,
-    "meanSlopeDeg": 20.3,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788221"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-7858032734--bengaluru",
     "name": "Unnamed Peak",
     "lat": 10.9805436,
@@ -7003,6 +6908,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7813748868"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813788221--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3742936,
+    "lng": 77.0650577,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 556,
+    "reliefM": 238,
+    "prominenceProxyM": 238,
+    "meanSlopeDeg": 19.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.94,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788221"
     ],
     "verified": false
   },
@@ -7159,25 +7083,6 @@
     "verified": false
   },
   {
-    "id": "osm-370284742--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5692464,
-    "lng": 79.8207879,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 504,
-    "reliefM": 310,
-    "prominenceProxyM": 310,
-    "meanSlopeDeg": 17.5,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/370284742"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-13232878486--bengaluru",
     "name": "Unnamed Peak",
     "lat": 15.2297405,
@@ -7222,10 +7127,10 @@
     "lng": 76.9941615,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 488,
-    "reliefM": 238,
-    "prominenceProxyM": 238,
-    "meanSlopeDeg": 19.2,
+    "elevationM": 493,
+    "reliefM": 230,
+    "prominenceProxyM": 230,
+    "meanSlopeDeg": 18.9,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -7298,10 +7203,10 @@
     "lng": 76.9565677,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 434,
-    "reliefM": 274,
-    "prominenceProxyM": 274,
-    "meanSlopeDeg": 16.5,
+    "elevationM": 440,
+    "reliefM": 260,
+    "prominenceProxyM": 260,
+    "meanSlopeDeg": 17.8,
     "terrainConfidence": 1,
     "discoveryScore": 0.94,
     "estimatedDifficulty": "Moderate",
@@ -7520,44 +7425,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813788233--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3212771,
-    "lng": 76.9838618,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 377,
-    "reliefM": 206,
-    "prominenceProxyM": 206,
-    "meanSlopeDeg": 16.5,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788233"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788232--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3283069,
-    "lng": 76.9930457,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 372,
-    "reliefM": 201,
-    "prominenceProxyM": 201,
-    "meanSlopeDeg": 17.1,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.94,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788232"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-9464206908--bengaluru",
     "name": "Unnamed Peak",
     "lat": 10.5483185,
@@ -7710,6 +7577,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813787988--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.1944623,
+    "lng": 77.2235011,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1810,
+    "reliefM": 199,
+    "prominenceProxyM": 199,
+    "meanSlopeDeg": 19.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.939,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787988"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-10715793562--bengaluru",
     "name": "Unnamed Peak",
     "lat": 8.5051773,
@@ -7744,6 +7630,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/1134502261"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-360213084--bengaluru",
+    "name": "Kanja Malai",
+    "lat": 11.6167962,
+    "lng": 78.0581131,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 918,
+    "reliefM": 287,
+    "prominenceProxyM": 264,
+    "meanSlopeDeg": 14.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.939,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/360213084"
     ],
     "verified": false
   },
@@ -7957,25 +7862,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813788379--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3194561,
-    "lng": 77.1030807,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1165,
-    "reliefM": 234,
-    "prominenceProxyM": 234,
-    "meanSlopeDeg": 14.7,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.935,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788379"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-5163380079--bengaluru",
     "name": "Tengal Gutta",
     "lat": 12.5533907,
@@ -8105,25 +7991,6 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/5224499196"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813787988--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.1944623,
-    "lng": 77.2235011,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1809,
-    "reliefM": 195,
-    "prominenceProxyM": 195,
-    "meanSlopeDeg": 18.8,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.933,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813787988"
     ],
     "verified": false
   },
@@ -8413,6 +8280,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813788233--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3212771,
+    "lng": 76.9838618,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 377,
+    "reliefM": 194,
+    "prominenceProxyM": 194,
+    "meanSlopeDeg": 16.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.931,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788233"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-2485108643--bengaluru",
     "name": "Pukkunnu Mala",
     "lat": 11.4060976,
@@ -8447,6 +8333,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7449385211"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813788385--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.1760758,
+    "lng": 77.0660876,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 907,
+    "reliefM": 193,
+    "prominenceProxyM": 193,
+    "meanSlopeDeg": 18.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.93,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788385"
     ],
     "verified": false
   },
@@ -8590,10 +8495,10 @@
     "lng": 77.6826686,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1436,
-    "reliefM": 296,
-    "prominenceProxyM": 296,
-    "meanSlopeDeg": 27.4,
+    "elevationM": 1417,
+    "reliefM": 304,
+    "prominenceProxyM": 304,
+    "meanSlopeDeg": 26,
     "terrainConfidence": 1,
     "discoveryScore": 0.928,
     "estimatedDifficulty": "Hard",
@@ -8717,25 +8622,6 @@
     "verified": false
   },
   {
-    "id": "osm-1132561849--bengaluru",
-    "name": "Madhugiri Betta",
-    "lat": 13.6514834,
-    "lng": 77.1996542,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1179,
-    "reliefM": 321,
-    "prominenceProxyM": 321,
-    "meanSlopeDeg": 29.7,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.928,
-    "estimatedDifficulty": "Hard",
-    "sources": [
-      "https://www.openstreetmap.org/node/1132561849"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-1134502252--bengaluru",
     "name": "Sigekoppalu Betta",
     "lat": 13.3738916,
@@ -8755,6 +8641,25 @@
     "verified": false
   },
   {
+    "id": "osm-682012190--bengaluru",
+    "name": "Biligudda",
+    "lat": 12.916451,
+    "lng": 77.2886629,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1136,
+    "reliefM": 251,
+    "prominenceProxyM": 233,
+    "meanSlopeDeg": 20.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.928,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/682012190"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-819008637--bengaluru",
     "name": "Bilikal Rangaswamy Betta",
     "lat": 12.5549312,
@@ -8762,33 +8667,14 @@
     "cityId": "bangalore",
     "tier": "discovery",
     "elevationM": 1128,
-    "reliefM": 238,
-    "prominenceProxyM": 234,
-    "meanSlopeDeg": 16,
+    "reliefM": 291,
+    "prominenceProxyM": 274,
+    "meanSlopeDeg": 17.2,
     "terrainConfidence": 1,
     "discoveryScore": 0.928,
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/819008637"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-682012190--bengaluru",
-    "name": "Biligudda",
-    "lat": 12.916451,
-    "lng": 77.2886629,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1103,
-    "reliefM": 287,
-    "prominenceProxyM": 214,
-    "meanSlopeDeg": 15.7,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.928,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/682012190"
     ],
     "verified": false
   },
@@ -8808,6 +8694,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/3802160076"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1132561849--bengaluru",
+    "name": "Madhugiri Betta",
+    "lat": 13.6514834,
+    "lng": 77.1996542,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1085,
+    "reliefM": 212,
+    "prominenceProxyM": 212,
+    "meanSlopeDeg": 20.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.928,
+    "estimatedDifficulty": "Hard",
+    "sources": [
+      "https://www.openstreetmap.org/node/1132561849"
     ],
     "verified": false
   },
@@ -9027,10 +8932,10 @@
     "lng": 76.932857,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 406,
-    "reliefM": 201,
-    "prominenceProxyM": 201,
-    "meanSlopeDeg": 16.3,
+    "elevationM": 396,
+    "reliefM": 200,
+    "prominenceProxyM": 200,
+    "meanSlopeDeg": 15,
     "terrainConfidence": 1,
     "discoveryScore": 0.928,
     "estimatedDifficulty": "Moderate",
@@ -9135,6 +9040,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813788232--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3283069,
+    "lng": 76.9930457,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 381,
+    "reliefM": 191,
+    "prominenceProxyM": 191,
+    "meanSlopeDeg": 17.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.927,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788232"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-7813787896--bengaluru",
     "name": "Unnamed Peak",
     "lat": 8.5362074,
@@ -9150,6 +9074,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7813787896"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813787915--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 8.6162407,
+    "lng": 77.2212695,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1080,
+    "reliefM": 195,
+    "prominenceProxyM": 195,
+    "meanSlopeDeg": 14.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.926,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787915"
     ],
     "verified": false
   },
@@ -9382,6 +9325,25 @@
     "verified": false
   },
   {
+    "id": "osm-370284751--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5980297,
+    "lng": 79.8567509,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 606,
+    "reliefM": 260,
+    "prominenceProxyM": 260,
+    "meanSlopeDeg": 14.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.922,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284751"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-12964433346--bengaluru",
     "name": "Snowdon Peak",
     "lat": 11.4287228,
@@ -9416,25 +9378,6 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/9873935183"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-674558699--bengaluru",
-    "name": "Brahmagiri",
-    "lat": 12.3868578,
-    "lng": 75.490746,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1338,
-    "reliefM": 187,
-    "prominenceProxyM": 187,
-    "meanSlopeDeg": 15.7,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.921,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/674558699"
     ],
     "verified": false
   },
@@ -9534,25 +9477,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813788224--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3751405,
-    "lng": 77.1040248,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 987,
-    "reliefM": 205,
-    "prominenceProxyM": 205,
-    "meanSlopeDeg": 13.9,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.92,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788224"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-13229162903--bengaluru",
     "name": "Unnamed Peak",
     "lat": 15.4113194,
@@ -9625,6 +9549,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/5145981431"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-370284755--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.6258086,
+    "lng": 79.8248219,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 564,
+    "reliefM": 319,
+    "prominenceProxyM": 319,
+    "meanSlopeDeg": 13.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.918,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284755"
     ],
     "verified": false
   },
@@ -9800,6 +9743,25 @@
     "verified": false
   },
   {
+    "id": "osm-1132723349--bengaluru",
+    "name": "Siddarabetta",
+    "lat": 13.5526903,
+    "lng": 77.1323893,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1268,
+    "reliefM": 212,
+    "prominenceProxyM": 212,
+    "meanSlopeDeg": 13.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.914,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1132723349"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-13793765345--bengaluru",
     "name": "Unnamed Peak",
     "lat": 10.3665946,
@@ -9876,25 +9838,6 @@
     "verified": false
   },
   {
-    "id": "osm-370284751--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5980297,
-    "lng": 79.8567509,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 586,
-    "reliefM": 270,
-    "prominenceProxyM": 270,
-    "meanSlopeDeg": 14.1,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.913,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/370284751"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-13667092706--bengaluru",
     "name": "Unnamed Peak",
     "lat": 15.051258,
@@ -9952,25 +9895,6 @@
     "verified": false
   },
   {
-    "id": "osm-1132723675--bengaluru",
-    "name": "Kaulibetta",
-    "lat": 13.6207607,
-    "lng": 77.1674637,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1103,
-    "reliefM": 190,
-    "prominenceProxyM": 190,
-    "meanSlopeDeg": 14.3,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.912,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/1132723675"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-3347429143--bengaluru",
     "name": "Hemagiri",
     "lat": 12.813244,
@@ -10024,6 +9948,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/13401598346"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-370284742--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5692464,
+    "lng": 79.8207879,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 419,
+    "reliefM": 305,
+    "prominenceProxyM": 244,
+    "meanSlopeDeg": 13.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.912,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284742"
     ],
     "verified": false
   },
@@ -10161,25 +10104,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813788384--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.2169992,
-    "lng": 76.9769096,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 561,
-    "reliefM": 210,
-    "prominenceProxyM": 210,
-    "meanSlopeDeg": 13.3,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.91,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788384"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-5302565788--bengaluru",
     "name": "Unnamed Peak",
     "lat": 8.7146253,
@@ -10199,21 +10123,21 @@
     "verified": false
   },
   {
-    "id": "osm-1132723349--bengaluru",
-    "name": "Siddarabetta",
-    "lat": 13.5526903,
-    "lng": 77.1323893,
+    "id": "osm-7813788379--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3194561,
+    "lng": 77.1030807,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1254,
-    "reliefM": 236,
-    "prominenceProxyM": 236,
-    "meanSlopeDeg": 13.2,
+    "elevationM": 1165,
+    "reliefM": 193,
+    "prominenceProxyM": 193,
+    "meanSlopeDeg": 13.8,
     "terrainConfidence": 1,
     "discoveryScore": 0.909,
     "estimatedDifficulty": "Moderate",
     "sources": [
-      "https://www.openstreetmap.org/node/1132723349"
+      "https://www.openstreetmap.org/node/7813788379"
     ],
     "verified": false
   },
@@ -10290,25 +10214,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/13466069372"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788229--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.397327,
-    "lng": 76.9889258,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 506,
-    "reliefM": 197,
-    "prominenceProxyM": 197,
-    "meanSlopeDeg": 13.5,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.909,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788229"
     ],
     "verified": false
   },
@@ -10537,25 +10442,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/5161310391"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-698911154--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 12.8271273,
-    "lng": 77.206864,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 995,
-    "reliefM": 176,
-    "prominenceProxyM": 176,
-    "meanSlopeDeg": 18.1,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.904,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/698911154"
     ],
     "verified": false
   },
@@ -10807,6 +10693,25 @@
     "verified": false
   },
   {
+    "id": "osm-698911154--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.8271273,
+    "lng": 77.206864,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1003,
+    "reliefM": 174,
+    "prominenceProxyM": 174,
+    "meanSlopeDeg": 17.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.901,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/698911154"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-12766061749--bengaluru",
     "name": "Joladarashi Betta",
     "lat": 15.2526754,
@@ -11016,21 +10921,21 @@
     "verified": false
   },
   {
-    "id": "osm-585952661--bengaluru",
-    "name": "Ranipurm",
-    "lat": 12.4073703,
-    "lng": 75.3250637,
+    "id": "osm-7813788384--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.2169992,
+    "lng": 76.9769096,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 756,
+    "elevationM": 558,
     "reliefM": 227,
-    "prominenceProxyM": 226,
+    "prominenceProxyM": 227,
     "meanSlopeDeg": 12.5,
     "terrainConfidence": 1,
     "discoveryScore": 0.898,
     "estimatedDifficulty": "Moderate",
     "sources": [
-      "https://www.openstreetmap.org/node/585952661"
+      "https://www.openstreetmap.org/node/7813788384"
     ],
     "verified": false
   },
@@ -11069,25 +10974,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/3922107504"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-370280387--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.4970643,
-    "lng": 79.7912621,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 798,
-    "reliefM": 183,
-    "prominenceProxyM": 183,
-    "meanSlopeDeg": 14.7,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.897,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/370280387"
     ],
     "verified": false
   },
@@ -11225,21 +11111,21 @@
     "verified": false
   },
   {
-    "id": "osm-1120146456--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 12.6808931,
-    "lng": 79.9666788,
+    "id": "osm-585952661--bengaluru",
+    "name": "Ranipurm",
+    "lat": 12.4073703,
+    "lng": 75.3250637,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 198,
-    "reliefM": 173,
-    "prominenceProxyM": 173,
-    "meanSlopeDeg": 14.7,
+    "elevationM": 753,
+    "reliefM": 228,
+    "prominenceProxyM": 226,
+    "meanSlopeDeg": 12.3,
     "terrainConfidence": 1,
     "discoveryScore": 0.894,
     "estimatedDifficulty": "Moderate",
     "sources": [
-      "https://www.openstreetmap.org/node/1120146456"
+      "https://www.openstreetmap.org/node/585952661"
     ],
     "verified": false
   },
@@ -11339,6 +11225,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813787917--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 8.701178,
+    "lng": 77.2113132,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1436,
+    "reliefM": 168,
+    "prominenceProxyM": 168,
+    "meanSlopeDeg": 16.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.892,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787917"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-13811977140--bengaluru",
     "name": "Kutiramudi",
     "lat": 9.4527872,
@@ -11402,10 +11307,10 @@
     "lng": 77.2633632,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1018,
-    "reliefM": 229,
-    "prominenceProxyM": 223,
-    "meanSlopeDeg": 18.3,
+    "elevationM": 1023,
+    "reliefM": 208,
+    "prominenceProxyM": 208,
+    "meanSlopeDeg": 17.7,
     "terrainConfidence": 1,
     "discoveryScore": 0.892,
     "estimatedDifficulty": "Moderate",
@@ -11966,6 +11871,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813788229--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.397327,
+    "lng": 76.9889258,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 518,
+    "reliefM": 185,
+    "prominenceProxyM": 185,
+    "meanSlopeDeg": 13,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.883,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788229"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-7690389907--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.404733,
@@ -12019,25 +11943,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/3922107501"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813787915--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 8.6162407,
-    "lng": 77.2212695,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1069,
-    "reliefM": 173,
-    "prominenceProxyM": 173,
-    "meanSlopeDeg": 14,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.882,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813787915"
     ],
     "verified": false
   },
@@ -12327,6 +12232,25 @@
     "verified": false
   },
   {
+    "id": "osm-802566378--bengaluru",
+    "name": "Maruthamalai",
+    "lat": 11.0558462,
+    "lng": 76.8221924,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1215,
+    "reliefM": 244,
+    "prominenceProxyM": 229,
+    "meanSlopeDeg": 11.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.878,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/802566378"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-7813787906--bengaluru",
     "name": "Unnamed Peak",
     "lat": 8.6218415,
@@ -12441,25 +12365,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813788405--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.2277588,
-    "lng": 76.9145106,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 406,
-    "reliefM": 163,
-    "prominenceProxyM": 163,
-    "meanSlopeDeg": 14.3,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.873,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788405"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-7350525932--bengaluru",
     "name": "Unnamed Peak",
     "lat": 9.8767783,
@@ -12551,6 +12456,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/13112434181"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813788405--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.2277588,
+    "lng": 76.9145106,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 410,
+    "reliefM": 162,
+    "prominenceProxyM": 162,
+    "meanSlopeDeg": 14.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.871,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788405"
     ],
     "verified": false
   },
@@ -12859,25 +12783,6 @@
     "verified": false
   },
   {
-    "id": "osm-370284740--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5630722,
-    "lng": 79.8304867,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 663,
-    "reliefM": 175,
-    "prominenceProxyM": 175,
-    "meanSlopeDeg": 12.9,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.866,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/370284740"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-9874021524--bengaluru",
     "name": "Talai Malai",
     "lat": 10.139566,
@@ -13087,6 +12992,25 @@
     "verified": false
   },
   {
+    "id": "osm-818838292--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.4861014,
+    "lng": 77.270615,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 918,
+    "reliefM": 185,
+    "prominenceProxyM": 185,
+    "meanSlopeDeg": 11.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.86,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/818838292"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-7693274228--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.5038278,
@@ -13140,6 +13064,44 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/9874019120"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-370284740--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5630722,
+    "lng": 79.8304867,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 666,
+    "reliefM": 187,
+    "prominenceProxyM": 187,
+    "meanSlopeDeg": 11.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.859,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284740"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813788227--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3457538,
+    "lng": 77.0242881,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 566,
+    "reliefM": 159,
+    "prominenceProxyM": 159,
+    "meanSlopeDeg": 13.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.857,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788227"
     ],
     "verified": false
   },
@@ -13391,25 +13353,6 @@
     "verified": false
   },
   {
-    "id": "osm-1134502250--bengaluru",
-    "name": "Kambati Kallu",
-    "lat": 13.4204322,
-    "lng": 77.2167102,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1098,
-    "reliefM": 237,
-    "prominenceProxyM": 182,
-    "meanSlopeDeg": 9.6,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.848,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/1134502250"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-9874021526--bengaluru",
     "name": "Chendanurkanal Malai",
     "lat": 10.1527462,
@@ -13444,25 +13387,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7814372435"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-1065884708--bengaluru",
-    "name": "Tirumala - Srivaari Padalu",
-    "lat": 13.6549687,
-    "lng": 79.306671,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 475,
-    "reliefM": 221,
-    "prominenceProxyM": 138,
-    "meanSlopeDeg": 9.6,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.847,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/1065884708"
     ],
     "verified": false
   },
@@ -13714,25 +13638,6 @@
     "verified": false
   },
   {
-    "id": "osm-370284727--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5255225,
-    "lng": 79.8299718,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 628,
-    "reliefM": 205,
-    "prominenceProxyM": 205,
-    "meanSlopeDeg": 11.4,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.842,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/370284727"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-7693274216--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.737294,
@@ -13748,6 +13653,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7693274216"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-676520030--bengaluru",
+    "name": "Antaragange",
+    "lat": 13.1493543,
+    "lng": 78.0978427,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1044,
+    "reliefM": 319,
+    "prominenceProxyM": 171,
+    "meanSlopeDeg": 10.6,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.841,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/676520030"
     ],
     "verified": false
   },
@@ -13790,40 +13714,40 @@
     "verified": false
   },
   {
-    "id": "osm-7813788382--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.2434316,
-    "lng": 77.016735,
+    "id": "osm-1065884708--bengaluru",
+    "name": "Tirumala - Srivaari Padalu",
+    "lat": 13.6549687,
+    "lng": 79.306671,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 605,
-    "reliefM": 169,
-    "prominenceProxyM": 169,
-    "meanSlopeDeg": 12,
+    "elevationM": 475,
+    "reliefM": 226,
+    "prominenceProxyM": 141,
+    "meanSlopeDeg": 9.2,
     "terrainConfidence": 1,
     "discoveryScore": 0.841,
     "estimatedDifficulty": "Easy",
     "sources": [
-      "https://www.openstreetmap.org/node/7813788382"
+      "https://www.openstreetmap.org/node/1065884708"
     ],
     "verified": false
   },
   {
-    "id": "osm-7813787917--bengaluru",
+    "id": "osm-1120146456--bengaluru",
     "name": "Unnamed Peak",
-    "lat": 8.701178,
-    "lng": 77.2113132,
+    "lat": 12.6808931,
+    "lng": 79.9666788,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1403,
-    "reliefM": 148,
-    "prominenceProxyM": 148,
-    "meanSlopeDeg": 13.7,
+    "elevationM": 191,
+    "reliefM": 154,
+    "prominenceProxyM": 154,
+    "meanSlopeDeg": 13.3,
     "terrainConfidence": 1,
-    "discoveryScore": 0.84,
+    "discoveryScore": 0.841,
     "estimatedDifficulty": "Moderate",
     "sources": [
-      "https://www.openstreetmap.org/node/7813787917"
+      "https://www.openstreetmap.org/node/1120146456"
     ],
     "verified": false
   },
@@ -13843,6 +13767,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7858000698"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-370284727--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5255225,
+    "lng": 79.8299718,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 626,
+    "reliefM": 241,
+    "prominenceProxyM": 226,
+    "meanSlopeDeg": 11.3,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.84,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284727"
     ],
     "verified": false
   },
@@ -13923,25 +13866,6 @@
     "verified": false
   },
   {
-    "id": "osm-676520030--bengaluru",
-    "name": "Antaragange",
-    "lat": 13.1493543,
-    "lng": 78.0978427,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1061,
-    "reliefM": 309,
-    "prominenceProxyM": 179,
-    "meanSlopeDeg": 10.3,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.836,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/676520030"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-9445611948--bengaluru",
     "name": "Unnamed Peak",
     "lat": 14.0115279,
@@ -13980,21 +13904,21 @@
     "verified": false
   },
   {
-    "id": "osm-7814372428--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.987955,
-    "lng": 77.0297384,
+    "id": "osm-1134502250--bengaluru",
+    "name": "Kambati Kallu",
+    "lat": 13.4204322,
+    "lng": 77.2167102,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 824,
-    "reliefM": 146,
-    "prominenceProxyM": 146,
-    "meanSlopeDeg": 13.6,
+    "elevationM": 1113,
+    "reliefM": 219,
+    "prominenceProxyM": 179,
+    "meanSlopeDeg": 8.9,
     "terrainConfidence": 1,
     "discoveryScore": 0.835,
-    "estimatedDifficulty": "Moderate",
+    "estimatedDifficulty": "Easy",
     "sources": [
-      "https://www.openstreetmap.org/node/7814372428"
+      "https://www.openstreetmap.org/node/1134502250"
     ],
     "verified": false
   },
@@ -14071,6 +13995,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/10250237508"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813787911--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 8.484512,
+    "lng": 77.3861503,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1436,
+    "reliefM": 181,
+    "prominenceProxyM": 181,
+    "meanSlopeDeg": 10.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.832,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787911"
     ],
     "verified": false
   },
@@ -14227,21 +14170,21 @@
     "verified": false
   },
   {
-    "id": "osm-7813788227--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3457538,
-    "lng": 77.0242881,
+    "id": "osm-7813788381--bengaluru",
+    "name": "Metta",
+    "lat": 9.2807641,
+    "lng": 77.0640561,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 554,
-    "reliefM": 154,
-    "prominenceProxyM": 154,
-    "meanSlopeDeg": 12.6,
+    "elevationM": 1105,
+    "reliefM": 214,
+    "prominenceProxyM": 192,
+    "meanSlopeDeg": 8.6,
     "terrainConfidence": 1,
     "discoveryScore": 0.83,
-    "estimatedDifficulty": "Moderate",
+    "estimatedDifficulty": "Easy",
     "sources": [
-      "https://www.openstreetmap.org/node/7813788227"
+      "https://www.openstreetmap.org/node/7813788381"
     ],
     "verified": false
   },
@@ -14261,25 +14204,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/1159754787"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788381--bengaluru",
-    "name": "Metta",
-    "lat": 9.2807641,
-    "lng": 77.0640561,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1110,
-    "reliefM": 189,
-    "prominenceProxyM": 189,
-    "meanSlopeDeg": 9.4,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.827,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788381"
     ],
     "verified": false
   },
@@ -14318,6 +14242,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/7814397777"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-332371227--bengaluru",
+    "name": "Rajagiri",
+    "lat": 12.2501538,
+    "lng": 79.3948337,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 239,
+    "reliefM": 134,
+    "prominenceProxyM": 134,
+    "meanSlopeDeg": 14.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.827,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/332371227"
     ],
     "verified": false
   },
@@ -14394,6 +14337,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7693274217"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-674558699--bengaluru",
+    "name": "Brahmagiri",
+    "lat": 12.3868578,
+    "lng": 75.490746,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1307,
+    "reliefM": 158,
+    "prominenceProxyM": 158,
+    "meanSlopeDeg": 11.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.823,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/674558699"
     ],
     "verified": false
   },
@@ -14622,6 +14584,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/5184311987"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-390866017--bengaluru",
+    "name": "Nishani Motte",
+    "lat": 12.4536646,
+    "lng": 75.6764059,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1312,
+    "reliefM": 167,
+    "prominenceProxyM": 167,
+    "meanSlopeDeg": 10.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.817,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/390866017"
     ],
     "verified": false
   },
@@ -14911,6 +14892,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813787916--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 8.5255972,
+    "lng": 77.1426057,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 206,
+    "reliefM": 145,
+    "prominenceProxyM": 145,
+    "meanSlopeDeg": 12.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.807,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813787916"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-9511157611--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.3434755,
@@ -14926,6 +14926,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/9511157611"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-370280387--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.4970643,
+    "lng": 79.7912621,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 785,
+    "reliefM": 148,
+    "prominenceProxyM": 148,
+    "meanSlopeDeg": 12.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.806,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/370280387"
     ],
     "verified": false
   },
@@ -15021,6 +15040,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/9036813245"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-390162787--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.6570871,
+    "lng": 79.8264527,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 359,
+    "reliefM": 138,
+    "prominenceProxyM": 138,
+    "meanSlopeDeg": 12.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.804,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/390162787"
     ],
     "verified": false
   },
@@ -15135,6 +15173,44 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/8994102634"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-1065884712--bengaluru",
+    "name": "Tirumala",
+    "lat": 13.6739842,
+    "lng": 79.3440932,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 772,
+    "reliefM": 331,
+    "prominenceProxyM": 176,
+    "meanSlopeDeg": 13.8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.8,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/1065884712"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-313280518--bengaluru",
+    "name": "Perungulathur",
+    "lat": 12.8982276,
+    "lng": 80.0959014,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 161,
+    "reliefM": 130,
+    "prominenceProxyM": 130,
+    "meanSlopeDeg": 13,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.8,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/313280518"
     ],
     "verified": false
   },
@@ -15405,21 +15481,21 @@
     "verified": false
   },
   {
-    "id": "osm-332371227--bengaluru",
-    "name": "Rajagiri",
-    "lat": 12.2501538,
-    "lng": 79.3948337,
+    "id": "osm-7813788404--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.2097976,
+    "lng": 76.9637346,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 226,
-    "reliefM": 124,
-    "prominenceProxyM": 124,
-    "meanSlopeDeg": 13.6,
+    "elevationM": 518,
+    "reliefM": 161,
+    "prominenceProxyM": 161,
+    "meanSlopeDeg": 9.6,
     "terrainConfidence": 1,
     "discoveryScore": 0.789,
-    "estimatedDifficulty": "Moderate",
+    "estimatedDifficulty": "Easy",
     "sources": [
-      "https://www.openstreetmap.org/node/332371227"
+      "https://www.openstreetmap.org/node/7813788404"
     ],
     "verified": false
   },
@@ -15458,25 +15534,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/7763485711"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-1065884712--bengaluru",
-    "name": "Tirumala",
-    "lat": 13.6739842,
-    "lng": 79.3440932,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 783,
-    "reliefM": 359,
-    "prominenceProxyM": 203,
-    "meanSlopeDeg": 13.1,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.787,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/1065884712"
     ],
     "verified": false
   },
@@ -15576,25 +15633,6 @@
     "verified": false
   },
   {
-    "id": "osm-313386176--bengaluru",
-    "name": "Pallavaram Hill",
-    "lat": 12.9715362,
-    "lng": 80.1608623,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 140,
-    "reliefM": 126,
-    "prominenceProxyM": 126,
-    "meanSlopeDeg": 12.9,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.782,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/313386176"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-9036230416--bengaluru",
     "name": "Unnamed Peak",
     "lat": 16.4012181,
@@ -15658,10 +15696,10 @@
     "lng": 76.1433419,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 2219,
-    "reliefM": 358,
-    "prominenceProxyM": 358,
-    "meanSlopeDeg": 23.2,
+    "elevationM": 2213,
+    "reliefM": 339,
+    "prominenceProxyM": 339,
+    "meanSlopeDeg": 23.1,
     "terrainConfidence": 1,
     "discoveryScore": 0.78,
     "estimatedDifficulty": "Hard",
@@ -15734,10 +15772,10 @@
     "lng": 79.0573363,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 773,
-    "reliefM": 291,
-    "prominenceProxyM": 291,
-    "meanSlopeDeg": 26.6,
+    "elevationM": 753,
+    "reliefM": 301,
+    "prominenceProxyM": 301,
+    "meanSlopeDeg": 24.7,
     "terrainConfidence": 1,
     "discoveryScore": 0.78,
     "estimatedDifficulty": "Hard",
@@ -15861,21 +15899,21 @@
     "verified": false
   },
   {
-    "id": "osm-370284785--bengaluru",
+    "id": "osm-7814372428--bengaluru",
     "name": "Unnamed Peak",
-    "lat": 13.5668268,
-    "lng": 79.8551201,
+    "lat": 9.987955,
+    "lng": 77.0297384,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 700,
-    "reliefM": 170,
-    "prominenceProxyM": 170,
-    "meanSlopeDeg": 7.6,
+    "elevationM": 807,
+    "reliefM": 129,
+    "prominenceProxyM": 129,
+    "meanSlopeDeg": 11.5,
     "terrainConfidence": 1,
-    "discoveryScore": 0.775,
+    "discoveryScore": 0.774,
     "estimatedDifficulty": "Easy",
     "sources": [
-      "https://www.openstreetmap.org/node/370284785"
+      "https://www.openstreetmap.org/node/7814372428"
     ],
     "verified": false
   },
@@ -16013,25 +16051,6 @@
     "verified": false
   },
   {
-    "id": "osm-390162787--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.6570871,
-    "lng": 79.8264527,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 336,
-    "reliefM": 140,
-    "prominenceProxyM": 140,
-    "meanSlopeDeg": 10.4,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.771,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/390162787"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-5163380077--bengaluru",
     "name": "Kakershia Gudda",
     "lat": 12.578565,
@@ -16070,25 +16089,6 @@
     "verified": false
   },
   {
-    "id": "osm-313280518--bengaluru",
-    "name": "Perungulathur",
-    "lat": 12.8982276,
-    "lng": 80.0959014,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 147,
-    "reliefM": 125,
-    "prominenceProxyM": 125,
-    "meanSlopeDeg": 11.6,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.77,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/313280518"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-11593407710--bengaluru",
     "name": "Shivagange Betta",
     "lat": 13.1695215,
@@ -16104,6 +16104,25 @@
     "estimatedDifficulty": "Hard",
     "sources": [
       "https://www.openstreetmap.org/node/11593407710"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-732234962--bengaluru",
+    "name": "Horsley Hills",
+    "lat": 13.6508702,
+    "lng": 78.3965255,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1250,
+    "reliefM": 284,
+    "prominenceProxyM": 284,
+    "meanSlopeDeg": 16.9,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.768,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/732234962"
     ],
     "verified": false
   },
@@ -16161,6 +16180,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/7693274226"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-313386176--bengaluru",
+    "name": "Pallavaram Hill",
+    "lat": 12.9715362,
+    "lng": 80.1608623,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 142,
+    "reliefM": 122,
+    "prominenceProxyM": 122,
+    "meanSlopeDeg": 12.4,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.766,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/313386176"
     ],
     "verified": false
   },
@@ -16260,6 +16298,25 @@
     "verified": false
   },
   {
+    "id": "osm-1132723675--bengaluru",
+    "name": "Kaulibetta",
+    "lat": 13.6207607,
+    "lng": 77.1674637,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1052,
+    "reliefM": 162,
+    "prominenceProxyM": 129,
+    "meanSlopeDeg": 7.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.763,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/1132723675"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-13793765361--bengaluru",
     "name": "Pariyakulam Malai",
     "lat": 10.3497926,
@@ -16313,25 +16370,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/7763485704"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-732234962--bengaluru",
-    "name": "Horsley Hills",
-    "lat": 13.6508702,
-    "lng": 78.3965255,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1247,
-    "reliefM": 250,
-    "prominenceProxyM": 250,
-    "meanSlopeDeg": 14.5,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.76,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/732234962"
     ],
     "verified": false
   },
@@ -16545,25 +16583,6 @@
     "verified": false
   },
   {
-    "id": "osm-585821756--bengaluru",
-    "name": "Patthalmala",
-    "lat": 12.1450653,
-    "lng": 75.5716628,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 644,
-    "reliefM": 244,
-    "prominenceProxyM": 244,
-    "meanSlopeDeg": 16.6,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.756,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/585821756"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-9441290067--bengaluru",
     "name": "Unnamed Peak",
     "lat": 15.3428681,
@@ -16712,6 +16731,25 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/13098055826"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-585821756--bengaluru",
+    "name": "Patthalmala",
+    "lat": 12.1450653,
+    "lng": 75.5716628,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 628,
+    "reliefM": 196,
+    "prominenceProxyM": 196,
+    "meanSlopeDeg": 15.1,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.75,
+    "estimatedDifficulty": "Moderate",
+    "sources": [
+      "https://www.openstreetmap.org/node/585821756"
     ],
     "verified": false
   },
@@ -16887,25 +16925,6 @@
     "verified": false
   },
   {
-    "id": "osm-7813788404--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.2097976,
-    "lng": 76.9637346,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 506,
-    "reliefM": 133,
-    "prominenceProxyM": 133,
-    "meanSlopeDeg": 9.2,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.74,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788404"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-2407231486--bengaluru",
     "name": "Unnamed Peak",
     "lat": 15.1592058,
@@ -16988,10 +17007,10 @@
     "lng": 75.608815,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1710,
-    "reliefM": 312,
-    "prominenceProxyM": 312,
-    "meanSlopeDeg": 25.3,
+    "elevationM": 1687,
+    "reliefM": 235,
+    "prominenceProxyM": 235,
+    "meanSlopeDeg": 21.9,
     "terrainConfidence": 1,
     "discoveryScore": 0.732,
     "estimatedDifficulty": "Hard",
@@ -17035,25 +17054,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/13456297803"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-370284748--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5852654,
-    "lng": 79.8341775,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 649,
-    "reliefM": 146,
-    "prominenceProxyM": 146,
-    "meanSlopeDeg": 8.2,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.73,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/370284748"
     ],
     "verified": false
   },
@@ -17134,25 +17134,6 @@
     "verified": false
   },
   {
-    "id": "osm-370280398--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.4936424,
-    "lng": 79.7893738,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 782,
-    "reliefM": 132,
-    "prominenceProxyM": 132,
-    "meanSlopeDeg": 9.2,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.726,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/370280398"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-2154625912--bengaluru",
     "name": "Krishnagiri",
     "lat": 12.2592725,
@@ -17168,25 +17149,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/2154625912"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-390866017--bengaluru",
-    "name": "Nishani Motte",
-    "lat": 12.4536646,
-    "lng": 75.6764059,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1292,
-    "reliefM": 129,
-    "prominenceProxyM": 129,
-    "meanSlopeDeg": 8.4,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.721,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/390866017"
     ],
     "verified": false
   },
@@ -17267,6 +17229,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813788383--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.2485145,
+    "lng": 76.9812869,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 499,
+    "reliefM": 130,
+    "prominenceProxyM": 130,
+    "meanSlopeDeg": 7.5,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.715,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788383"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-1225917115--bengaluru",
     "name": "Rajahamsagad",
     "lat": 15.7572674,
@@ -17301,25 +17282,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/3055297141"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788383--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.2485145,
-    "lng": 76.9812869,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 502,
-    "reliefM": 128,
-    "prominenceProxyM": 128,
-    "meanSlopeDeg": 7.7,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.712,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788383"
     ],
     "verified": false
   },
@@ -17362,21 +17324,21 @@
     "verified": false
   },
   {
-    "id": "osm-7813787911--bengaluru",
+    "id": "osm-370280398--bengaluru",
     "name": "Unnamed Peak",
-    "lat": 8.484512,
-    "lng": 77.3861503,
+    "lat": 13.4936424,
+    "lng": 79.7893738,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 1422,
-    "reliefM": 118,
-    "prominenceProxyM": 118,
-    "meanSlopeDeg": 9.1,
+    "elevationM": 790,
+    "reliefM": 131,
+    "prominenceProxyM": 117,
+    "meanSlopeDeg": 8.9,
     "terrainConfidence": 1,
-    "discoveryScore": 0.71,
+    "discoveryScore": 0.711,
     "estimatedDifficulty": "Easy",
     "sources": [
-      "https://www.openstreetmap.org/node/7813787911"
+      "https://www.openstreetmap.org/node/370280398"
     ],
     "verified": false
   },
@@ -17472,6 +17434,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/6480852543"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-370284748--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5852654,
+    "lng": 79.8341775,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 655,
+    "reliefM": 130,
+    "prominenceProxyM": 130,
+    "meanSlopeDeg": 8,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.703,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284748"
     ],
     "verified": false
   },
@@ -17586,25 +17567,6 @@
     "estimatedDifficulty": "Moderate",
     "sources": [
       "https://www.openstreetmap.org/node/8157554069"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813787916--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 8.5255972,
-    "lng": 77.1426057,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 173,
-    "reliefM": 116,
-    "prominenceProxyM": 116,
-    "meanSlopeDeg": 9,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.7,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813787916"
     ],
     "verified": false
   },
@@ -18217,6 +18179,25 @@
     "verified": false
   },
   {
+    "id": "osm-370284785--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5668268,
+    "lng": 79.8551201,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 702,
+    "reliefM": 107,
+    "prominenceProxyM": 107,
+    "meanSlopeDeg": 5.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.646,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284785"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-2614472291--bengaluru",
     "name": "Unnamed Peak",
     "lat": 16.6699513,
@@ -18270,25 +18251,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/10246681885"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-7813788223--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 9.3641313,
-    "lng": 77.1102904,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 1049,
-    "reliefM": 100,
-    "prominenceProxyM": 100,
-    "meanSlopeDeg": 9.4,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.641,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/7813788223"
     ],
     "verified": false
   },
@@ -18559,6 +18521,25 @@
     "verified": false
   },
   {
+    "id": "osm-7813788223--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.3641313,
+    "lng": 77.1102904,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 1047,
+    "reliefM": 98,
+    "prominenceProxyM": 98,
+    "meanSlopeDeg": 8.4,
+    "terrainConfidence": 0.98,
+    "discoveryScore": 0.612,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788223"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-9035796495--bengaluru",
     "name": "Unnamed Peak",
     "lat": 16.691304,
@@ -18650,6 +18631,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/11801900677"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-7813788382--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 9.2434316,
+    "lng": 77.016735,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 589,
+    "reliefM": 97,
+    "prominenceProxyM": 97,
+    "meanSlopeDeg": 8.1,
+    "terrainConfidence": 0.96,
+    "discoveryScore": 0.601,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/7813788382"
     ],
     "verified": false
   },
@@ -18806,25 +18806,6 @@
     "verified": false
   },
   {
-    "id": "osm-313386591--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 12.9765029,
-    "lng": 80.1656326,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 106,
-    "reliefM": 92,
-    "prominenceProxyM": 92,
-    "meanSlopeDeg": 10.3,
-    "terrainConfidence": 0.9,
-    "discoveryScore": 0.584,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/313386591"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-7690389908--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.3519749,
@@ -18916,6 +18897,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/7837764655"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-313386591--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.9765029,
+    "lng": 80.1656326,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 110,
+    "reliefM": 91,
+    "prominenceProxyM": 91,
+    "meanSlopeDeg": 10.2,
+    "terrainConfidence": 0.89,
+    "discoveryScore": 0.577,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/313386591"
     ],
     "verified": false
   },
@@ -19372,25 +19372,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/7380335857"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-388585876--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 11.1558926,
-    "lng": 76.8737794,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 862,
-    "reliefM": 84,
-    "prominenceProxyM": 84,
-    "meanSlopeDeg": 5.8,
-    "terrainConfidence": 0.8,
-    "discoveryScore": 0.529,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/388585876"
     ],
     "verified": false
   },
@@ -20003,6 +19984,25 @@
     "verified": false
   },
   {
+    "id": "osm-370284746--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5744193,
+    "lng": 79.8350358,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 707,
+    "reliefM": 75,
+    "prominenceProxyM": 75,
+    "meanSlopeDeg": 5.9,
+    "terrainConfidence": 0.69,
+    "discoveryScore": 0.486,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284746"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-12752745048--bengaluru",
     "name": "Golantharappara",
     "lat": 8.9566795,
@@ -20075,6 +20075,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/7481769066"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-388585876--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 11.1558926,
+    "lng": 76.8737794,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 857,
+    "reliefM": 81,
+    "prominenceProxyM": 66,
+    "meanSlopeDeg": 5,
+    "terrainConfidence": 0.76,
+    "discoveryScore": 0.479,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/388585876"
     ],
     "verified": false
   },
@@ -20497,25 +20516,6 @@
     "verified": false
   },
   {
-    "id": "osm-720558005--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 15.1258809,
-    "lng": 75.6800786,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 629,
-    "reliefM": 66,
-    "prominenceProxyM": 66,
-    "meanSlopeDeg": 4.4,
-    "terrainConfidence": 0.57,
-    "discoveryScore": 0.446,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/720558005"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-12053661551--bengaluru",
     "name": "Kottai Malai",
     "lat": 12.5981544,
@@ -20531,25 +20531,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/12053661551"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-349181996--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 12.8331891,
-    "lng": 80.0616429,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 102,
-    "reliefM": 65,
-    "prominenceProxyM": 65,
-    "meanSlopeDeg": 7,
-    "terrainConfidence": 0.56,
-    "discoveryScore": 0.442,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/349181996"
     ],
     "verified": false
   },
@@ -20588,25 +20569,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/7803547753"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-370284746--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5744193,
-    "lng": 79.8350358,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 689,
-    "reliefM": 64,
-    "prominenceProxyM": 64,
-    "meanSlopeDeg": 5.2,
-    "terrainConfidence": 0.55,
-    "discoveryScore": 0.438,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/370284746"
     ],
     "verified": false
   },
@@ -20858,6 +20820,25 @@
     "verified": false
   },
   {
+    "id": "osm-370284750--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5905932,
+    "lng": 79.8423445,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 552,
+    "reliefM": 84,
+    "prominenceProxyM": 56,
+    "meanSlopeDeg": 2.3,
+    "terrainConfidence": 0.8,
+    "discoveryScore": 0.414,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284750"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-10078067823--bengaluru",
     "name": "Unnamed Peak",
     "lat": 11.1435558,
@@ -20930,25 +20911,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/11468699072"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-313281655--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 12.882381,
-    "lng": 80.1082009,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 81,
-    "reliefM": 56,
-    "prominenceProxyM": 56,
-    "meanSlopeDeg": 6.8,
-    "terrainConfidence": 0.45,
-    "discoveryScore": 0.408,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/313281655"
     ],
     "verified": false
   },
@@ -21048,25 +21010,6 @@
     "verified": false
   },
   {
-    "id": "osm-347339851--bengaluru",
-    "name": "Pachaimalai",
-    "lat": 12.9455002,
-    "lng": 80.126531,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 76,
-    "reliefM": 61,
-    "prominenceProxyM": 61,
-    "meanSlopeDeg": 6.1,
-    "terrainConfidence": 0.51,
-    "discoveryScore": 0.402,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/347339851"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-1577755422--bengaluru",
     "name": "Vaikunta Hill",
     "lat": 12.8926203,
@@ -21082,25 +21025,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/1577755422"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-660459135--bengaluru",
-    "name": "Doddabetta",
-    "lat": 11.4006926,
-    "lng": 76.7356752,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 2604,
-    "reliefM": 158,
-    "prominenceProxyM": 2257,
-    "meanSlopeDeg": 12.6,
-    "terrainConfidence": 1,
-    "discoveryScore": 0.399,
-    "estimatedDifficulty": "Moderate",
-    "sources": [
-      "https://www.openstreetmap.org/node/660459135"
     ],
     "verified": false
   },
@@ -21238,6 +21162,25 @@
     "verified": false
   },
   {
+    "id": "osm-340355670--bengaluru",
+    "name": "Malayavanta",
+    "lat": 15.3247311,
+    "lng": 76.4884632,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 477,
+    "reliefM": 55,
+    "prominenceProxyM": 55,
+    "meanSlopeDeg": 6.3,
+    "terrainConfidence": 0.44,
+    "discoveryScore": 0.38,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/340355670"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-1646601913--bengaluru",
     "name": "Chandragiri",
     "lat": 12.8617097,
@@ -21276,6 +21219,25 @@
     "verified": false
   },
   {
+    "id": "osm-720558005--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 15.1258809,
+    "lng": 75.6800786,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 610,
+    "reliefM": 67,
+    "prominenceProxyM": 30,
+    "meanSlopeDeg": 3.2,
+    "terrainConfidence": 0.59,
+    "discoveryScore": 0.372,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/720558005"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-2559416703--bengaluru",
     "name": "Varadadri Betta",
     "lat": 13.4054892,
@@ -21295,6 +21257,27 @@
     "verified": false
   },
   {
+    "id": "manual-puligundu--bengaluru",
+    "name": "Puligundu",
+    "lat": 13.3417,
+    "lng": 79.2032,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 362,
+    "reliefM": 62,
+    "prominenceProxyM": 33,
+    "meanSlopeDeg": 3,
+    "terrainConfidence": 0.53,
+    "discoveryScore": 0.371,
+    "estimatedDifficulty": "Easy",
+    "highlights": "A granite rock hill near Chittoor with a short, steep scramble to a viewpoint. Added manually — not yet mapped as a peak in OpenStreetMap.",
+    "sources": [
+      "https://www.openstreetmap.org/#map=16/13.3417/79.2032"
+    ],
+    "verified": false,
+    "nearestTown": "Kanyakapuram"
+  },
+  {
     "id": "osm-7509597973--bengaluru",
     "name": "Vaniyambalam Para",
     "lat": 11.1982666,
@@ -21310,63 +21293,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/7509597973"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-980469020--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 15.3419581,
-    "lng": 76.4644408,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 476,
-    "reliefM": 76,
-    "prominenceProxyM": 76,
-    "meanSlopeDeg": 7.6,
-    "terrainConfidence": 0.7,
-    "discoveryScore": 0.37,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/980469020"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-340355670--bengaluru",
-    "name": "Malayavanta",
-    "lat": 15.3247311,
-    "lng": 76.4884632,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 467,
-    "reliefM": 52,
-    "prominenceProxyM": 52,
-    "meanSlopeDeg": 5.7,
-    "terrainConfidence": 0.4,
-    "discoveryScore": 0.37,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/340355670"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-370284744--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5679949,
-    "lng": 79.8427605,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 680,
-    "reliefM": 48,
-    "prominenceProxyM": 48,
-    "meanSlopeDeg": 3.2,
-    "terrainConfidence": 0.35,
-    "discoveryScore": 0.369,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/370284744"
     ],
     "verified": false
   },
@@ -21409,6 +21335,44 @@
     "verified": false
   },
   {
+    "id": "osm-370284744--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 13.5679949,
+    "lng": 79.8427605,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 694,
+    "reliefM": 47,
+    "prominenceProxyM": 47,
+    "meanSlopeDeg": 3.6,
+    "terrainConfidence": 0.34,
+    "discoveryScore": 0.365,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/370284744"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-660459135--bengaluru",
+    "name": "Doddabetta",
+    "lat": 11.4006926,
+    "lng": 76.7356752,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 2597,
+    "reliefM": 161,
+    "prominenceProxyM": 2257,
+    "meanSlopeDeg": 10.2,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.364,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/660459135"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-9902398801--bengaluru",
     "name": "Panchapandavar Malai",
     "lat": 12.9697237,
@@ -21443,6 +21407,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/12596102254"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-349181996--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.8331891,
+    "lng": 80.0616429,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 80,
+    "reliefM": 47,
+    "prominenceProxyM": 36,
+    "meanSlopeDeg": 3.5,
+    "terrainConfidence": 0.34,
+    "discoveryScore": 0.358,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/349181996"
     ],
     "verified": false
   },
@@ -21500,25 +21483,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/3617043199"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-335753026--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 12.8863918,
-    "lng": 80.194383,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 50,
-    "reliefM": 39,
-    "prominenceProxyM": 39,
-    "meanSlopeDeg": 4.5,
-    "terrainConfidence": 0.24,
-    "discoveryScore": 0.355,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/335753026"
     ],
     "verified": false
   },
@@ -21637,25 +21601,6 @@
     "verified": false
   },
   {
-    "id": "osm-340354874--bengaluru",
-    "name": "Gandhamadana",
-    "lat": 15.3368623,
-    "lng": 76.4739034,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 479,
-    "reliefM": 68,
-    "prominenceProxyM": 68,
-    "meanSlopeDeg": 7,
-    "terrainConfidence": 0.6,
-    "discoveryScore": 0.347,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/340354874"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-12012440021--bengaluru",
     "name": "Unnamed Peak",
     "lat": 12.9800717,
@@ -21709,6 +21654,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/8869436055"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-335753026--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.8863918,
+    "lng": 80.194383,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 43,
+    "reliefM": 33,
+    "prominenceProxyM": 33,
+    "meanSlopeDeg": 3.9,
+    "terrainConfidence": 0.16,
+    "discoveryScore": 0.345,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/335753026"
     ],
     "verified": false
   },
@@ -21979,6 +21943,25 @@
     "verified": false
   },
   {
+    "id": "osm-313281655--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 12.882381,
+    "lng": 80.1082009,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 49,
+    "reliefM": 22,
+    "prominenceProxyM": 22,
+    "meanSlopeDeg": 2.3,
+    "terrainConfidence": 0.03,
+    "discoveryScore": 0.34,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/313281655"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-5302184115--bengaluru",
     "name": "Unnamed Peak",
     "lat": 8.5436767,
@@ -22036,21 +22019,21 @@
     "verified": false
   },
   {
-    "id": "osm-370284750--bengaluru",
-    "name": "Unnamed Peak",
-    "lat": 13.5905932,
-    "lng": 79.8423445,
+    "id": "osm-340354874--bengaluru",
+    "name": "Gandhamadana",
+    "lat": 15.3368623,
+    "lng": 76.4739034,
     "cityId": "bangalore",
     "tier": "discovery",
-    "elevationM": 542,
-    "reliefM": 63,
-    "prominenceProxyM": 37,
-    "meanSlopeDeg": 2.2,
-    "terrainConfidence": 0.54,
-    "discoveryScore": 0.333,
+    "elevationM": 467,
+    "reliefM": 69,
+    "prominenceProxyM": 60,
+    "meanSlopeDeg": 5,
+    "terrainConfidence": 0.61,
+    "discoveryScore": 0.332,
     "estimatedDifficulty": "Easy",
     "sources": [
-      "https://www.openstreetmap.org/node/370284750"
+      "https://www.openstreetmap.org/node/340354874"
     ],
     "verified": false
   },
@@ -22070,6 +22053,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/3622091496"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-347339851--bengaluru",
+    "name": "Pachaimalai",
+    "lat": 12.9455002,
+    "lng": 80.126531,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 60,
+    "reliefM": 38,
+    "prominenceProxyM": 38,
+    "meanSlopeDeg": 3.4,
+    "terrainConfidence": 0.23,
+    "discoveryScore": 0.329,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/347339851"
     ],
     "verified": false
   },
@@ -22226,6 +22228,25 @@
     "verified": false
   },
   {
+    "id": "osm-980469020--bengaluru",
+    "name": "Unnamed Peak",
+    "lat": 15.3419581,
+    "lng": 76.4644408,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 468,
+    "reliefM": 61,
+    "prominenceProxyM": 61,
+    "meanSlopeDeg": 5.2,
+    "terrainConfidence": 0.51,
+    "discoveryScore": 0.306,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/980469020"
+    ],
+    "verified": false
+  },
+  {
     "id": "osm-11203038388--bengaluru",
     "name": "Monte Hill",
     "lat": 15.2795641,
@@ -22241,6 +22262,25 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/11203038388"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-340364826--bengaluru",
+    "name": "Rushyamuka hill",
+    "lat": 15.3407616,
+    "lng": 76.4667334,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 464,
+    "reliefM": 57,
+    "prominenceProxyM": 57,
+    "meanSlopeDeg": 5.4,
+    "terrainConfidence": 0.46,
+    "discoveryScore": 0.291,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/340364826"
     ],
     "verified": false
   },
@@ -22283,25 +22323,6 @@
     "verified": false
   },
   {
-    "id": "osm-340364826--bengaluru",
-    "name": "Rushyamuka hill",
-    "lat": 15.3407616,
-    "lng": 76.4667334,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 450,
-    "reliefM": 49,
-    "prominenceProxyM": 49,
-    "meanSlopeDeg": 5.3,
-    "terrainConfidence": 0.36,
-    "discoveryScore": 0.264,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/340364826"
-    ],
-    "verified": false
-  },
-  {
     "id": "osm-340354825--bengaluru",
     "name": "Hemakuta",
     "lat": 15.332915,
@@ -22309,14 +22330,33 @@
     "cityId": "bangalore",
     "tier": "discovery",
     "elevationM": 451,
-    "reliefM": 46,
-    "prominenceProxyM": 46,
-    "meanSlopeDeg": 3.7,
-    "terrainConfidence": 0.33,
-    "discoveryScore": 0.254,
+    "reliefM": 45,
+    "prominenceProxyM": 45,
+    "meanSlopeDeg": 3,
+    "terrainConfidence": 0.31,
+    "discoveryScore": 0.251,
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/340354825"
+    ],
+    "verified": false
+  },
+  {
+    "id": "osm-340354760--bengaluru",
+    "name": "Matanga Hill",
+    "lat": 15.3313508,
+    "lng": 76.4683038,
+    "cityId": "bangalore",
+    "tier": "discovery",
+    "elevationM": 501,
+    "reliefM": 79,
+    "prominenceProxyM": 79,
+    "meanSlopeDeg": 9,
+    "terrainConfidence": 0.74,
+    "discoveryScore": 0.24,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/340354760"
     ],
     "verified": false
   },
@@ -22355,25 +22395,6 @@
     "estimatedDifficulty": "Easy",
     "sources": [
       "https://www.openstreetmap.org/node/1577761240"
-    ],
-    "verified": false
-  },
-  {
-    "id": "osm-340354760--bengaluru",
-    "name": "Matanga Hill",
-    "lat": 15.3313508,
-    "lng": 76.4683038,
-    "cityId": "bangalore",
-    "tier": "discovery",
-    "elevationM": 485,
-    "reliefM": 72,
-    "prominenceProxyM": 72,
-    "meanSlopeDeg": 7.5,
-    "terrainConfidence": 0.65,
-    "discoveryScore": 0.192,
-    "estimatedDifficulty": "Easy",
-    "sources": [
-      "https://www.openstreetmap.org/node/340354760"
     ],
     "verified": false
   },
@@ -36153,6 +36174,30 @@
     ],
     "verified": false,
     "nearestTown": "Kolakunda"
+  },
+  {
+    "id": "osm-4708831963--hyderabad",
+    "name": "BoddaGuta",
+    "lat": 17.9751474,
+    "lng": 79.515096,
+    "cityId": "geo:17.3850,78.4867",
+    "tier": "discovery",
+    "elevationM": 293,
+    "reliefM": 20,
+    "prominenceProxyM": 19,
+    "meanSlopeDeg": 1.2,
+    "terrainConfidence": 0,
+    "discoveryScore": 0.34,
+    "estimatedDifficulty": "Easy",
+    "sources": [
+      "https://www.openstreetmap.org/node/4708831963"
+    ],
+    "verified": false,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Main_entrance_Kazipet.JPG/960px-Main_entrance_Kazipet.JPG",
+      "attribution": "Nikhilb239, CC BY-SA 3.0 — Wikimedia Commons https://commons.wikimedia.org/wiki/File:Main_entrance_Kazipet.JPG"
+    },
+    "nearestTown": "Bhattupalle"
   },
   {
     "id": "osm-2894717914--hyderabad",

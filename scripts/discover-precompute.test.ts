@@ -3,9 +3,11 @@ import {
   precomputeRegion,
   dedupeAgainstCurated,
   enrichCuratedTerrain,
+  mergeManualPeaks,
   type DiscoverFetchers,
   type RegionConfig,
 } from "./discover-precompute";
+import { manualPeaksNear, MANUAL_PEAKS } from "./seed/manual-peaks";
 import { validateTrek, type Origin, type Trek } from "../src/lib/trek";
 import type { ParsedPeak } from "../src/lib/overpass";
 
@@ -132,6 +134,87 @@ describe("precomputeRegion", () => {
         CFG,
       ),
     ).rejects.toThrow(/overpass/);
+  });
+});
+
+describe("manual peaks (spec 12)", () => {
+  const manual: ParsedPeak = {
+    id: "manual-puligundu",
+    name: "Puligundu",
+    lat: 13.3417,
+    lng: 79.2032,
+    notability: { hasWikipediaTag: false, hasWikidataTag: false },
+    sourceUrl: "https://www.openstreetmap.org/#map=16/13.3417/79.2032",
+    note: "A granite rock hill near Chittoor.",
+  };
+
+  it("mergeManualPeaks puts manual first and drops an OSM duplicate within 200 m", () => {
+    const osmDup: ParsedPeak = { ...manual, id: "osm-99", sourceUrl: undefined, note: undefined };
+    const osmFar: ParsedPeak = {
+      id: "osm-1",
+      name: "Far",
+      lat: 13.9,
+      lng: 79.9,
+      notability: { hasWikipediaTag: false, hasWikidataTag: false },
+    };
+    const merged = mergeManualPeaks([manual], [osmDup, osmFar]);
+    expect(merged.map((p) => p.id)).toEqual(["manual-puligundu", "osm-1"]);
+  });
+
+  it("manualPeaksNear returns in-range entries mapped to ParsedPeak", () => {
+    const near = manualPeaksNear(
+      { id: "bangalore", name: "Bengaluru", lat: 12.9716, lng: 77.5946 },
+      500,
+    );
+    expect(near.find((p) => p.id === "manual-puligundu")).toBeTruthy();
+    // Out of range at 10 km.
+    expect(manualPeaksNear({ id: "x", name: "x", lat: 12.9716, lng: 77.5946 }, 10)).toHaveLength(0);
+  });
+
+  it("seeds Puligundu with a known coordinate", () => {
+    const p = MANUAL_PEAKS.find((m) => m.id === "manual-puligundu")!;
+    expect(p.lat).toBeCloseTo(13.3417, 3);
+    expect(p.lng).toBeCloseTo(79.2032, 3);
+  });
+
+  it("a manual candidate becomes a discovery Trek carrying its source + note", async () => {
+    const [trek] = await precomputeRegion(
+      { id: "bangalore", name: "Bengaluru", lat: 12.9716, lng: 77.5946 },
+      {
+        peaks: async () => [],
+        manualPeaks: () => [manual],
+        elevations: async () => [1000, ...Array<number>(8).fill(700)], // relief 300
+        tourismPoints: async () => [],
+      },
+      { radiusKm: 500, maxCandidates: 20000, enrichLimit: 0 },
+    );
+    expect(trek.name).toBe("Puligundu");
+    expect(trek.tier).toBe("discovery");
+    expect(trek.reliefM).toBe(300);
+    expect(trek.highlights).toContain("granite");
+    expect(trek.sources[0]).toContain("openstreetmap.org");
+    expect(validateTrek(trek).ok).toBe(true);
+  });
+
+  it("always enriches a manual peak (photo/town) even below enrichLimit, keeping its note", async () => {
+    const [trek] = await precomputeRegion(
+      { id: "bangalore", name: "Bengaluru", lat: 12.9716, lng: 77.5946 },
+      {
+        peaks: async () => [],
+        manualPeaks: () => [manual],
+        elevations: async () => [1000, ...Array<number>(8).fill(700)],
+        tourismPoints: async () => [],
+        enrich: async () => ({
+          image: { url: "https://upload.wikimedia.org/x.jpg", attribution: "Commons" },
+          highlights: "auto summary that must NOT overwrite the manual note",
+          nearestTown: "Chittoor",
+        }),
+      },
+      { radiusKm: 500, maxCandidates: 20000, enrichLimit: 0 }, // rank-0 enrichment, yet manual still enriched
+    );
+    expect(trek.image?.url).toContain("upload.wikimedia.org");
+    expect(trek.nearestTown).toBe("Chittoor");
+    expect(trek.highlights).toContain("granite"); // manual note preserved
   });
 });
 
