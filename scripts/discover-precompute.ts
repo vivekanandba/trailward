@@ -22,6 +22,7 @@ import { distanceFrom } from "../src/lib/distance";
 import type { ParsedPeak } from "../src/lib/overpass";
 import { PRESET_ORIGINS } from "../src/lib/cities";
 import { fetchPeaks, fetchTourismPoints } from "./sources/overpass";
+import { manualPeaksNear } from "./seed/manual-peaks";
 import { fetchElevations } from "./sources/elevation";
 import { fetchNearestArticle } from "./sources/geosearch";
 import { fetchWiki } from "./sources/wiki";
@@ -37,12 +38,24 @@ export interface PeakEnrichment {
 
 export interface DiscoverFetchers {
   peaks(origin: Origin, radiusKm: number): Promise<ParsedPeak[]>;
+  /** Optional hand-added peaks absent from OSM (spec 12), merged as candidates. */
+  manualPeaks?(origin: Origin, radiusKm: number): ParsedPeak[];
   /** Index-aligned elevations for the sample points (rosette grid). */
   elevations(points: LatLng[]): Promise<(number | undefined)[]>;
   /** Optional tourism POIs for the amenity-density obscurity signal. */
   tourismPoints?(origin: Origin, radiusKm: number): Promise<LatLng[]>;
   /** Optional photo/summary/town enrichment for the top-ranked peaks. */
   enrich?(peak: { lat: number; lng: number }): Promise<PeakEnrichment>;
+}
+
+// A manual peak this close to an OSM candidate is the same summit — drop the OSM
+// duplicate so the manual entry (with its note/source) wins.
+const MANUAL_DEDUP_KM = 0.2;
+
+/** Merge manual peaks ahead of OSM peaks, dropping OSM peaks that duplicate one. */
+export function mergeManualPeaks(manual: ParsedPeak[], osm: ParsedPeak[]): ParsedPeak[] {
+  const deduped = osm.filter((o) => !manual.some((m) => distanceFrom(m, o) <= MANUAL_DEDUP_KM));
+  return [...manual, ...deduped];
 }
 
 /** Per-region knobs (spec 11). We DEM-score every candidate (no elevation
@@ -109,7 +122,9 @@ export async function precomputeRegion(
   fetchers: DiscoverFetchers,
   config: RegionConfig,
 ): Promise<Trek[]> {
-  const peaks = await fetchers.peaks(origin, config.radiusKm);
+  const osmPeaks = await fetchers.peaks(origin, config.radiusKm);
+  const manual = fetchers.manualPeaks?.(origin, config.radiusKm) ?? [];
+  const peaks = mergeManualPeaks(manual, osmPeaks);
   if (peaks.length === 0) return [];
 
   // Score EVERY candidate — no elevation pre-filter (that culled the low
@@ -181,7 +196,9 @@ export async function precomputeRegion(
       terrainConfidence: round(terrain.confidence, 2),
       discoveryScore: round(score, 3),
       estimatedDifficulty: estimateDifficulty(terrain),
-      sources: [`https://www.openstreetmap.org/node/${osmId}`],
+      // Manual peaks (spec 12) carry their own source + note; OSM peaks link the node.
+      ...(c.note ? { highlights: c.note } : {}),
+      sources: [c.sourceUrl ?? `https://www.openstreetmap.org/node/${osmId}`],
       verified: false,
     });
   }
@@ -193,14 +210,18 @@ export async function precomputeRegion(
   );
 
   // Keep every scored peak — the UI filters do the capping (user's call).
-  // Enrich only the top `enrichLimit` (photo / nearby-article summary / nearest
-  // town) — enrichment is several network calls per peak, so we spend it on the
-  // best-ranked; the long tail still ships with terrain + score.
+  // Enrich the top `enrichLimit` (photo / nearby-article summary / nearest town)
+  // — several network calls per peak, so spent on the best-ranked; the long tail
+  // ships terrain + score. Manual peaks (spec 12) are always enriched regardless
+  // of rank, since they're hand-picked and few.
   if (fetchers.enrich) {
-    for (const t of results.slice(0, config.enrichLimit)) {
+    const top = results.slice(0, config.enrichLimit);
+    const manuals = results.filter((t) => t.id.startsWith("manual-") && !top.includes(t));
+    for (const t of [...top, ...manuals]) {
       const e = await fetchers.enrich({ lat: t.lat, lng: t.lng });
       if (e.image) t.image = e.image;
-      if (e.highlights) t.highlights = e.highlights;
+      // Don't let enrichment clobber a manual peak's own note.
+      if (e.highlights && !t.id.startsWith("manual-")) t.highlights = e.highlights;
       if (e.nearestTown) t.nearestTown = e.nearestTown;
     }
   }
@@ -245,6 +266,7 @@ export async function enrichCuratedTerrain(
 function liveFetchers(): DiscoverFetchers {
   return {
     peaks: (origin, radiusKm) => fetchPeaks(origin, radiusKm),
+    manualPeaks: (origin, radiusKm) => manualPeaksNear(origin, radiusKm),
     elevations: (points) => fetchElevations(points),
     // Tourism/amenity density is a nice-to-have obscurity signal, not essential:
     // a failure degrades to "no nearby amenities" rather than losing the region.

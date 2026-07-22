@@ -37,6 +37,9 @@ export interface ParsedPeak {
   lng: number;
   elevationM?: number;
   notability: PeakNotability;
+  // Carry-through for manually-added peaks (spec 12); OSM parsing leaves unset.
+  sourceUrl?: string; // overrides the default OSM-node source link
+  note?: string; // seeds `highlights`
 }
 
 /** Pure parser: Overpass JSON → parsed peaks (coords, elevation, notability). */
