@@ -14,6 +14,15 @@ test("default Bangalore view renders map, markers and curated treks", async ({ p
   expect(await page.locator("path.leaflet-interactive").count()).toBeGreaterThan(5);
 });
 
+test("Bangalore's full radius caps the list and points overflow to the map (spec 16)", async ({
+  page,
+}) => {
+  await page.goto("/?oid=bangalore&olat=12.97160&olng=77.59460&on=Bengaluru&r=500");
+  // GeoNames listed summits push Bangalore past the 300-row cap: the footer must
+  // appear so the thousands of extra pins are still discoverable via the map.
+  await expect(page.getByText(/\+[\d,]+ more on the map/)).toBeVisible();
+});
+
 test("selecting a trek opens its detail with a directions link", async ({ page }) => {
   await page.goto("/");
   await page.getByText("Skandagiri").first().click();

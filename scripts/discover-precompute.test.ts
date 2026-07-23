@@ -4,9 +4,11 @@ import {
   dedupeAgainstCurated,
   enrichCuratedTerrain,
   mergeManualPeaks,
+  toListedTreks,
   type DiscoverFetchers,
   type RegionConfig,
 } from "./discover-precompute";
+import type { GeonamesSummit } from "./sources/geonames";
 import { manualPeaksNear, MANUAL_PEAKS } from "./seed/manual-peaks";
 import { validateTrek, type Origin, type Trek } from "../src/lib/trek";
 import type { ParsedPeak } from "../src/lib/overpass";
@@ -240,6 +242,76 @@ describe("manual peaks (spec 12)", () => {
     expect(trek.image?.url).toContain("upload.wikimedia.org");
     expect(trek.nearestTown).toBe("Chittoor");
     expect(trek.highlights).toContain("granite"); // manual note preserved
+  });
+});
+
+describe("GeoNames listed summits (spec 16)", () => {
+  const scored: Trek = {
+    id: "osm-1--pune",
+    name: "Scored Peak",
+    lat: 18.51,
+    lng: 73.84,
+    cityId: "geo:18.5204,73.8567",
+    tier: "discovery",
+    discoveryScore: 0.8,
+    reliefM: 300,
+    estimatedDifficulty: "Hard",
+    sources: ["https://www.openstreetmap.org/node/1"],
+    verified: false,
+  };
+  const summit: GeonamesSummit = {
+    id: "12345",
+    name: "Listed Hill",
+    lat: 18.7,
+    lng: 74.0,
+    elevationM: 900,
+  };
+
+  it("maps a summit to an unscored listed discovery trek (name + elevation, no topo fields)", () => {
+    const [t] = toListedTreks([summit], [], "pune", "geo:18.5204,73.8567");
+    expect(t.id).toBe("gn-12345--pune");
+    expect(t.name).toBe("Listed Hill");
+    expect(t.elevationM).toBe(900);
+    expect(t.tier).toBe("discovery");
+    expect(t.verified).toBe(false);
+    expect(t.sources[0]).toBe("https://www.geonames.org/12345");
+    // Listed pins are NOT topo-scored — these must be absent so filters/UI treat
+    // them as unranked (and hidden-gems/relief filters exclude them).
+    expect(t.discoveryScore).toBeUndefined();
+    expect(t.reliefM).toBeUndefined();
+    expect(t.estimatedDifficulty).toBeUndefined();
+    expect(validateTrek(t).ok).toBe(true);
+  });
+
+  it("omits elevationM when GeoNames had none", () => {
+    const [t] = toListedTreks(
+      [{ id: "9", name: "No Elev", lat: 18.7, lng: 74.0 }],
+      [],
+      "pune",
+      "c",
+    );
+    expect(t.elevationM).toBeUndefined();
+    expect(validateTrek(t).ok).toBe(true);
+  });
+
+  it("drops a summit that duplicates an already-scored peak (within 250 m)", () => {
+    const dup: GeonamesSummit = { id: "77", name: "Dup", lat: 18.5101, lng: 73.8401 };
+    expect(toListedTreks([dup], [scored], "pune", "c")).toHaveLength(0);
+  });
+
+  it("dedupes listed summits against each other", () => {
+    const a: GeonamesSummit = { id: "1", name: "A", lat: 18.7, lng: 74.0 };
+    const b: GeonamesSummit = { id: "2", name: "B", lat: 18.7001, lng: 74.0001 }; // ~15 m away
+    expect(toListedTreks([a, b], [], "pune", "c").map((t) => t.id)).toEqual(["gn-1--pune"]);
+  });
+
+  it("precomputeRegion appends listed summits below the ranked peaks", async () => {
+    const treks = await precomputeRegion(PUNE, fetchers({ listedSummits: () => [summit] }), CFG);
+    // 2 scored (rugged, flat) + 1 listed, listed last (no score).
+    expect(treks).toHaveLength(3);
+    const listed = treks[treks.length - 1];
+    expect(listed.id).toBe("gn-12345--pune");
+    expect(listed.discoveryScore).toBeUndefined();
   });
 });
 
