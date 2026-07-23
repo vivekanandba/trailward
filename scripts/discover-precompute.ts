@@ -124,9 +124,10 @@ const cellKey = (lat: number, lng: number): string =>
   `${Math.floor(lat / CELL_DEG)}:${Math.floor(lng / CELL_DEG)}`;
 
 /**
- * Turn GeoNames summits into lightweight "listed" discovery treks — name +
- * GeoNames elevation only, NO relief/slope/score/difficulty (they cost no DEM
- * calls). Drops any that duplicate an already-scored peak, and any duplicated
+ * Turn GeoNames summits into discovery treks. When `build:geonames` has
+ * DEM-scored them (spec 17) they carry relief/slope/prominence/score/difficulty
+ * and rank alongside OSM peaks; otherwise they fall back to name + elevation
+ * only. Drops any that duplicate an already-scored peak, and any duplicated
  * among themselves. Grid-bucketed so it stays fast over thousands of candidates.
  */
 export function toListedTreks(
@@ -173,6 +174,13 @@ export function toListedTreks(
       cityId,
       tier: "discovery",
       ...(s.elevationM !== undefined ? { elevationM: s.elevationM } : {}),
+      // Tile-DEM terrain rank (spec 17), when build:geonames resolved it.
+      ...(s.reliefM !== undefined ? { reliefM: s.reliefM } : {}),
+      ...(s.prominenceProxyM !== undefined ? { prominenceProxyM: s.prominenceProxyM } : {}),
+      ...(s.meanSlopeDeg !== undefined ? { meanSlopeDeg: s.meanSlopeDeg } : {}),
+      ...(s.terrainConfidence !== undefined ? { terrainConfidence: s.terrainConfidence } : {}),
+      ...(s.discoveryScore !== undefined ? { discoveryScore: s.discoveryScore } : {}),
+      ...(s.estimatedDifficulty ? { estimatedDifficulty: s.estimatedDifficulty } : {}),
       sources: [`https://www.geonames.org/${s.id}`],
       verified: false,
     });

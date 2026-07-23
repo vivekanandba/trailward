@@ -11,4 +11,6 @@ test-results
 .env
 .env.*
 !.env.example
-scripts/geonames/.cache/
+# Build-tool caches (GeoNames dump, DEM tiles) — never committed.
+scripts/**/.cache/
+scripts/.cache/
