@@ -26,6 +26,14 @@ export const MANUAL_PEAKS: ManualPeak[] = [
     note: "A granite rock hill near Chittoor with a short, steep scramble to a viewpoint. Added manually — not yet mapped as a peak in OpenStreetMap.",
     sourceUrl: "https://www.openstreetmap.org/#map=16/13.3417/79.2032",
   },
+  {
+    id: "manual-saanarappan-malai",
+    name: "Saanarappan Malai",
+    lat: 12.4484,
+    lng: 78.3347,
+    note: "A hill near Pulikunda (Krishnagiri area) with a memorial-stone temple below the summit. Added manually — not mapped as a peak/hill in OpenStreetMap.",
+    sourceUrl: "https://www.openstreetmap.org/#map=16/12.4484/78.3347",
+  },
 ];
 
 /** Manual peaks within radiusKm of the origin, mapped to the ParsedPeak shape. */
