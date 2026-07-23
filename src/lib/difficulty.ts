@@ -14,8 +14,23 @@ export const DIFFICULTY_COLORS: Record<Difficulty, string> = {
 // Discovery / unknown-difficulty treks (community, unverified).
 export const DISCOVERY_COLOR = "#64748b"; // slate grey
 
+// Brighter, higher-chroma variants for MAP MARKERS only. The badge colours above
+// are darkened for white-text WCAG contrast, which makes amber/red sink into the
+// warm terrain basemap; pins carry no text, so they use vivid fills (over a white
+// halo + shadow) to stay legible. Legend + pins read from here.
+export const MAP_DIFFICULTY_COLORS: Record<Difficulty, string> = {
+  Easy: "#22c55e", // vivid green — distinct from the dark cluster green + olive terrain
+  Moderate: "#f97316", // vivid orange — pops off the brown hills
+  Hard: "#ef4444", // vivid red
+};
+
 export function difficultyColor(difficulty?: Difficulty): string {
   return difficulty ? DIFFICULTY_COLORS[difficulty] : DISCOVERY_COLOR;
+}
+
+/** Brighter colour for map markers/legend (see MAP_DIFFICULTY_COLORS). */
+export function mapDifficultyColor(difficulty?: Difficulty): string {
+  return difficulty ? MAP_DIFFICULTY_COLORS[difficulty] : DISCOVERY_COLOR;
 }
 
 export function difficultyLabel(difficulty?: Difficulty): string {

@@ -12,7 +12,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import type { Origin, Trek } from "../lib/trek";
-import { difficultyColor, difficultyLabel } from "../lib/difficulty";
+import { difficultyLabel, mapDifficultyColor } from "../lib/difficulty";
 import { distanceFrom } from "../lib/distance";
 import { clusterByGrid } from "../lib/cluster";
 import { loadBasemap, saveBasemap, type Basemap } from "../lib/basemap";
@@ -169,7 +169,7 @@ function TrekPin({
   // Colour by (estimated) difficulty; unknown-difficulty peaks fall back to the
   // slate discovery colour (a white fill vanished into the terrain basemap).
   const shownDifficulty = trek.difficulty ?? trek.estimatedDifficulty;
-  const color = difficultyColor(shownDifficulty);
+  const color = mapDifficultyColor(shownDifficulty);
   const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
   // Size discovery pins by their hidden-gem score so top picks read first.
   const baseRadius =
@@ -395,7 +395,7 @@ export default function TrekMap({
           <div key={d} className="flex items-center gap-1.5 text-trail-700 dark:text-slate-300">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: difficultyColor(d) }}
+              style={{ backgroundColor: mapDifficultyColor(d) }}
             />
             {d}
           </div>
