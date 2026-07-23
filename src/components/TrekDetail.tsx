@@ -5,12 +5,18 @@ import { difficultyColor, difficultyLabel } from "../lib/difficulty";
 import { googleMapsDirectionsUrl } from "../lib/directions";
 import { getWeather, type WeatherNow } from "../lib/weather";
 import { toGpx } from "../lib/gpx";
+import { fetchLiveEnrichment, type LiveEnrichment } from "../lib/enrich";
 
 interface TrekDetailProps {
   trek: Trek;
   origin: Origin;
   onClose(): void;
 }
+
+// Live enrichment is fetched once per pin and cached for the session, so
+// reopening a pin (or clicking between pins and back) is instant and doesn't
+// re-hit the APIs.
+const liveEnrichCache = new Map<string, LiveEnrichment>();
 
 // Safe hostname for a source link; falls back to the raw string if the URL is
 // malformed, so one bad source never blanks the panel (spec 00).
@@ -103,6 +109,10 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   const [weatherFailed, setWeatherFailed] = useState(false);
   // Hide the hero if the image URL 404s so a dead photo never leaves a gap.
   const [imageFailed, setImageFailed] = useState(false);
+  // Live, on-open enrichment (spec 19) for discovery pins that ship without a
+  // baked photo / summary / town — most of the GeoNames set.
+  const [live, setLive] = useState<LiveEnrichment>({});
+  const [enriching, setEnriching] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -117,6 +127,40 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
     };
   }, [trek.id, trek.lat, trek.lng]);
 
+  useEffect(() => {
+    // Only fetch for discovery pins actually missing context, and only what
+    // isn't already baked. Curated/enriched treks skip the network entirely.
+    const needs =
+      trek.tier === "discovery" && (!trek.image || !trek.highlights || !trek.nearestTown);
+    if (!needs) {
+      setLive({});
+      return;
+    }
+    const cached = liveEnrichCache.get(trek.id);
+    if (cached) {
+      setLive(cached);
+      return;
+    }
+    let active = true;
+    setLive({});
+    setEnriching(true);
+    fetchLiveEnrichment(trek.lat, trek.lng)
+      .then((e) => {
+        liveEnrichCache.set(trek.id, e);
+        if (active) setLive(e);
+      })
+      .catch(() => {})
+      .finally(() => active && setEnriching(false));
+    return () => {
+      active = false;
+    };
+  }, [trek.id, trek.lat, trek.lng, trek.tier, trek.image, trek.highlights, trek.nearestTown]);
+
+  // Prefer baked data; fall back to whatever the live fetch found.
+  const image = trek.image ?? live.image;
+  const highlights = trek.highlights ?? live.highlights;
+  const nearestTown = trek.nearestTown ?? live.nearestTown;
+
   const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
   // For discovery peaks with no curated difficulty, colour + label by the
   // terrain-estimated difficulty (kept honest with an "est." prefix).
@@ -127,7 +171,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
     : trek.estimatedDifficulty
       ? `est. ${trek.estimatedDifficulty}`
       : "Unverified";
-  const credit = trek.image ? splitAttribution(trek.image.attribution) : null;
+  const credit = image ? splitAttribution(image.attribution) : null;
   // Extra Commons photos beyond the hero (spec 15).
   const galleryThumbs = (trek.gallery ?? []).filter((g) => g.url !== trek.image?.url).slice(0, 3);
 
@@ -185,10 +229,10 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {trek.image && !imageFailed && (
+        {image && !imageFailed && (
           <figure className="mb-3">
             <img
-              src={trek.image.url}
+              src={image.url}
               alt={`${trek.name}`}
               loading="lazy"
               onError={() => setImageFailed(true)}
@@ -228,8 +272,11 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             ))}
           </div>
         )}
-        {trek.highlights && (
-          <p className="text-sm text-trail-700 dark:text-slate-300">{trek.highlights}</p>
+        {highlights && <p className="text-sm text-trail-700 dark:text-slate-300">{highlights}</p>}
+        {enriching && !highlights && !image && (
+          <p className="text-xs italic text-trail-500 dark:text-slate-400" role="status">
+            Looking for nearby photos & notes…
+          </p>
         )}
 
         <dl className="mt-3 divide-y divide-trail-50 dark:divide-slate-700">
@@ -241,7 +288,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             value={trek.trailLengthKm ? `${trek.trailLengthKm} km` : undefined}
           />
           <Fact label="Duration" value={trek.durationHrs ? `${trek.durationHrs} h` : undefined} />
-          <Fact label="Nearest town" value={trek.nearestTown} />
+          <Fact label="Nearest town" value={nearestTown} />
           <Fact label="Entry fee" value={trek.entryFee} />
           <Fact
             label="Permit"

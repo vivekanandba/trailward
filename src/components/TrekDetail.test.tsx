@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import TrekDetail from "./TrekDetail";
 import type { Origin, Trek } from "../lib/trek";
@@ -9,6 +9,12 @@ vi.mock("../lib/weather", async () => {
   return { ...actual, getWeather: () => Promise.resolve(null) };
 });
 
+// Lazy enrichment is a network call (spec 19); stub it so tests stay offline.
+// vi.hoisted so the mock factory can reference it despite hoisting.
+const { liveEnrich } = vi.hoisted(() => ({ liveEnrich: vi.fn() }));
+vi.mock("../lib/enrich", () => ({ fetchLiveEnrichment: liveEnrich }));
+
+beforeEach(() => liveEnrich.mockReset().mockResolvedValue({}));
 afterEach(cleanup);
 
 const origin: Origin = { id: "bangalore", name: "Bengaluru", lat: 12.97, lng: 77.59 };
@@ -57,6 +63,42 @@ describe("TrekDetail image", () => {
     const img = screen.getByRole("img", { name: "Skandagiri" });
     fireEvent.error(img);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+});
+
+describe("TrekDetail lazy enrichment (spec 19)", () => {
+  const gnTrek: Trek = {
+    id: "gn-123--bengaluru",
+    name: "Some Listed Hill",
+    lat: 13.4,
+    lng: 77.7,
+    cityId: "bangalore",
+    tier: "discovery",
+    reliefM: 300,
+    discoveryScore: 0.8,
+    estimatedDifficulty: "Moderate",
+    sources: ["https://www.geonames.org/123"],
+    verified: false,
+  };
+
+  it("fetches and shows a nearby photo, summary, and town for a bare discovery pin", async () => {
+    liveEnrich.mockResolvedValueOnce({
+      image: { url: "https://upload.wikimedia.org/live.jpg", attribution: "Wikimedia Commons" },
+      highlights: "A quiet granite dome.",
+      nearestTown: "Chikkaballapur",
+    });
+    render(<TrekDetail trek={gnTrek} origin={origin} onClose={vi.fn()} />);
+    expect(await screen.findByText("A quiet granite dome.")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Some Listed Hill" })).toHaveAttribute(
+      "src",
+      "https://upload.wikimedia.org/live.jpg",
+    );
+    expect(screen.getByText("Chikkaballapur")).toBeInTheDocument();
+  });
+
+  it("does not fetch enrichment for a curated trek", () => {
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    expect(liveEnrich).not.toHaveBeenCalled();
   });
 });
 
