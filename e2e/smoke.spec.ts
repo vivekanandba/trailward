@@ -68,9 +68,10 @@ test("hidden-gems filter narrows a preset region's list", async ({ page }) => {
 
 test("the map shows a difficulty legend", async ({ page }) => {
   await page.goto("/");
-  const legend = page.locator("text=unverified").last();
-  await expect(legend).toBeVisible();
-  await expect(page.getByText("Moderate", { exact: true }).last()).toBeVisible();
+  // Easy/Moderate/Hard also appear as filter chips in the rail; the legend adds
+  // a second occurrence on the map, so each word appears at least twice.
+  await expect(page.getByText("Hard", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("Moderate", { exact: true })).toHaveCount(2);
 });
 
 test("basemap defaults to terrain and toggles to the street map", async ({ page }) => {

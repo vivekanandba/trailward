@@ -166,8 +166,8 @@ function TrekPin({
   onSelect(id: string): void;
 }) {
   const isDiscovery = trek.tier === "discovery";
-  // Colour discovery peaks by their terrain-estimated difficulty when we have
-  // one; only truly unknown peaks stay hollow white.
+  // Colour by (estimated) difficulty; unknown-difficulty peaks fall back to the
+  // slate discovery colour (a white fill vanished into the terrain basemap).
   const shownDifficulty = trek.difficulty ?? trek.estimatedDifficulty;
   const color = difficultyColor(shownDifficulty);
   const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
@@ -184,12 +184,13 @@ function TrekPin({
       center={[trek.lat, trek.lng]}
       radius={selected ? 11 : baseRadius}
       pathOptions={{
+        // Solid white halo + a drop-shadow (see .trek-pin in index.css) so the
+        // marker reads clearly over the busy terrain basemap; solid fill for punch.
         color: selected ? "#1c3927" : "#ffffff",
-        weight: selected ? 3 : 1.5,
-        fillColor: shownDifficulty ? color : "#ffffff",
-        fillOpacity: isDiscovery ? 0.75 : 0.95,
-        // Dashed outline keeps discovery pins visually "unverified" even when coloured.
-        dashArray: isDiscovery ? "2 3" : undefined,
+        weight: selected ? 3.5 : 2.5,
+        fillColor: color,
+        fillOpacity: 1,
+        className: "trek-pin",
       }}
       eventHandlers={{ click: () => onSelect(trek.id) }}
     >
@@ -259,7 +260,13 @@ function Markers({
             key={`cluster:${c.members.map((m) => m.id).join(",")}`}
             center={[c.lat, c.lng]}
             radius={Math.min(24, 12 + c.members.length)}
-            pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#2f6b3f", fillOpacity: 0.9 }}
+            pathOptions={{
+              color: "#ffffff",
+              weight: 2.5,
+              fillColor: "#1c3927",
+              fillOpacity: 1,
+              className: "trek-pin",
+            }}
             eventHandlers={{
               click: () =>
                 map.fitBounds(bounds, {
@@ -393,10 +400,6 @@ export default function TrekMap({
             {d}
           </div>
         ))}
-        <div className="mt-0.5 flex items-center gap-1.5 text-trail-600 dark:text-slate-400">
-          <span className="inline-block h-2.5 w-2.5 rounded-full border border-dashed border-trail-500" />
-          unverified
-        </div>
       </div>
     </div>
   );
