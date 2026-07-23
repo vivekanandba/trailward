@@ -21,6 +21,8 @@ export const ALLOWED_HOSTS = new Set<string>([
   "commons.wikimedia.org",
   "upload.wikimedia.org",
   "nominatim.openstreetmap.org", // reverse geocode: nearest town for a discovery peak
+  "elevation-tiles-prod.s3.amazonaws.com", // AWS Terrarium DEM tiles (no key) for terrain scoring
+  "query.wikidata.org", // Wikidata SPARQL: cross-match listed summits by GeoNames ID (P1566)
 ]);
 
 export function isAllowedHost(url: string): boolean {
@@ -53,10 +55,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function throttle(host: string): Promise<void> {
+async function throttle(host: string, gapMs = MIN_GAP_MS): Promise<void> {
   const now = Date.now();
   const last = lastHit.get(host) ?? 0;
-  const wait = last + MIN_GAP_MS - now;
+  const wait = last + gapMs - now;
   if (wait > 0) await sleep(wait);
   lastHit.set(host, Date.now());
 }
@@ -68,6 +70,9 @@ interface GetOptions {
   retries?: number;
   /** Per-attempt network timeout override (ms). Defaults to REQUEST_TIMEOUT_MS. */
   timeoutMs?: number;
+  /** Per-host min gap between requests (ms). Defaults to MIN_GAP_MS (1 req/s);
+   *  set lower for high-throughput endpoints like S3 static tiles. */
+  throttleMs?: number;
 }
 
 /** Fetch a URL's text, enforcing the allowlist, rate limit, and retries. */
@@ -109,4 +114,45 @@ export async function fetchText(url: string, opts: GetOptions = {}): Promise<str
 /** Fetch and JSON-parse a URL. */
 export async function fetchJson<T = unknown>(url: string, opts: GetOptions = {}): Promise<T> {
   return JSON.parse(await fetchText(url, opts)) as T;
+}
+
+/**
+ * Fetch a URL's raw bytes (e.g. a DEM PNG tile), enforcing the allowlist, rate
+ * limit, and retries. Use the direct (virtual-host) endpoint for a host so no
+ * redirect is needed — undici's plain request() doesn't follow them. Returns
+ * null on a 404 so a missing tile (ocean, out of coverage) degrades to "no
+ * elevation" rather than aborting.
+ */
+export async function fetchBuffer(url: string, opts: GetOptions = {}): Promise<Buffer | null> {
+  assertAllowedHost(url);
+  const host = new URL(url).hostname;
+  const retries = opts.retries ?? 2;
+
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    await throttle(host, opts.throttleMs);
+    try {
+      const timeout = opts.timeoutMs ?? REQUEST_TIMEOUT_MS;
+      const res = await request(url, {
+        method: "GET",
+        headers: { "user-agent": USER_AGENT, ...opts.headers },
+        headersTimeout: timeout,
+        bodyTimeout: timeout,
+      });
+      if (res.statusCode === 404) {
+        await res.body.dump();
+        return null;
+      }
+      if (res.statusCode >= 300 && res.statusCode < 500) {
+        throw new NonRetryableError(`HTTP ${res.statusCode} for ${url}`);
+      }
+      if (res.statusCode >= 500) throw new Error(`HTTP ${res.statusCode} for ${url}`);
+      return Buffer.from(await res.body.arrayBuffer());
+    } catch (err) {
+      lastErr = err;
+      if (err instanceof NonRetryableError) break;
+      if (attempt < retries) await sleep(500 * (attempt + 1));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(`fetch failed: ${url}`);
 }

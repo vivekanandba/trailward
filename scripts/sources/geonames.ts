@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import type { Origin } from "../../src/lib/trek";
+import type { Difficulty, Origin } from "../../src/lib/trek";
 import { distanceFrom } from "../../src/lib/distance";
 
 export interface GeonamesSummit {
@@ -16,6 +16,14 @@ export interface GeonamesSummit {
   lat: number;
   lng: number;
   elevationM?: number;
+  // Terrain rank baked by `build:geonames` (tile DEM, spec 17). Present when the
+  // DEM resolved the summit; absent leaves the pin unscored (name + elevation).
+  reliefM?: number;
+  prominenceProxyM?: number;
+  meanSlopeDeg?: number;
+  terrainConfidence?: number;
+  discoveryScore?: number;
+  estimatedDifficulty?: Difficulty;
 }
 
 let cache: GeonamesSummit[] | null = null;

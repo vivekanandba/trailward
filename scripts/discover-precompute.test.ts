@@ -283,6 +283,30 @@ describe("GeoNames listed summits (spec 16)", () => {
     expect(validateTrek(t).ok).toBe(true);
   });
 
+  it("carries DEM-scored fields (spec 17) so the pin ranks like an OSM peak", () => {
+    const [t] = toListedTreks(
+      [
+        {
+          ...summit,
+          reliefM: 320,
+          prominenceProxyM: 300,
+          meanSlopeDeg: 18.5,
+          terrainConfidence: 0.9,
+          discoveryScore: 0.82,
+          estimatedDifficulty: "Moderate",
+        },
+      ],
+      [],
+      "pune",
+      "c",
+    );
+    expect(t.reliefM).toBe(320);
+    expect(t.meanSlopeDeg).toBe(18.5);
+    expect(t.discoveryScore).toBe(0.82);
+    expect(t.estimatedDifficulty).toBe("Moderate");
+    expect(validateTrek(t).ok).toBe(true);
+  });
+
   it("omits elevationM when GeoNames had none", () => {
     const [t] = toListedTreks(
       [{ id: "9", name: "No Elev", lat: 18.7, lng: 74.0 }],
