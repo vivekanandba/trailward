@@ -192,6 +192,14 @@ export default function App() {
     [baseTreks],
   );
   const stats = useMemo(() => regionStats(visible), [visible]);
+  // GeoNames listed summits can push a region past several thousand pins. The map
+  // culls to the viewport, but the list rail would choke rendering them all — so
+  // cap the rows (data order is curated → ranked discovery → listed, so the top
+  // stays the most relevant) and tell the user the rest are on the map / behind
+  // filters.
+  const LIST_CAP = 300;
+  const shown = useMemo(() => visible.slice(0, LIST_CAP), [visible]);
+  const overflow = visible.length - shown.length;
 
   // Look up the selection among the currently-visible treks so the detail panel
   // closes automatically when active filters exclude the selected trek (#6).
@@ -353,7 +361,7 @@ export default function App() {
                 </button>
               </li>
             )}
-            {visible.map((t) => (
+            {shown.map((t) => (
               <li key={t.id}>
                 <button
                   type="button"
@@ -388,6 +396,12 @@ export default function App() {
                 </button>
               </li>
             ))}
+            {overflow > 0 && (
+              <li className="px-4 py-3 text-xs text-trail-500 dark:text-slate-400">
+                +{overflow.toLocaleString()} more on the map. Zoom in, search, or filter (relief,
+                hidden gems, difficulty) to narrow the list.
+              </li>
+            )}
           </ul>
         </aside>
 

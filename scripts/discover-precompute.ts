@@ -23,6 +23,7 @@ import type { ParsedPeak } from "../src/lib/overpass";
 import { PRESET_ORIGINS } from "../src/lib/cities";
 import { fetchPeaks, fetchTourismPoints } from "./sources/overpass";
 import { manualPeaksNear } from "./seed/manual-peaks";
+import { geonamesSummitsNear, type GeonamesSummit } from "./sources/geonames";
 import { fetchTrailAndPois } from "./sources/trails";
 import { fetchElevations } from "./sources/elevation";
 import { fetchNearestArticle } from "./sources/geosearch";
@@ -53,6 +54,9 @@ export interface DiscoverFetchers {
     trail?: Trek["trail"];
     pois?: Trek["pois"];
   }>;
+  /** Optional GeoNames listed summits (spec 16) — appended as lightweight,
+   *  unscored "listed" pins (name + elevation only, no DEM cost). */
+  listedSummits?(origin: Origin, radiusKm: number): GeonamesSummit[];
 }
 
 // A manual peak this close to an OSM candidate is the same summit — drop the OSM
@@ -108,6 +112,72 @@ const CURATED_DEDUP_KM = 0.7;
 /** Drop discovery peaks that coincide with an already-curated trek. */
 export function dedupeAgainstCurated(discovery: Trek[], curated: Trek[]): Trek[] {
   return discovery.filter((d) => !curated.some((c) => distanceFrom(c, d) <= CURATED_DEDUP_KM));
+}
+
+// A GeoNames summit this close to a peak we've already scored (OSM/manual) is the
+// same hill — drop it so we don't double-pin. Coarser than MANUAL_DEDUP so minor
+// coordinate disagreement between sources still collapses to one pin.
+const LISTED_DEDUP_KM = 0.25;
+const CELL_DEG = 0.005; // ~550 m grid: a 250 m radius always lands in the 3×3 block
+
+const cellKey = (lat: number, lng: number): string =>
+  `${Math.floor(lat / CELL_DEG)}:${Math.floor(lng / CELL_DEG)}`;
+
+/**
+ * Turn GeoNames summits into lightweight "listed" discovery treks — name +
+ * GeoNames elevation only, NO relief/slope/score/difficulty (they cost no DEM
+ * calls). Drops any that duplicate an already-scored peak, and any duplicated
+ * among themselves. Grid-bucketed so it stays fast over thousands of candidates.
+ */
+export function toListedTreks(
+  summits: GeonamesSummit[],
+  scored: Trek[],
+  regionSlug: string,
+  cityId: string,
+): Trek[] {
+  const grid = new Map<string, { lat: number; lng: number }[]>();
+  const occupy = (lat: number, lng: number): void => {
+    const k = cellKey(lat, lng);
+    (grid.get(k) ?? grid.set(k, []).get(k)!).push({ lat, lng });
+  };
+  const nearOccupied = (lat: number, lng: number): boolean => {
+    const bx = Math.floor(lat / CELL_DEG);
+    const by = Math.floor(lng / CELL_DEG);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const cell = grid.get(`${bx + dx}:${by + dy}`);
+        if (
+          cell?.some(
+            (p) =>
+              distanceFrom({ id: "c", name: "c", lat, lng }, { lat: p.lat, lng: p.lng }) <=
+              LISTED_DEDUP_KM,
+          )
+        )
+          return true;
+      }
+    }
+    return false;
+  };
+
+  for (const s of scored) occupy(s.lat, s.lng);
+
+  const listed: Trek[] = [];
+  for (const s of summits) {
+    if (nearOccupied(s.lat, s.lng)) continue;
+    occupy(s.lat, s.lng); // also dedupe listed against each other
+    listed.push({
+      id: `gn-${s.id}--${regionSlug}`,
+      name: s.name,
+      lat: s.lat,
+      lng: s.lng,
+      cityId,
+      tier: "discovery",
+      ...(s.elevationM !== undefined ? { elevationM: s.elevationM } : {}),
+      sources: [`https://www.geonames.org/${s.id}`],
+      verified: false,
+    });
+  }
+  return listed;
 }
 
 // Build the flat [center, ring×8] sample list for a set of points.
@@ -246,6 +316,18 @@ export async function precomputeRegion(
       if (pois && pois.length > 0) t.pois = pois;
     }
   }
+
+  // Append GeoNames listed summits (spec 16) — deduped against everything we
+  // just scored, added as unscored name+elevation pins. They sort below the
+  // ranked peaks (no discoveryScore), so the UI's ranked view stays on top.
+  const summits = fetchers.listedSummits?.(origin, config.radiusKm) ?? [];
+  if (summits.length > 0) {
+    const listed = toListedTreks(summits, results, regionSlug, origin.id);
+    if (listed.length > 0) {
+      console.log(`[discover] ${origin.name}: +${listed.length} GeoNames listed summits.`);
+      results.push(...listed);
+    }
+  }
   return results;
 }
 
@@ -325,6 +407,7 @@ function liveFetchers(): DiscoverFetchers {
       return out;
     },
     trailAndPois: (peak) => fetchTrailAndPois(peak, fetchElevations),
+    listedSummits: (origin, radiusKm) => geonamesSummitsNear(origin, radiusKm),
   };
 }
 
