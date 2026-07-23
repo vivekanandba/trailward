@@ -111,24 +111,28 @@ describe("precomputeRegion", () => {
     expect(validateTrek(top).ok).toBe(true);
   });
 
-  it("attaches a trail from the trail fetcher to top peaks (spec 14)", async () => {
+  it("attaches a trail + POIs from the trailAndPois fetcher to top peaks (spec 14/15)", async () => {
     const [top] = await precomputeRegion(
       PUNE,
       fetchers({
-        trail: async () => ({
-          coords: [
-            [18.51, 73.84],
-            [18.52, 73.85],
-          ],
-          lengthKm: 1.2,
-          gainM: 80,
-          profile: [700, 780],
+        trailAndPois: async () => ({
+          trail: {
+            coords: [
+              [18.51, 73.84],
+              [18.52, 73.85],
+            ],
+            lengthKm: 1.2,
+            gainM: 80,
+            profile: [700, 780],
+          },
+          pois: [{ kind: "parking", lat: 18.5, lng: 73.83, distM: 600 }],
         }),
       }),
       CFG,
     );
     expect(top.trail?.lengthKm).toBe(1.2);
     expect(top.trail?.gainM).toBe(80);
+    expect(top.pois?.[0].kind).toBe("parking");
     expect(validateTrek(top).ok).toBe(true);
   });
 

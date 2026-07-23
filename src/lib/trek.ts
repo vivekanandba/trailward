@@ -48,6 +48,9 @@ export interface Trek {
   highlights?: string;
   nearestTown?: string;
   image?: TrekImage;
+  gallery?: TrekImage[]; // extra nearby Commons photos (spec 15)
+  // Nearby trailhead POIs (spec 15): nearest of each kind to the summit.
+  pois?: { kind: "parking" | "water" | "viewpoint"; lat: number; lng: number; distM: number }[];
 
   // Provenance
   sources: string[]; // URLs; ≥1 for curated
@@ -187,15 +190,36 @@ export function validateTrek(input: unknown): ValidateResult {
   }
 
   // Image: a url requires an attribution (licensing requirement).
-  if (input.image !== undefined) {
-    if (!isRecord(input.image)) return fail("image", "must be an object");
-    const { url, attribution } = input.image;
-    if (typeof url !== "string" || url.length === 0) {
-      return fail("image.url", "must be a non-empty string");
+  const validImage = (v: unknown): boolean =>
+    isRecord(v) &&
+    typeof v.url === "string" &&
+    v.url.length > 0 &&
+    typeof v.attribution === "string" &&
+    v.attribution.length > 0;
+  if (input.image !== undefined && !validImage(input.image)) {
+    return fail("image", "must have a non-empty url and attribution");
+  }
+  if (input.gallery !== undefined) {
+    if (!Array.isArray(input.gallery) || !input.gallery.every(validImage)) {
+      return fail("gallery", "must be an array of {url, attribution}");
     }
-    if (typeof attribution !== "string" || attribution.length === 0) {
-      return fail("image.attribution", "is required when image.url is present");
-    }
+  }
+
+  // POIs (spec 15): nearest trailhead features.
+  if (input.pois !== undefined) {
+    const KINDS = ["parking", "water", "viewpoint"];
+    const okPois =
+      Array.isArray(input.pois) &&
+      input.pois.every(
+        (p) =>
+          isRecord(p) &&
+          KINDS.includes(p.kind as string) &&
+          typeof p.lat === "number" &&
+          typeof p.lng === "number" &&
+          typeof p.distM === "number" &&
+          p.distM >= 0,
+      );
+    if (!okPois) return fail("pois", "must be an array of {kind, lat, lng, distM}");
   }
 
   // Tier-specific provenance rules.

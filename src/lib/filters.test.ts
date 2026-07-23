@@ -181,6 +181,34 @@ describe("applyFilters — free-text query", () => {
   });
 });
 
+describe("applyFilters — terrain filters (spec 15)", () => {
+  const treks = [
+    trek({ id: "gem", distanceKm: 1, tier: "discovery", discoveryScore: 0.9, reliefM: 400 }),
+    trek({ id: "meh", distanceKm: 1, tier: "discovery", discoveryScore: 0.3, reliefM: 120 }),
+    trek({ id: "curated-noscore", distanceKm: 1 }),
+  ];
+
+  it("hiddenGemsOnly keeps only high-score peaks", () => {
+    expect(applyFilters(treks, origin, filters({ hiddenGemsOnly: true })).map((t) => t.id)).toEqual(
+      ["gem"],
+    );
+  });
+
+  it("minReliefM keeps peaks at/above the relief and excludes unknown-relief", () => {
+    expect(applyFilters(treks, origin, filters({ minReliefM: 300 })).map((t) => t.id)).toEqual([
+      "gem",
+    ]);
+  });
+
+  it("imposes no constraint at defaults", () => {
+    expect(applyFilters(treks, origin, filters()).map((t) => t.id)).toEqual([
+      "gem",
+      "meh",
+      "curated-noscore",
+    ]);
+  });
+});
+
 describe("countByDifficulty", () => {
   it("tallies each difficulty and ignores unknowns", () => {
     const treks = [

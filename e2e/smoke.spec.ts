@@ -57,6 +57,22 @@ test("a preset region shows topography-ranked discovery peaks", async ({ page })
   await expect(page.getByText(/community · unverified/i)).toBeVisible();
 });
 
+test("hidden-gems filter narrows a preset region's list", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Pune" }).click();
+  await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
+  const before = await page.locator("aside li").count();
+  await page.getByLabel("Hidden gems only").check();
+  await expect.poll(async () => page.locator("aside li").count()).toBeLessThan(before);
+});
+
+test("the map shows a difficulty legend", async ({ page }) => {
+  await page.goto("/");
+  const legend = page.locator("text=unverified").last();
+  await expect(legend).toBeVisible();
+  await expect(page.getByText("Moderate", { exact: true }).last()).toBeVisible();
+});
+
 test("basemap toggle switches to OpenTopoMap terrain tiles", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("img.leaflet-tile").first()).toBeVisible();

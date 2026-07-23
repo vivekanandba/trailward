@@ -14,6 +14,8 @@ import OriginSearch from "./components/OriginSearch";
 import Panel from "./components/Panel";
 import ThemeToggle from "./components/ThemeToggle";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
+import { regionStats, type RegionStats } from "./lib/regionStats";
+import { difficultyColor } from "./lib/difficulty";
 
 // The feedback panel is only mounted on demand, so its code (form, validation,
 // Web3Forms client) stays out of the initial bundle. A failed chunk load (stale
@@ -30,6 +32,50 @@ const FeedbackForm = lazy(() =>
 );
 
 const ALL_TREKS = treksRaw as Trek[];
+
+// Compact overview of the peaks in view (spec 15): count, a difficulty-spread
+// bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
+function RegionStatsCard({ stats }: { stats: RegionStats }) {
+  const { spread } = stats;
+  const graded = spread.Easy + spread.Moderate + spread.Hard;
+  return (
+    <div className="border-b border-trail-100 px-4 py-3 text-xs dark:border-slate-700">
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-trail-800 dark:text-slate-100">
+          {stats.count} peak{stats.count === 1 ? "" : "s"} in view
+        </span>
+        {stats.topGem && (
+          <span className="truncate pl-2 text-trail-600 dark:text-slate-400">
+            top gem: {stats.topGem.name}
+          </span>
+        )}
+      </div>
+      {graded > 0 && (
+        <div
+          className="mt-2 flex h-2 gap-px overflow-hidden rounded-full"
+          role="img"
+          aria-label={`Difficulty spread: ${spread.Easy} easy, ${spread.Moderate} moderate, ${spread.Hard} hard`}
+        >
+          {(["Easy", "Moderate", "Hard"] as const).map((d) =>
+            spread[d] > 0 ? (
+              <span
+                key={d}
+                style={{
+                  width: `${(spread[d] / graded) * 100}%`,
+                  backgroundColor: difficultyColor(d),
+                }}
+              />
+            ) : null,
+          )}
+        </div>
+      )}
+      <div className="mt-2 flex flex-wrap gap-x-3 text-trail-600 dark:text-slate-400">
+        {stats.highestM !== undefined && <span>highest {stats.highestM} m</span>}
+        {stats.maxReliefM !== undefined && <span>max relief {stats.maxReliefM} m</span>}
+      </div>
+    </div>
+  );
+}
 
 // Bengaluru's discovery peaks are precomputed out to 500 km; other origins keep
 // the default 150 km (spec 11). One helper so the slider max and the on-switch
@@ -139,6 +185,13 @@ export default function App() {
   );
   const hasCurated = useMemo(() => visible.some((t) => t.tier === "curated"), [visible]);
   const maxRadiusKm = maxRadiusForOrigin(origin.id);
+  // Terrain filters (hidden-gems / min-relief) only make sense where peaks carry
+  // a score/relief; the region-stats card summarises what's in view (spec 15).
+  const showTerrainFilters = useMemo(
+    () => baseTreks.some((t) => t.discoveryScore !== undefined || t.reliefM !== undefined),
+    [baseTreks],
+  );
+  const stats = useMemo(() => regionStats(visible), [visible]);
 
   // Look up the selection among the currently-visible treks so the detail panel
   // closes automatically when active filters exclude the selected trek (#6).
@@ -250,8 +303,10 @@ export default function App() {
               showTrailLength={showTrailLength}
               showDuration={showDuration}
               maxRadiusKm={maxRadiusKm}
+              showTerrainFilters={showTerrainFilters}
             />
           </div>
+          {!discovering && visible.length > 0 && <RegionStatsCard stats={stats} />}
           {discoveryCount > 0 && !discovering && (
             <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
               {!topoRanked

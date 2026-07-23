@@ -23,16 +23,17 @@ import type { ParsedPeak } from "../src/lib/overpass";
 import { PRESET_ORIGINS } from "../src/lib/cities";
 import { fetchPeaks, fetchTourismPoints } from "./sources/overpass";
 import { manualPeaksNear } from "./seed/manual-peaks";
-import { fetchTrail } from "./sources/trails";
+import { fetchTrailAndPois } from "./sources/trails";
 import { fetchElevations } from "./sources/elevation";
 import { fetchNearestArticle } from "./sources/geosearch";
 import { fetchWiki } from "./sources/wiki";
-import { fetchNearbyPhoto } from "./sources/commons";
+import { fetchNearbyPhotos } from "./sources/commons";
 import { fetchNearestTown } from "./sources/reverse";
 
 /** Enrichment for one peak — all optional, all best-effort. */
 export interface PeakEnrichment {
   image?: TrekImage;
+  gallery?: TrekImage[];
   highlights?: string;
   nearestTown?: string;
 }
@@ -47,8 +48,11 @@ export interface DiscoverFetchers {
   tourismPoints?(origin: Origin, radiusKm: number): Promise<LatLng[]>;
   /** Optional photo/summary/town enrichment for the top-ranked peaks. */
   enrich?(peak: { lat: number; lng: number }): Promise<PeakEnrichment>;
-  /** Optional nearest-trail lookup for the very top peaks (spec 14). */
-  trail?(peak: { lat: number; lng: number }): Promise<Trek["trail"] | undefined>;
+  /** Optional nearest-trail + trailhead-POIs lookup for the very top peaks (spec 14/15). */
+  trailAndPois?(peak: { lat: number; lng: number }): Promise<{
+    trail?: Trek["trail"];
+    pois?: Trek["pois"];
+  }>;
 }
 
 // A manual peak this close to an OSM candidate is the same summit — drop the OSM
@@ -224,20 +228,22 @@ export async function precomputeRegion(
     for (const t of [...top, ...manuals]) {
       const e = await fetchers.enrich({ lat: t.lat, lng: t.lng });
       if (e.image) t.image = e.image;
+      if (e.gallery && e.gallery.length > 0) t.gallery = e.gallery;
       // Don't let enrichment clobber a manual peak's own note.
       if (e.highlights && !t.id.startsWith("manual-")) t.highlights = e.highlights;
       if (e.nearestTown) t.nearestTown = e.nearestTown;
     }
   }
 
-  // Attach a nearest OSM trail to the very top peaks + manual peaks (spec 14) —
-  // an extra Overpass + DEM call each, so kept to a small trailLimit.
-  if (fetchers.trail) {
+  // Attach a nearest OSM trail + trailhead POIs to the very top peaks + manual
+  // peaks (spec 14/15) — one combined Overpass call each, so kept to trailLimit.
+  if (fetchers.trailAndPois) {
     const topTrail = results.slice(0, config.trailLimit);
     const manualsT = results.filter((t) => t.id.startsWith("manual-") && !topTrail.includes(t));
     for (const t of [...topTrail, ...manualsT]) {
-      const tr = await fetchers.trail({ lat: t.lat, lng: t.lng });
-      if (tr) t.trail = tr;
+      const { trail, pois } = await fetchers.trailAndPois({ lat: t.lat, lng: t.lng });
+      if (trail) t.trail = trail;
+      if (pois && pois.length > 0) t.pois = pois;
     }
   }
   return results;
@@ -307,15 +313,18 @@ function liveFetchers(): DiscoverFetchers {
         if (wiki.summary) out.highlights = wiki.summary;
         if (wiki.image) out.image = wiki.image;
       }
-      if (!out.image) {
-        const photo = await fetchNearbyPhoto(lat, lng, 2000);
-        if (photo) out.image = photo;
+      // Up to 3 nearby Commons photos (gallery); the first also serves as the
+      // hero when the article gave none.
+      const photos = await fetchNearbyPhotos(lat, lng, 2000, 3);
+      if (photos.length > 0) {
+        out.gallery = photos;
+        if (!out.image) out.image = photos[0];
       }
       const town = await fetchNearestTown(lat, lng);
       if (town) out.nearestTown = town;
       return out;
     },
-    trail: (peak) => fetchTrail(peak, fetchElevations),
+    trailAndPois: (peak) => fetchTrailAndPois(peak, fetchElevations),
   };
 }
 

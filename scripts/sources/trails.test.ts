@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { parseTrailWays, pickNearestTrail, simplifyPath, pathLengthKm, buildTrail } from "./trails";
+import {
+  parseTrailWays,
+  pickNearestTrail,
+  simplifyPath,
+  pathLengthKm,
+  buildTrail,
+  parsePois,
+} from "./trails";
 
 const geomFixture = {
   elements: [
@@ -71,6 +78,32 @@ describe("pathLengthKm", () => {
     ]);
     expect(km).toBeGreaterThan(0.2);
     expect(km).toBeLessThan(0.25);
+  });
+});
+
+describe("parsePois", () => {
+  const summit = { lat: 13.3417, lng: 79.2032 };
+  it("keeps the nearest parking/water/viewpoint, one per kind", () => {
+    const pois = parsePois(
+      {
+        elements: [
+          { lat: 13.3407, lon: 79.2032, tags: { amenity: "parking" } }, // ~110m
+          { lat: 13.3, lon: 79.2, tags: { amenity: "parking" } }, // far → dropped (dup kind)
+          { lat: 13.3427, lon: 79.2032, tags: { natural: "spring" } }, // water
+          { lat: 13.342, lon: 79.204, tags: { tourism: "viewpoint" } },
+          { lat: 13.34, lon: 79.2, tags: { shop: "kiosk" } }, // irrelevant
+          { type: "way", geometry: [{ lat: 13.34, lon: 79.2 }] }, // a way → ignored
+        ],
+      },
+      summit,
+    );
+    const kinds = pois.map((p) => p.kind).sort();
+    expect(kinds).toEqual(["parking", "viewpoint", "water"]);
+    const parking = pois.find((p) => p.kind === "parking")!;
+    expect(parking.distM).toBeLessThan(200); // the near one, not the far dup
+  });
+  it("returns [] for malformed input", () => {
+    expect(parsePois({}, summit)).toEqual([]);
   });
 });
 

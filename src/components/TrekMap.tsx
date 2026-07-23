@@ -381,6 +381,23 @@ export default function TrekMap({
           </button>
         ))}
       </div>
+
+      {/* Difficulty legend (spec 15). */}
+      <div className="absolute bottom-6 left-2 z-[500] rounded-lg border border-trail-200 bg-white/90 px-2.5 py-1.5 text-[11px] shadow dark:border-slate-600 dark:bg-slate-800/90">
+        {(["Easy", "Moderate", "Hard"] as const).map((d) => (
+          <div key={d} className="flex items-center gap-1.5 text-trail-700 dark:text-slate-300">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: difficultyColor(d) }}
+            />
+            {d}
+          </div>
+        ))}
+        <div className="mt-0.5 flex items-center gap-1.5 text-trail-600 dark:text-slate-400">
+          <span className="inline-block h-2.5 w-2.5 rounded-full border border-dashed border-trail-500" />
+          unverified
+        </div>
+      </div>
     </div>
   );
 }

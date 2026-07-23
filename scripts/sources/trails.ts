@@ -17,6 +17,37 @@ interface GeomEl {
   geometry?: { lat?: unknown; lon?: unknown }[];
 }
 
+export type Poi = NonNullable<Trek["pois"]>[number];
+
+/** Pure: Overpass nodes → the nearest parking / water / viewpoint to the summit. */
+export function parsePois(json: unknown, summit: { lat: number; lng: number }): Poi[] {
+  const elements = (json as { elements?: unknown })?.elements;
+  if (!Array.isArray(elements)) return [];
+  const nearest = new Map<Poi["kind"], Poi>();
+  for (const el of elements as {
+    lat?: unknown;
+    lon?: unknown;
+    tags?: Record<string, unknown>;
+  }[]) {
+    const lat = Number(el?.lat);
+    const lng = Number(el?.lon);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) continue; // nodes only (ways have no lat)
+    const tags = el?.tags ?? {};
+    let kind: Poi["kind"] | undefined;
+    if (tags.amenity === "parking") kind = "parking";
+    else if (tags.amenity === "drinking_water" || tags.natural === "spring") kind = "water";
+    else if (tags.tourism === "viewpoint") kind = "viewpoint";
+    if (!kind) continue;
+    const distM = Math.round(distM_(lat, lng, summit));
+    const prev = nearest.get(kind);
+    if (!prev || distM < prev.distM) nearest.set(kind, { kind, lat, lng, distM });
+  }
+  return [...nearest.values()].sort((a, b) => a.distM - b.distM);
+}
+
+const distM_ = (lat: number, lng: number, s: { lat: number; lng: number }): number =>
+  distanceFrom({ id: "", name: "", lat, lng }, s) * 1000;
+
 /** Pure: Overpass `out geom` ways → polylines of [lat, lng]. */
 export function parseTrailWays(json: unknown): Pt[][] {
   const elements = (json as { elements?: unknown })?.elements;
@@ -106,26 +137,50 @@ export function buildTrail(
  * elevation gain, and a per-vertex profile. Returns undefined when no path is
  * nearby or on any fetch failure.
  */
-export async function fetchTrail(
+export interface TrailAndPois {
+  trail?: Trek["trail"];
+  pois?: Trek["pois"];
+}
+
+/**
+ * One combined Overpass call per summit fetches both nearby walking paths and
+ * trailhead POIs (parking/water/viewpoint), then samples the DEM for the trail's
+ * gain/profile. Best-effort: returns {} on failure or when nothing is nearby.
+ */
+export async function fetchTrailAndPois(
   summit: { lat: number; lng: number },
   fetchElev: (pts: LatLng[]) => Promise<(number | undefined)[]>,
-): Promise<Trek["trail"] | undefined> {
-  let ways: Pt[][];
+): Promise<TrailAndPois> {
+  let raw: unknown;
   try {
-    const query = `[out:json][timeout:60];way(around:1200,${summit.lat},${summit.lng})[highway~"^(path|footway|track|steps)$"];out geom;`;
-    ways = parseTrailWays(await fetchOverpass(query));
+    const around = `${summit.lat},${summit.lng}`;
+    const query =
+      `[out:json][timeout:60];(` +
+      `way(around:1200,${around})[highway~"^(path|footway|track|steps)$"];` +
+      `node(around:1500,${around})[amenity=parking];` +
+      `node(around:1500,${around})[amenity=drinking_water];` +
+      `node(around:1500,${around})[natural=spring];` +
+      `node(around:1500,${around})[tourism=viewpoint];` +
+      `);out geom;`;
+    raw = await fetchOverpass(query);
   } catch {
-    return undefined;
+    return {};
   }
-  const picked = pickNearestTrail(ways, summit);
-  if (!picked) return undefined;
 
-  const coords = simplifyPath(picked);
-  let elevs: (number | undefined)[] = [];
-  try {
-    elevs = await fetchElev(coords.map(([lat, lng]) => ({ lat, lng })));
-  } catch {
-    /* keep length; buildTrail leaves gain 0 / no profile */
+  const out: TrailAndPois = {};
+  const pois = parsePois(raw, summit);
+  if (pois.length > 0) out.pois = pois;
+
+  const picked = pickNearestTrail(parseTrailWays(raw), summit);
+  if (picked) {
+    const coords = simplifyPath(picked);
+    let elevs: (number | undefined)[] = [];
+    try {
+      elevs = await fetchElev(coords.map(([lat, lng]) => ({ lat, lng })));
+    } catch {
+      /* keep length; buildTrail leaves gain 0 / no profile */
+    }
+    out.trail = buildTrail(coords, elevs);
   }
-  return buildTrail(coords, elevs);
+  return out;
 }
