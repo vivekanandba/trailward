@@ -29,6 +29,11 @@
   background: #e8eef0;
   font-family: inherit;
 }
+/* Trek markers get a soft drop-shadow so they stay legible over the busy
+   terrain basemap (spec 13), on top of their solid white halo. */
+.trek-pin {
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.5));
+}
 .dark .leaflet-container {
   background: #0f172a; /* slate-900 */
 }
