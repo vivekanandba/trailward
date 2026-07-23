@@ -226,17 +226,29 @@ export default function App() {
     setFeedbackKind(kind);
   };
 
-  // When a dialog Panel is open, mark the rest of the app inert so assistive
-  // tech and pointer/keyboard can't reach the backdrop behind the modal.
+  // When a panel is open, inert the rest of the app so assistive tech / pointer
+  // can't reach the backdrop — but ONLY on mobile, where the panel is a true
+  // full-screen modal. On desktop the detail is a non-modal side panel beside
+  // the map, so the map + list stay interactive and clicking another peak
+  // switches the open detail (the `inert` map used to swallow those clicks).
   // (`inert` isn't in this @types/react yet, so toggle the DOM property.)
   const panelOpen = Boolean(selected) || feedbackKind !== null;
   const headerRef = useRef<HTMLElement>(null);
   const asideRef = useRef<HTMLElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    for (const el of [headerRef.current, asideRef.current, mapRef.current]) {
-      if (el) el.inert = panelOpen;
-    }
+    // below Tailwind's lg; guarded for environments without matchMedia (jsdom).
+    const mq =
+      typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 1023px)") : null;
+    const apply = () => {
+      const inert = panelOpen && (mq?.matches ?? false);
+      for (const el of [headerRef.current, asideRef.current, mapRef.current]) {
+        if (el) el.inert = inert;
+      }
+    };
+    apply();
+    mq?.addEventListener?.("change", apply);
+    return () => mq?.removeEventListener?.("change", apply);
   }, [panelOpen]);
 
   return (

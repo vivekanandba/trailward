@@ -73,12 +73,24 @@ test("the map shows a difficulty legend", async ({ page }) => {
   await expect(page.getByText("Moderate", { exact: true }).last()).toBeVisible();
 });
 
-test("basemap toggle switches to OpenTopoMap terrain tiles", async ({ page }) => {
+test("basemap defaults to terrain and toggles to the street map", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("img.leaflet-tile").first()).toBeVisible();
-  await page.getByRole("button", { name: "terrain", exact: true }).click();
-  // Leaflet creates <img> tiles for the new source even if a tile 404s.
+  // Terrain (OpenTopoMap) is the default for this trekking app.
   await expect(page.locator('img.leaflet-tile[src*="opentopomap.org"]').first()).toBeVisible();
+  await page.getByRole("button", { name: "map", exact: true }).click();
+  await expect(page.locator('img.leaflet-tile[src*="cartocdn.com"]').first()).toBeVisible();
+});
+
+test("clicking another peak switches the open detail (desktop side panel)", async ({ page }) => {
+  // Desktop-only: on mobile the detail is a full-screen modal that covers the list.
+  test.skip((page.viewportSize()?.width ?? 0) < 1024, "desktop side-panel behaviour");
+  await page.goto("/");
+  await page.getByText("Skandagiri").first().click();
+  await expect(page.getByRole("heading", { name: "Skandagiri" })).toBeVisible();
+  // With the detail open, click a different peak in the list — it should switch.
+  await page.getByText("Nandi Hills").first().click();
+  await expect(page.getByRole("heading", { name: "Nandi Hills" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Skandagiri" })).toHaveCount(0);
 });
 
 test("'use my location' sets the origin from geolocation", async ({ page, context }) => {
