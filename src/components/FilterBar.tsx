@@ -15,6 +15,9 @@ interface FilterBarProps {
   // Upper bound of the radius slider (km). Bengaluru reaches 500 for its
   // precomputed discovery peaks; other origins keep the default 150 (spec 11).
   maxRadiusKm?: number;
+  // Show the terrain filters (hidden-gems / min-relief) — only where the peaks
+  // in view carry a discoveryScore/relief (spec 15).
+  showTerrainFilters?: boolean;
 }
 
 const DIFFICULTIES: Difficulty[] = ["Easy", "Moderate", "Hard"];
@@ -29,6 +32,7 @@ const ELEV_MAX = 2000;
 const ELEV_STEP = 50;
 const TRAIL_MAX = 30; // km — slider at max means "Any length"
 const DURATION_MAX = 12; // h — slider at max means "Any duration"
+const RELIEF_MAX = 1000; // m — min-relief slider; 0 means "Any"
 
 // Permit tri-state cycles any → required → not-required → any.
 const PERMIT_LABEL: Record<"any" | "yes" | "no", string> = {
@@ -48,6 +52,7 @@ export default function FilterBar({
   showTrailLength = true,
   showDuration = true,
   maxRadiusKm = 150,
+  showTerrainFilters = false,
 }: FilterBarProps) {
   const patch = (p: Partial<FilterState>) => onChange({ ...filters, ...p });
 
@@ -97,6 +102,8 @@ export default function FilterBar({
     filters.durationMaxHrs === undefined &&
     filters.permitRequired === undefined &&
     !filters.nightOnly &&
+    !filters.hiddenGemsOnly &&
+    filters.minReliefM === undefined &&
     filters.query.trim() === "";
 
   return (
@@ -299,6 +306,42 @@ export default function FilterBar({
         />
         Night treks only
       </label>
+
+      {/* Terrain filters — only where discovery peaks carry a score/relief (spec 15). */}
+      {showTerrainFilters && (
+        <>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-trail-800 dark:text-slate-100">
+            <input
+              type="checkbox"
+              checked={filters.hiddenGemsOnly}
+              onChange={(e) => patch({ hiddenGemsOnly: e.target.checked })}
+              className="h-4 w-4 rounded border-trail-300 accent-trail-600"
+            />
+            Hidden gems only
+          </label>
+          <div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-trail-800 dark:text-slate-100">Min. relief</span>
+              <span className="tabular-nums text-trail-600 dark:text-slate-400">
+                {filters.minReliefM ? `${filters.minReliefM} m` : "Any"}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={RELIEF_MAX}
+              step={50}
+              value={filters.minReliefM ?? 0}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                patch({ minReliefM: v === 0 ? undefined : v });
+              }}
+              aria-label="Minimum local relief in metres"
+              className="mt-2 w-full accent-trail-600"
+            />
+          </div>
+        </>
+      )}
 
       {/* Count + reset */}
       <div className="flex items-center justify-between border-t border-trail-100 dark:border-slate-700 pt-3 text-sm">

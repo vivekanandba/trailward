@@ -128,6 +128,8 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
       ? `est. ${trek.estimatedDifficulty}`
       : "Unverified";
   const credit = trek.image ? splitAttribution(trek.image.attribution) : null;
+  // Extra Commons photos beyond the hero (spec 15).
+  const galleryThumbs = (trek.gallery ?? []).filter((g) => g.url !== trek.image?.url).slice(0, 3);
 
   // Download the peak (and its trail, if any) as a GPX file for phone/GPS apps.
   const downloadGpx = () => {
@@ -210,6 +212,22 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             </figcaption>
           </figure>
         )}
+        {galleryThumbs.length > 0 && (
+          <div className="mb-3 flex gap-1.5">
+            {galleryThumbs.map((g) => (
+              <a
+                key={g.url}
+                href={splitAttribution(g.attribution).url ?? g.url}
+                target="_blank"
+                rel="noreferrer"
+                title={splitAttribution(g.attribution).text || "Wikimedia Commons"}
+                className="block h-14 w-14 flex-none overflow-hidden rounded"
+              >
+                <img src={g.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
         {trek.highlights && (
           <p className="text-sm text-trail-700 dark:text-slate-300">{trek.highlights}</p>
         )}
@@ -287,6 +305,25 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             <ElevationProfile trail={trek.trail} />
             <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
               Nearest OpenStreetMap path; elevation profile from the DEM.
+            </p>
+          </div>
+        )}
+
+        {/* Nearby trailhead POIs (spec 15). */}
+        {trek.pois && trek.pois.length > 0 && (
+          <div className="mt-4 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
+            <span className="text-sm font-medium text-trail-800 dark:text-slate-100">Nearby</span>
+            <dl className="mt-1 divide-y divide-trail-100 dark:divide-slate-700">
+              {trek.pois.map((p) => (
+                <Fact
+                  key={p.kind}
+                  label={{ parking: "Parking", water: "Water", viewpoint: "Viewpoint" }[p.kind]}
+                  value={`~${p.distM < 1000 ? `${p.distM} m` : `${(p.distM / 1000).toFixed(1)} km`}`}
+                />
+              ))}
+            </dl>
+            <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
+              Nearest mapped facilities (OpenStreetMap).
             </p>
           </div>
         )}
