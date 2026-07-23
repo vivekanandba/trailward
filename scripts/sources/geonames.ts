@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import type { Difficulty, Origin } from "../../src/lib/trek";
+import type { Difficulty, Origin, TrekImage } from "../../src/lib/trek";
 import { distanceFrom } from "../../src/lib/distance";
 
 export interface GeonamesSummit {
@@ -24,6 +24,8 @@ export interface GeonamesSummit {
   terrainConfidence?: number;
   discoveryScore?: number;
   estimatedDifficulty?: Difficulty;
+  // Wikidata cross-match (spec 18): a photo when P18 had one.
+  image?: TrekImage;
 }
 
 let cache: GeonamesSummit[] | null = null;

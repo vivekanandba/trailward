@@ -11,10 +11,12 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { distanceFrom } from "../../src/lib/distance";
+import { DEFAULT_ORIGIN } from "../../src/lib/trek";
 import { PRESET_ORIGINS } from "../../src/lib/cities";
 import { rosetteRing, computeTerrain, estimateDifficulty } from "../../src/lib/terrain";
-import { scoreDiscovery } from "../../src/lib/discoveryScore";
+import { scoreDiscovery, type ObscuritySignals } from "../../src/lib/discoveryScore";
 import { createDemTiles } from "../sources/demtiles";
+import { fetchWikidataKnown } from "../sources/wikidata";
 import type { GeonamesSummit } from "../sources/geonames";
 
 const SUMMIT_CODES = new Set(["PK", "PKS", "HLL", "HLLS", "MT", "MTS", "RK", "RKS"]);
@@ -61,10 +63,72 @@ async function main(): Promise<void> {
   console.log(`[geonames] filtered ${summits.length} summits; DEM-scoring via tiles…`);
 
   await scoreSummits(summits, resolve(tmp, "demtiles"));
+  await crossMatchWikidata(summits);
 
   writeFileSync(OUT, JSON.stringify(summits) + "\n", "utf8");
   const scored = summits.filter((s) => s.discoveryScore !== undefined).length;
   console.log(`[geonames] wrote ${summits.length} summits (${scored} DEM-scored, CC-BY) → ${OUT}`);
+}
+
+const OBSCURE: ObscuritySignals = {
+  hasWikipediaTag: false,
+  hasWikidataTag: false,
+  nearbyAmenityCount: 0,
+  wikiArticlesWithin1km: -1,
+};
+
+// Discovery score from a summit's already-computed terrain + given notability.
+function scoreWith(s: GeonamesSummit, obscurity: ObscuritySignals): number {
+  const { score } = scoreDiscovery(
+    {
+      reliefM: s.reliefM!,
+      prominenceProxyM: s.prominenceProxyM!,
+      meanSlopeDeg: s.meanSlopeDeg!,
+      confidence: s.terrainConfidence!,
+    },
+    obscurity,
+  );
+  return round(score, 3);
+}
+
+/**
+ * Cross-match against Wikidata (spec 18). A summit that also exists in Wikidata
+ * is "known", so re-score it as non-obscure (hasWikidataTag / hasWikipediaTag) —
+ * this keeps the hidden-gem ranking honest, since GeoNames alone carries no
+ * notability signal. Grabs a P18 photo when present (rare). One batched box
+ * query per region; best-effort — a failed query just leaves that region as-is.
+ */
+async function crossMatchWikidata(summits: GeonamesSummit[]): Promise<void> {
+  const byId = new Map(summits.map((s) => [s.id, s]));
+  let matched = 0;
+  let photos = 0;
+  for (const origin of PRESET_ORIGINS) {
+    const radiusKm = origin.id === DEFAULT_ORIGIN.id ? 500 : 150;
+    let known;
+    try {
+      known = await fetchWikidataKnown(origin, radiusKm);
+    } catch (err) {
+      console.warn(
+        `[geonames] ${origin.name}: Wikidata cross-match skipped (${(err as Error).message})`,
+      );
+      continue;
+    }
+    for (const [gnId, match] of known) {
+      const s = byId.get(gnId);
+      if (!s || s.reliefM === undefined) continue; // unmatched, or unscored (no terrain to rescore)
+      s.discoveryScore = scoreWith(s, {
+        ...OBSCURE,
+        hasWikidataTag: true,
+        hasWikipediaTag: match.hasArticle,
+      });
+      if (match.image && !s.image) {
+        s.image = { url: match.image, attribution: "Wikimedia Commons (via Wikidata)" };
+        photos++;
+      }
+      matched++;
+    }
+  }
+  console.log(`[geonames] Wikidata: re-scored ${matched} known summits (${photos} photos).`);
 }
 
 /**
@@ -88,26 +152,14 @@ async function scoreSummits(summits: GeonamesSummit[], cacheDir: string): Promis
     const centerElev = elevs[0] ?? s.elevationM;
     if (centerElev === undefined) continue; // DEM miss + no GeoNames elevation → leave unscored
     const terrain = computeTerrain(centerElev, elevs.slice(1), ROSETTE_RADIUS_M);
-    const { score } = scoreDiscovery(
-      {
-        reliefM: terrain.reliefM,
-        prominenceProxyM: terrain.prominenceProxyM,
-        meanSlopeDeg: terrain.meanSlopeDeg,
-        confidence: terrain.confidence,
-      },
-      {
-        hasWikipediaTag: false,
-        hasWikidataTag: false,
-        nearbyAmenityCount: 0,
-        wikiArticlesWithin1km: -1,
-      },
-    );
     s.elevationM = round(centerElev);
     s.reliefM = round(terrain.reliefM);
     s.prominenceProxyM = round(terrain.prominenceProxyM);
     s.meanSlopeDeg = round(terrain.meanSlopeDeg, 1);
     s.terrainConfidence = round(terrain.confidence, 2);
-    s.discoveryScore = round(score, 3);
+    // GeoNames summits are absent from OSM by definition → treated as maximally
+    // obscure here; crossMatchWikidata later down-weights any that are "known".
+    s.discoveryScore = scoreWith(s, OBSCURE);
     s.estimatedDifficulty = estimateDifficulty(terrain);
     if ((i + 1) % 500 === 0) console.log(`[geonames]   scored ${i + 1}/${summits.length}…`);
   }

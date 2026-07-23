@@ -181,6 +181,7 @@ export function toListedTreks(
       ...(s.terrainConfidence !== undefined ? { terrainConfidence: s.terrainConfidence } : {}),
       ...(s.discoveryScore !== undefined ? { discoveryScore: s.discoveryScore } : {}),
       ...(s.estimatedDifficulty ? { estimatedDifficulty: s.estimatedDifficulty } : {}),
+      ...(s.image ? { image: s.image } : {}), // Wikidata P18 photo (spec 18), when present
       sources: [`https://www.geonames.org/${s.id}`],
       verified: false,
     });
