@@ -6,6 +6,12 @@ import { googleMapsDirectionsUrl } from "../lib/directions";
 import { getWeather, type WeatherNow } from "../lib/weather";
 import { toGpx } from "../lib/gpx";
 import { fetchLiveEnrichment, type LiveEnrichment } from "../lib/enrich";
+import climateRaw from "../data/climate.json";
+import { climateCellKey, driestMonths, wettestMonth, MONTHS } from "../lib/climate";
+
+// Mean monthly rainfall keyed by climate cell (spec 20) — stored once per cell
+// rather than duplicated onto every trek.
+const CLIMATE = climateRaw as Record<string, number[]>;
 
 interface TrekDetailProps {
   trek: Trek;
@@ -104,6 +110,90 @@ function ElevationProfile({ trail }: { trail: NonNullable<Trek["trail"]> }) {
   );
 }
 
+// Mean monthly rainfall for the peak's climate cell (spec 20) as a 12-bar
+// micro-chart. One measure, one hue for the bars; the driest stretch is marked
+// by a shaded band BEHIND them rather than by bar colour — dry months are short
+// bars, so colouring them would hide exactly what we want to point at. The
+// season is also stated in text above and the full series sits in the
+// aria-label, so nothing depends on colour alone.
+function RainfallProfile({ monthly }: { monthly: number[] }) {
+  const dry = driestMonths(monthly);
+  const drySet = new Set(dry);
+  const max = Math.max(...monthly, 1);
+  const W = 300;
+  const H = 56;
+  const GAP = 2; // 2px surface gap between adjacent fills
+  const LABEL_H = 12;
+  const slot = W / 12;
+  const barW = slot - GAP;
+  const plotH = H - LABEL_H;
+  const r = Math.min(2, barW / 2);
+
+  // The dry run can wrap Dec→Jan; emit it as contiguous spans so the band reads
+  // as one region on each side rather than 12 separate slivers.
+  const spans: [number, number][] = [];
+  for (let i = 0; i < 12; i++) {
+    if (!drySet.has(i)) continue;
+    const last = spans[spans.length - 1];
+    if (last && last[1] === i - 1) last[1] = i;
+    else spans.push([i, i]);
+  }
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className="mt-2 h-14 w-full text-trail-600 dark:text-trail-300"
+      role="img"
+      aria-label={`Mean monthly rainfall in mm: ${MONTHS.map((m, i) => `${m} ${Math.round(monthly[i])}`).join(", ")}`}
+    >
+      {spans.map(([a, b]) => (
+        <rect
+          key={`band-${a}`}
+          x={a * slot}
+          y={0}
+          width={(b - a + 1) * slot}
+          height={plotH}
+          rx={2}
+          fill="currentColor"
+          fillOpacity={0.1}
+        />
+      ))}
+      {monthly.map((mm, i) => {
+        const h = Math.max(1.5, (mm / max) * (plotH - 2));
+        return (
+          <rect
+            key={i}
+            x={i * slot + GAP / 2}
+            y={plotH - h}
+            width={barW}
+            height={h}
+            rx={r}
+            fill="currentColor"
+            fillOpacity={0.75}
+          />
+        );
+      })}
+      {MONTHS.map((m, i) => (
+        <text
+          key={m}
+          x={i * slot + slot / 2}
+          y={H - 2}
+          textAnchor="middle"
+          className={
+            drySet.has(i)
+              ? "fill-trail-700 font-medium dark:fill-slate-200"
+              : "fill-trail-500 dark:fill-slate-400"
+          }
+          style={{ fontSize: 8 }}
+        >
+          {m[0]}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
 export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   const [weather, setWeather] = useState<WeatherNow | null>(null);
   const [weatherFailed, setWeatherFailed] = useState(false);
@@ -155,6 +245,10 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
       active = false;
     };
   }, [trek.id, trek.lat, trek.lng, trek.tier, trek.image, trek.highlights, trek.nearestTown]);
+
+  // Rainfall profile for this peak's climate cell, when we sampled it (spec 20).
+  const monthlyRain = CLIMATE[climateCellKey(trek.lat, trek.lng)];
+  const wettest = monthlyRain ? wettestMonth(monthlyRain) : undefined;
 
   // Prefer baked data; fall back to whatever the live fetch found.
   const image = trek.image ?? live.image;
@@ -302,6 +396,27 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           />
           <Fact label="Night trek" value={trek.nightTrek ? "Popular" : undefined} />
         </dl>
+
+        {/* Rainfall — mean monthly totals for this peak's climate cell (spec 20),
+            so the "best season" above is shown rather than just asserted. */}
+        {monthlyRain && (
+          <div className="mt-4 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-sm font-medium text-trail-800 dark:text-slate-100">
+                Rainfall
+              </span>
+              {wettest && (
+                <span className="text-xs text-trail-600 dark:text-slate-400">
+                  wettest {wettest.month} ~{wettest.mm} mm
+                </span>
+              )}
+            </div>
+            <RainfallProfile monthly={monthlyRain} />
+            <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
+              Mean monthly rainfall, 2022–23 (Open-Meteo). The shaded band marks the driest stretch.
+            </p>
+          </div>
+        )}
 
         {/* Terrain — computed from the DEM for discovery peaks (spec 11). */}
         {trek.reliefM !== undefined && (

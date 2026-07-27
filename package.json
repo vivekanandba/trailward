@@ -23,6 +23,7 @@
     "build:data": "tsx scripts/build-data.ts",
     "build:discovery": "tsx scripts/discover-precompute.ts",
     "build:geonames": "tsx scripts/geonames/build-geonames.ts",
+    "build:climate": "tsx scripts/build-climate.ts",
     "validate:data": "tsx scripts/validate-data.ts"
   },
   "dependencies": {

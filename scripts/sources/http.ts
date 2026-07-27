@@ -15,6 +15,7 @@ export const ALLOWED_HOSTS = new Set<string>([
   "overpass-api.de",
   "overpass.kumi.systems", // Overpass mirror — failover when the main endpoint 429/504s
   "api.open-meteo.com",
+  "archive-api.open-meteo.com", // historical rainfall → best-season guidance (spec 20)
   "api.opentopodata.org", // elevation failover when Open-Meteo throttles (spec 11)
   "router.project-osrm.org",
   "en.wikipedia.org",
@@ -51,6 +52,13 @@ const REQUEST_TIMEOUT_MS = 15_000;
 /** A failure that must not be retried (e.g. a 4xx that won't change on retry). */
 class NonRetryableError extends Error {}
 
+/** A 429: retryable, but only after a long wait (per-minute windows). */
+class RateLimitError extends Error {}
+
+// Rate-limit windows are per-minute on some endpoints (Open-Meteo), so a
+// half-second backoff is useless — wait out the window instead.
+const RATE_LIMIT_BACKOFF_MS = 65_000;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -83,7 +91,7 @@ export async function fetchText(url: string, opts: GetOptions = {}): Promise<str
 
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
-    await throttle(host);
+    await throttle(host, opts.throttleMs);
     try {
       const timeout = opts.timeoutMs ?? REQUEST_TIMEOUT_MS;
       const res = await request(url, {
@@ -96,7 +104,12 @@ export async function fetchText(url: string, opts: GetOptions = {}): Promise<str
       });
       // request() does not follow redirects, so a 3xx body is just a stub —
       // returning it would feed garbage to JSON.parse. 3xx and 4xx won't change
-      // on retry (fail fast); only 5xx falls through to the retry path.
+      // on retry (fail fast); only 5xx falls through to the retry path. A 429 is
+      // the exception: it clears once the rate-limit window rolls over.
+      if (res.statusCode === 429) {
+        await res.body.dump();
+        throw new RateLimitError(`HTTP 429 (rate limited) for ${url}`);
+      }
       if (res.statusCode >= 300 && res.statusCode < 500) {
         throw new NonRetryableError(`HTTP ${res.statusCode} for ${url}`);
       }
@@ -105,7 +118,9 @@ export async function fetchText(url: string, opts: GetOptions = {}): Promise<str
     } catch (err) {
       lastErr = err;
       if (err instanceof NonRetryableError) break;
-      if (attempt < retries) await sleep(500 * (attempt + 1)); // linear backoff
+      if (attempt < retries) {
+        await sleep(err instanceof RateLimitError ? RATE_LIMIT_BACKOFF_MS : 500 * (attempt + 1));
+      }
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(`fetch failed: ${url}`);

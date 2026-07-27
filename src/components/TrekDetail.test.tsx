@@ -51,7 +51,9 @@ describe("TrekDetail image", () => {
 
   it("renders no image when the trek has none", () => {
     render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    // Scoped to the hero photo: the panel also contains chart graphics with
+    // role="img" (elevation profile, rainfall), which are not photos.
+    expect(screen.queryByRole("img", { name: baseTrek.name })).not.toBeInTheDocument();
   });
 
   it("hides the hero if the image fails to load", () => {
@@ -62,7 +64,7 @@ describe("TrekDetail image", () => {
     render(<TrekDetail trek={trek} origin={origin} onClose={vi.fn()} />);
     const img = screen.getByRole("img", { name: "Skandagiri" });
     fireEvent.error(img);
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Skandagiri" })).not.toBeInTheDocument();
   });
 });
 
@@ -99,6 +101,25 @@ describe("TrekDetail lazy enrichment (spec 19)", () => {
   it("does not fetch enrichment for a curated trek", () => {
     render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
     expect(liveEnrich).not.toHaveBeenCalled();
+  });
+});
+
+describe("TrekDetail rainfall profile (spec 20)", () => {
+  // baseTrek sits at 13.5/77.69 → a climate cell we sampled, so the panel renders
+  // from the committed climate.json.
+  it("shows the rainfall chart and wettest month for a covered coordinate", () => {
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    expect(screen.getByText("Rainfall")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /mean monthly rainfall/i })).toBeInTheDocument();
+    expect(screen.getByText(/wettest Jul/i)).toBeInTheDocument();
+  });
+
+  it("omits the rainfall panel where no climate cell was sampled", () => {
+    // Mid-ocean: no peaks there, so no cell.
+    render(
+      <TrekDetail trek={{ ...baseTrek, lat: 0, lng: -30 }} origin={origin} onClose={vi.fn()} />,
+    );
+    expect(screen.queryByText("Rainfall")).not.toBeInTheDocument();
   });
 });
 
