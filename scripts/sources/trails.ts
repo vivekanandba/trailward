@@ -73,6 +73,28 @@ export function parseHillFeatures(json: unknown): HillFeature[] {
   return HILL_FEATURES.filter((f) => found.has(f));
 }
 
+/**
+ * Pure: Overpass `is_in` areas → the protected area enclosing the summit
+ * (spec 24). Prefers a formally protected boundary over a generic nature
+ * reserve; unnamed areas are useless to a reader and skipped. National forests
+ * tagged only landuse=forest are deliberately ignored — nearly every hill sits
+ * in *some* forest polygon, and that tells a trekker nothing about entry rules.
+ */
+export function parseProtectedArea(json: unknown): string | undefined {
+  const elements = (json as { elements?: unknown })?.elements;
+  if (!Array.isArray(elements)) return undefined;
+  let reserve: string | undefined;
+  for (const el of elements as { type?: string; tags?: Record<string, unknown> }[]) {
+    if (el?.type !== "area") continue;
+    const t = el.tags ?? {};
+    const name = typeof t.name === "string" ? t.name : undefined;
+    if (!name) continue;
+    if (t.boundary === "protected_area") return name;
+    if (t.leisure === "nature_reserve") reserve = reserve ?? name;
+  }
+  return reserve;
+}
+
 /** Pure: Overpass `out geom` ways → polylines of [lat, lng]. */
 export function parseTrailWays(json: unknown): Pt[][] {
   const elements = (json as { elements?: unknown })?.elements;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
-import { pickTargets } from "./build-hillfeatures";
+import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { cellsFor } from "./build-climate";
 import type { Trek } from "../src/lib/trek";
 import { climateCellKey } from "../src/lib/climate";
@@ -108,5 +108,15 @@ describe("pickVolumes tolerates archive.org's multi-valued title field", () => {
   it("ignores a title of an unexpected type instead of throwing", () => {
     expect(() => pickVolumes([{ identifier: "x", title: 42 }])).not.toThrow();
     expect(pickVolumes([{ identifier: "x", title: 42 }])).toEqual([]);
+  });
+});
+
+describe("matchHeritage (spec 24)", () => {
+  const t = mk({ id: "x", lat: 13.3702, lng: 77.5758 });
+  it("matches the nearest designation within 600 m and rejects farther ones", () => {
+    expect(
+      matchHeritage(t, [{ lat: 13.3705, lng: 77.576, status: "Monument of National Importance" }]),
+    ).toBe("Monument of National Importance");
+    expect(matchHeritage(t, [{ lat: 13.4, lng: 77.6, status: "Too Far" }])).toBeUndefined();
   });
 });

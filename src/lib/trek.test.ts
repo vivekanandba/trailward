@@ -188,3 +188,29 @@ describe("validateDataset", () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe("validateTrek: enrichment fields (specs 21/22/24)", () => {
+  it("accepts a well-formed historicalNote and rejects one without provenance", () => {
+    const note = { text: "A fortified hill.", source: "Imperial Gazetteer of India", year: 1908 };
+    expect(validateTrek({ ...curated, historicalNote: note }).ok).toBe(true);
+    expect(validateTrek({ ...curated, historicalNote: { text: "x" } }).ok).toBe(false);
+    expect(validateTrek({ ...curated, historicalNote: { ...note, year: 99 } }).ok).toBe(false);
+  });
+
+  it("accepts known hillFeatures and rejects unknown ones", () => {
+    expect(validateTrek({ ...curated, hillFeatures: ["fort", "temple"] }).ok).toBe(true);
+    expect(validateTrek({ ...curated, hillFeatures: ["disco"] }).ok).toBe(false);
+  });
+
+  it("accepts protectedArea/heritage strings and rejects empties", () => {
+    expect(
+      validateTrek({
+        ...curated,
+        protectedArea: "BRT Wildlife Sanctuary",
+        heritage: "Monument of National Importance",
+      }).ok,
+    ).toBe(true);
+    expect(validateTrek({ ...curated, protectedArea: "" }).ok).toBe(false);
+    expect(validateTrek({ ...curated, heritage: 42 }).ok).toBe(false);
+  });
+});

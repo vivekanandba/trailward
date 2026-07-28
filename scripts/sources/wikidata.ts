@@ -53,6 +53,60 @@ function query(west: number, south: number, east: number, north: number): string
 }`;
 }
 
+export interface HeritageSite {
+  lat: number;
+  lng: number;
+  status: string; // e.g. "Monument of National Importance"
+}
+
+/** Pure: SPARQL JSON → heritage-designated sites with coordinates. */
+export function parseHeritageSites(json: string): HeritageSite[] {
+  const parsed = JSON.parse(json) as {
+    results?: { bindings?: Record<string, { value?: string }>[] };
+  };
+  const out: HeritageSite[] = [];
+  for (const b of parsed.results?.bindings ?? []) {
+    const m = /Point\(([-\d.]+) ([-\d.]+)\)/.exec(b.coord?.value ?? "");
+    const status = b.statusLabel?.value;
+    if (!m || !status) continue;
+    const lng = Number(m[1]);
+    const lat = Number(m[2]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    out.push({ lat, lng, status });
+  }
+  return out;
+}
+
+function heritageQuery(west: number, south: number, east: number, north: number): string {
+  return `SELECT ?coord ?statusLabel WHERE {
+  ?item wdt:P1435 ?status .
+  SERVICE wikibase:box {
+    ?item wdt:P625 ?coord .
+    bd:serviceParam wikibase:cornerWest "Point(${west} ${south})"^^geo:wktLiteral .
+    bd:serviceParam wikibase:cornerEast "Point(${east} ${north})"^^geo:wktLiteral .
+  }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+}`;
+}
+
+/**
+ * Heritage-designated sites (Wikidata P1435 — ASI Monuments of National
+ * Importance, State Protected Monuments, …) within the origin's radius
+ * (spec 24). One box query per region.
+ */
+export async function fetchHeritageSites(
+  origin: Origin,
+  radiusKm: number,
+): Promise<HeritageSite[]> {
+  const [w, s, e, n] = bboxAround(origin, radiusKm);
+  const url = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(heritageQuery(w, s, e, n))}`;
+  const json = await fetchText(url, {
+    headers: { accept: "application/sparql-results+json" },
+    timeoutMs: 60_000,
+  });
+  return parseHeritageSites(json);
+}
+
 /** Wikidata mountains (with a GeoNames ID) within the origin's radius. */
 export async function fetchWikidataKnown(
   origin: Origin,

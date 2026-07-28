@@ -981,7 +981,8 @@
     ],
     "highlights": "Vandaravu is the highest peak in the Palani hills in Tamil Nadu, India.",
     "nearestTown": "Vattavada",
-    "bestSeason": "Feb–Mar (driest)"
+    "bestSeason": "Feb–Mar (driest)",
+    "protectedArea": "Pambadum Shola National Park"
   },
   {
     "id": "osm-3158128891--bengaluru",
@@ -1065,7 +1066,8 @@
       }
     ],
     "nearestTown": "Vattavada",
-    "bestSeason": "Dec–Apr (driest)"
+    "bestSeason": "Dec–Apr (driest)",
+    "protectedArea": "Munnar Wildlife Zone ESZ (Proposed)"
   },
   {
     "id": "osm-3158128892--bengaluru",
@@ -1128,7 +1130,8 @@
     ],
     "verified": false,
     "nearestTown": "Valparai",
-    "bestSeason": "Feb–Mar (driest)"
+    "bestSeason": "Feb–Mar (driest)",
+    "protectedArea": "Anamalai Tiger Reserve"
   },
   {
     "id": "osm-9873935182--bengaluru",
@@ -1157,7 +1160,8 @@
         "distM": 1085
       }
     ],
-    "bestSeason": "Feb–Mar (driest)"
+    "bestSeason": "Feb–Mar (driest)",
+    "protectedArea": "Kodaikanal WLS"
   },
   {
     "id": "osm-13798383983--bengaluru",
@@ -1178,7 +1182,8 @@
     ],
     "verified": false,
     "nearestTown": "Valparai",
-    "bestSeason": "Feb–Mar (driest)"
+    "bestSeason": "Feb–Mar (driest)",
+    "protectedArea": "Anamalai Tiger Reserve"
   },
   {
     "id": "osm-582062709--bengaluru",
@@ -1344,7 +1349,8 @@
         "distM": 1084
       }
     ],
-    "bestSeason": "Feb–Mar (driest)"
+    "bestSeason": "Feb–Mar (driest)",
+    "protectedArea": "Kodaikanal WLS"
   },
   {
     "id": "osm-5211742569--bengaluru",
@@ -2487,7 +2493,8 @@
         1991
       ]
     },
-    "bestSeason": "Dec–Apr (driest)"
+    "bestSeason": "Dec–Apr (driest)",
+    "protectedArea": "Anamudi Shola National Park"
   },
   {
     "id": "osm-13363147528--bengaluru",
@@ -119305,7 +119312,10 @@
         "distM": 856
       }
     ],
-    "bestSeason": "Oct–May (driest)"
+    "bestSeason": "Oct–May (driest)",
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "osm-7732089700--pune",
@@ -139403,7 +139413,8 @@
       "fort",
       "temple",
       "ruins"
-    ]
+    ],
+    "heritage": "Monument of National Importance"
   },
   {
     "id": "osm-1815959520--hyderabad",
@@ -140110,7 +140121,8 @@
     "hillFeatures": [
       "fort",
       "temple"
-    ]
+    ],
+    "heritage": "Heritage structures in Hyderabad, India"
   },
   {
     "id": "osm-4708831963--hyderabad",
