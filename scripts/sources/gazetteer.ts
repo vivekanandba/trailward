@@ -117,12 +117,12 @@ const SUMMIT_RE = /\b(hill|hills|peak|mountain|range|summit|rock|ridge|plateau|f
  * generous — but a name match alone is never enough, and neither is proximity
  * alone (hills cluster). Returns the best (nearest) entry per trek id.
  */
-export function matchEntries(
-  entries: GazetteerEntry[],
+export function matchEntries<E extends GazetteerEntry>(
+  entries: E[],
   treks: { id: string; name: string; lat: number; lng: number; elevationM?: number }[],
   maxKm = 5,
-): Map<string, GazetteerEntry> {
-  const out = new Map<string, GazetteerEntry>();
+): Map<string, E> {
+  const out = new Map<string, E>();
   const best = new Map<string, number>();
   for (const e of entries) {
     const eKey = nameKey(e.name);

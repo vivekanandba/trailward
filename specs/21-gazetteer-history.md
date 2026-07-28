@@ -35,6 +35,21 @@ Gopalswamibetta (1454 vs 1454 m) — so a large disagreement really does mean a 
   first) rather than hardcoded. Text is cached under `scripts/.cache/gazetteer`, so re-runs need no
   network. A trek that no longer matches has its note dropped, keeping re-runs honest.
 
+## Series (spec update)
+
+`build:gazetteer` now mines **multiple public-domain series**, each with its own attribution
+(`SERIES` in the build tool): the Imperial Gazetteer (1908) and **Rice's _Mysore: A Gazetteer_
+(1897)**. Volumes are tracked per-series in a cache manifest so attribution survives re-runs, and a
+volume discovered by two queries counts once.
+
+**Evaluated and dropped:** the Gazetteer of the Bombay Presidency and the Madras District
+Gazetteers. Both are running prose organised by chapter with almost no per-place coordinates (the
+entire Thana "Places of Interest" volume contains 15 "latitude" mentions), so the
+coordinate-verified matcher — correctly — finds nothing to attach. A name-only fallback was also
+measured (transliteration-folded names, droog/durga/oo/ee variants): it produced **zero additional
+matches** beyond the strict pipeline, so it was not kept. The match count is limited by how few
+1900s entries carry parseable coordinates near our peaks, not by name spelling.
+
 ## Result
 
 258 coordinate-bearing summit entries → **10 verified matches**, including genuinely obscure hills
