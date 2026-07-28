@@ -6,6 +6,15 @@ export type Difficulty = "Easy" | "Moderate" | "Hard";
 export type TrekType = "Hill" | "Monolith" | "Cave" | "Fort" | "Pilgrimage";
 export type Tier = "curated" | "discovery";
 
+/**
+ * Something notable ON the hill itself (spec 22), from OSM tags within ~600 m of
+ * the summit. Deliberately excludes viewpoint/water: those come from the wider
+ * trailhead-POI query and are already reported as `pois` with a distance, so
+ * listing them here would both double-report and overstate how close they are.
+ */
+export type HillFeature = "fort" | "temple" | "cave" | "ruins";
+export const HILL_FEATURES: HillFeature[] = ["fort", "temple", "cave", "ruins"];
+
 export interface TrekImage {
   url: string;
   attribution: string; // required when url is present (license credit)
@@ -51,6 +60,13 @@ export interface Trek {
   gallery?: TrekImage[]; // extra nearby Commons photos (spec 15)
   // Nearby trailhead POIs (spec 15): nearest of each kind to the summit.
   pois?: { kind: "parking" | "water" | "viewpoint"; lat: number; lng: number; distM: number }[];
+  // Coordinate-verified excerpt from a public-domain gazetteer (spec 21). Kept
+  // separate from `highlights` because it is a HISTORICAL description, not
+  // current fact, and must always be shown with its source + year.
+  historicalNote?: { text: string; source: string; year: number; url?: string };
+  // What's ON the hill, from OSM (spec 22) — fort ruins, a summit temple, a
+  // viewpoint, caves, water. Often the real reason to pick one hill over another.
+  hillFeatures?: HillFeature[];
 
   // Provenance
   sources: string[]; // URLs; ≥1 for curated
@@ -220,6 +236,32 @@ export function validateTrek(input: unknown): ValidateResult {
           p.distM >= 0,
       );
     if (!okPois) return fail("pois", "must be an array of {kind, lat, lng, distM}");
+  }
+
+  // Historical note (spec 21): must carry its provenance, or it reads as fact.
+  if (input.historicalNote !== undefined) {
+    const h = input.historicalNote;
+    const okNote =
+      isRecord(h) &&
+      typeof h.text === "string" &&
+      h.text.length > 0 &&
+      typeof h.source === "string" &&
+      h.source.length > 0 &&
+      typeof h.year === "number" &&
+      h.year >= 1500 &&
+      h.year <= 2100 &&
+      (h.url === undefined || typeof h.url === "string");
+    if (!okNote) {
+      return fail("historicalNote", "must be {text, source, year, url?} with a plausible year");
+    }
+  }
+
+  // Hill features (spec 22).
+  if (input.hillFeatures !== undefined) {
+    const okFeat =
+      Array.isArray(input.hillFeatures) &&
+      input.hillFeatures.every((f) => HILL_FEATURES.includes(f as HillFeature));
+    if (!okFeat) return fail("hillFeatures", `must be a subset of ${HILL_FEATURES.join("|")}`);
   }
 
   // Tier-specific provenance rules.

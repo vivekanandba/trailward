@@ -8,7 +8,7 @@
  * gains new regions:  npm run build:climate
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
 import { validateDataset } from "../src/lib/trek";
@@ -89,7 +89,11 @@ async function main(): Promise<void> {
   console.log(`[climate] baked bestSeason onto ${baked} treks.`);
 }
 
-main().catch((err) => {
-  console.error((err as Error).message);
-  process.exit(1);
-});
+// Only run when invoked as a CLI — importing this module (tests) must not
+// kick off a build, mirroring the guard in discover-precompute.ts.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error((err as Error).message);
+    process.exit(1);
+  });
+}

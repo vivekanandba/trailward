@@ -6,6 +6,7 @@ import {
   pathLengthKm,
   buildTrail,
   parsePois,
+  parseHillFeatures,
 } from "./trails";
 
 const geomFixture = {
@@ -126,5 +127,46 @@ describe("buildTrail", () => {
     expect(trail.gainM).toBe(0);
     expect(trail.profile).toBeUndefined();
     expect(trail.lengthKm).toBeGreaterThan(0);
+  });
+});
+
+describe("parseHillFeatures (spec 22)", () => {
+  it("detects forts, temples, caves and ruins, incl. ways/relations with no lat/lon", () => {
+    const json = {
+      elements: [
+        { type: "way", tags: { historic: "fort", name: "Old fort" } }, // area, no lat/lon
+        { type: "node", lat: 13, lon: 77, tags: { amenity: "place_of_worship" } },
+        { type: "node", lat: 13, lon: 77, tags: { natural: "cave_entrance" } },
+        { type: "relation", tags: { historic: "archaeological_site" } },
+      ],
+    };
+    expect(parseHillFeatures(json)).toEqual(["fort", "temple", "cave", "ruins"]);
+  });
+
+  it("dedupes and returns a stable order regardless of input order", () => {
+    const a = parseHillFeatures({
+      elements: [
+        { tags: { amenity: "place_of_worship" } },
+        { tags: { historic: "fort" } },
+        { tags: { historic: "fort" } },
+      ],
+    });
+    expect(a).toEqual(["fort", "temple"]);
+  });
+
+  it("ignores trailhead POIs — those are reported as pois with a distance", () => {
+    const json = {
+      elements: [
+        { tags: { tourism: "viewpoint" } },
+        { tags: { amenity: "parking" } },
+        { tags: { natural: "spring" } },
+      ],
+    };
+    expect(parseHillFeatures(json)).toEqual([]);
+  });
+
+  it("tolerates junk input", () => {
+    expect(parseHillFeatures({})).toEqual([]);
+    expect(parseHillFeatures({ elements: [{}, { tags: {} }] })).toEqual([]);
   });
 });

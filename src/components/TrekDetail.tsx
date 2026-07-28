@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Origin, Trek } from "../lib/trek";
+import type { HillFeature, Origin, Trek } from "../lib/trek";
 import { distanceFrom } from "../lib/distance";
 import { difficultyColor, difficultyLabel } from "../lib/difficulty";
 import { googleMapsDirectionsUrl } from "../lib/directions";
@@ -18,6 +18,14 @@ interface TrekDetailProps {
   origin: Origin;
   onClose(): void;
 }
+
+// Readable labels for the OSM-derived summit features (spec 22).
+const HILL_FEATURE_LABELS: Record<HillFeature, string> = {
+  fort: "Fort",
+  temple: "Temple",
+  cave: "Cave",
+  ruins: "Ruins",
+};
 
 // Live enrichment is fetched once per pin and cached for the session, so
 // reopening a pin (or clicking between pins and back) is instant and doesn't
@@ -218,10 +226,10 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   }, [trek.id, trek.lat, trek.lng]);
 
   useEffect(() => {
-    // Only fetch for discovery pins actually missing context, and only what
-    // isn't already baked. Curated/enriched treks skip the network entirely.
-    const needs =
-      trek.tier === "discovery" && (!trek.image || !trek.highlights || !trek.nearestTown);
+    // Only fetch for discovery pins, which are the ones missing context. Even a
+    // fully-baked discovery pin still benefits (wildlife is never baked), but
+    // curated treks skip the network entirely.
+    const needs = trek.tier === "discovery";
     if (!needs) {
       setLive({});
       return;
@@ -244,7 +252,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
     return () => {
       active = false;
     };
-  }, [trek.id, trek.lat, trek.lng, trek.tier, trek.image, trek.highlights, trek.nearestTown]);
+  }, [trek.id, trek.lat, trek.lng, trek.tier]);
 
   // Rainfall profile for this peak's climate cell, when we sampled it (spec 20).
   const monthlyRain = CLIMATE[climateCellKey(trek.lat, trek.lng)];
@@ -302,6 +310,16 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                 community · unverified
               </span>
             )}
+            {/* What's on the hill (spec 22) — often the reason to pick it. */}
+            {trek.hillFeatures?.map((f) => (
+              <span
+                key={f}
+                className="rounded-full border border-trail-300 bg-white px-2 py-0.5 text-xs capitalize text-trail-700 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200"
+                title="Mapped on the summit in OpenStreetMap"
+              >
+                {HILL_FEATURE_LABELS[f]}
+              </span>
+            ))}
             {trek.type?.map((t) => (
               <span
                 key={t}
@@ -414,6 +432,58 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             <RainfallProfile monthly={monthlyRain} />
             <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
               Mean monthly rainfall, 2022–23 (Open-Meteo). The shaded band marks the driest stretch.
+            </p>
+          </div>
+        )}
+
+        {/* Wildlife recorded nearby (spec 23) — fetched live from GBIF on open.
+            Scientific names, because GBIF's occurrence records carry no
+            vernacular names and inventing common names would be guessing. */}
+        {live.wildlife && live.wildlife.species.length > 0 && (
+          <div className="mt-4 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-sm font-medium text-trail-800 dark:text-slate-100">
+                Wildlife nearby
+              </span>
+              <span className="text-xs text-trail-600 dark:text-slate-400">
+                {live.wildlife.records.toLocaleString()} records
+              </span>
+            </div>
+            <p className="mt-1 text-sm italic text-trail-700 dark:text-slate-300">
+              {live.wildlife.species.join(", ")}
+            </p>
+            <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
+              Birds & mammals recorded within ~5 km (GBIF). Occurrence records, not a sighting
+              guarantee.
+            </p>
+          </div>
+        )}
+
+        {/* Historical note (spec 21) — a coordinate-verified excerpt from a
+            public-domain gazetteer. Always shown with its source + year, since
+            it describes the place as it was, not as it is. */}
+        {trek.historicalNote && (
+          <div className="mt-4 rounded-lg border border-trail-100 p-3 dark:border-slate-700">
+            <span className="text-sm font-medium text-trail-800 dark:text-slate-100">
+              Historical note
+            </span>
+            <p className="mt-1 text-sm text-trail-700 dark:text-slate-300">
+              {trek.historicalNote.text}
+            </p>
+            <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
+              {trek.historicalNote.url ? (
+                <a
+                  href={trek.historicalNote.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline hover:text-trail-700 dark:hover:text-slate-200"
+                >
+                  {trek.historicalNote.source}
+                </a>
+              ) : (
+                trek.historicalNote.source
+              )}
+              , {trek.historicalNote.year} — public domain; place names and conditions have changed.
             </p>
           </div>
         )}
