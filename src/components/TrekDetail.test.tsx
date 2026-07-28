@@ -122,6 +122,23 @@ describe("TrekDetail historical note (spec 21) + hill features (spec 22)", () =>
     expect(screen.getByText(/1908.*conditions have changed/s)).toBeInTheDocument();
   });
 
+  it("shows the protected area fact and heritage chip (spec 24)", () => {
+    render(
+      <TrekDetail
+        trek={{
+          ...baseTrek,
+          protectedArea: "BRT Wildlife Sanctuary",
+          heritage: "Monument of National Importance",
+        }}
+        origin={origin}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Protected area")).toBeInTheDocument();
+    expect(screen.getByText("BRT Wildlife Sanctuary")).toBeInTheDocument();
+    expect(screen.getByText("Monument of National Importance")).toBeInTheDocument();
+  });
+
   it("shows summit features as chips", () => {
     render(
       <TrekDetail

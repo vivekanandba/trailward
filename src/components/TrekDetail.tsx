@@ -310,6 +310,15 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                 community · unverified
               </span>
             )}
+            {/* Heritage designation (spec 24) — an ASI/state monument here. */}
+            {trek.heritage && (
+              <span
+                className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
+                title="Heritage designation from Wikidata"
+              >
+                {trek.heritage}
+              </span>
+            )}
             {/* What's on the hill (spec 22) — often the reason to pick it. */}
             {trek.hillFeatures?.map((f) => (
               <span
@@ -401,6 +410,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           />
           <Fact label="Duration" value={trek.durationHrs ? `${trek.durationHrs} h` : undefined} />
           <Fact label="Nearest town" value={nearestTown} />
+          <Fact label="Protected area" value={trek.protectedArea} />
           <Fact label="Entry fee" value={trek.entryFee} />
           <Fact
             label="Permit"

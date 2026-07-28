@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseWikidataMatches } from "./wikidata";
+import { parseWikidataMatches, parseHeritageSites } from "./wikidata";
 
 const sparql = (bindings: Record<string, { value: string }>[]): string =>
   JSON.stringify({ results: { bindings } });
@@ -34,5 +34,30 @@ describe("parseWikidataMatches", () => {
   it("ignores rows without a GeoNames ID and tolerates empty results", () => {
     expect(parseWikidataMatches(sparql([{ image: { value: "x" } }])).size).toBe(0);
     expect(parseWikidataMatches(JSON.stringify({})).size).toBe(0);
+  });
+});
+
+describe("parseHeritageSites (spec 24)", () => {
+  it("extracts coordinates + designation labels", () => {
+    const json = JSON.stringify({
+      results: {
+        bindings: [
+          {
+            coord: { value: "Point(77.5758 13.3702)" },
+            statusLabel: { value: "Monument of National Importance" },
+          },
+          { coord: { value: "garbage" }, statusLabel: { value: "State Protected Monument" } },
+          { statusLabel: { value: "no coord" } },
+        ],
+      },
+    });
+    const sites = parseHeritageSites(json);
+    expect(sites).toEqual([
+      { lat: 13.3702, lng: 77.5758, status: "Monument of National Importance" },
+    ]);
+  });
+
+  it("tolerates empty results", () => {
+    expect(parseHeritageSites(JSON.stringify({}))).toEqual([]);
   });
 });

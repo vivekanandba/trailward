@@ -7,6 +7,7 @@ import {
   buildTrail,
   parsePois,
   parseHillFeatures,
+  parseProtectedArea,
 } from "./trails";
 
 const geomFixture = {
@@ -168,5 +169,35 @@ describe("parseHillFeatures (spec 22)", () => {
   it("tolerates junk input", () => {
     expect(parseHillFeatures({})).toEqual([]);
     expect(parseHillFeatures({ elements: [{}, { tags: {} }] })).toEqual([]);
+  });
+});
+
+describe("parseProtectedArea (spec 24)", () => {
+  it("returns the named protected_area boundary enclosing the summit", () => {
+    const json = {
+      elements: [
+        { type: "node", lat: 1, lon: 2, tags: { amenity: "parking" } },
+        { type: "area", tags: { boundary: "protected_area", name: "BRT Wildlife Sanctuary" } },
+      ],
+    };
+    expect(parseProtectedArea(json)).toBe("BRT Wildlife Sanctuary");
+  });
+
+  it("prefers protected_area over a generic nature reserve, skips unnamed", () => {
+    const json = {
+      elements: [
+        { type: "area", tags: { leisure: "nature_reserve", name: "Some Reserve" } },
+        { type: "area", tags: { boundary: "protected_area" } }, // unnamed → useless
+        { type: "area", tags: { boundary: "protected_area", name: "Real Sanctuary" } },
+      ],
+    };
+    expect(parseProtectedArea(json)).toBe("Real Sanctuary");
+  });
+
+  it("ignores non-area elements and returns undefined when nothing encloses", () => {
+    expect(
+      parseProtectedArea({ elements: [{ type: "way", tags: { name: "x" } }] }),
+    ).toBeUndefined();
+    expect(parseProtectedArea({})).toBeUndefined();
   });
 });

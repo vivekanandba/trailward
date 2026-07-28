@@ -64,6 +64,12 @@ export interface Trek {
   // separate from `highlights` because it is a HISTORICAL description, not
   // current fact, and must always be shown with its source + year.
   historicalNote?: { text: string; source: string; year: number; url?: string };
+  // The protected area (sanctuary / national park / reserve) enclosing the
+  // summit, from OSM boundaries (spec 24) — entry there is usually regulated.
+  protectedArea?: string;
+  // Heritage designation of a monument on/at the summit, from Wikidata P1435
+  // (spec 24), e.g. "Monument of National Importance".
+  heritage?: string;
   // What's ON the hill, from OSM (spec 22) — fort ruins, a summit temple, a
   // viewpoint, caves, water. Often the real reason to pick one hill over another.
   hillFeatures?: HillFeature[];
@@ -253,6 +259,18 @@ export function validateTrek(input: unknown): ValidateResult {
       (h.url === undefined || typeof h.url === "string");
     if (!okNote) {
       return fail("historicalNote", "must be {text, source, year, url?} with a plausible year");
+    }
+  }
+
+  // Protected area + heritage designation (spec 24): non-empty strings.
+  if (input.protectedArea !== undefined) {
+    if (typeof input.protectedArea !== "string" || input.protectedArea.length === 0) {
+      return fail("protectedArea", "must be a non-empty string");
+    }
+  }
+  if (input.heritage !== undefined) {
+    if (typeof input.heritage !== "string" || input.heritage.length === 0) {
+      return fail("heritage", "must be a non-empty string");
     }
   }
 
