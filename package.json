@@ -26,6 +26,7 @@
     "build:climate": "tsx scripts/build-climate.ts",
     "build:gazetteer": "tsx scripts/build-gazetteer.ts",
     "build:hillfeatures": "tsx scripts/build-hillfeatures.ts",
+    "build:landcover": "tsx scripts/build-landcover.ts",
     "validate:data": "tsx scripts/validate-data.ts"
   },
   "dependencies": {

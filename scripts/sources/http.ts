@@ -23,6 +23,7 @@ export const ALLOWED_HOSTS = new Set<string>([
   "upload.wikimedia.org",
   "nominatim.openstreetmap.org", // reverse geocode: nearest town for a discovery peak
   "elevation-tiles-prod.s3.amazonaws.com", // AWS Terrarium DEM tiles (no key) for terrain scoring
+  "esa-worldcover.s3.eu-central-1.amazonaws.com", // ESA WorldCover 10 m land cover COGs (spec 26)
   "query.wikidata.org", // Wikidata SPARQL: cross-match listed summits by GeoNames ID (P1566)
 ]);
 
