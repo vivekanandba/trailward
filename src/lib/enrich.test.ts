@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   parseWildlife,
+  parseVoyage,
   parseCommonsPhoto,
   parseWikiTitle,
   parseWikiSummary,
@@ -78,18 +79,30 @@ describe("fetchLiveEnrichment", () => {
         return { query: { pages: { "1": { imageinfo: [{ url: "photo.jpg" }] } } } };
       if (url.includes("list=geosearch"))
         return { query: { geosearch: [{ title: "Nandi Hills" }] } };
-      if (url.includes("/page/summary/"))
+      if (url.includes("en.wikipedia.org/api/rest_v1/page/summary/"))
         return { extract: "A popular hill station.", type: "standard" };
       if (url.includes("nominatim")) return { address: { town: "Nandi" } };
-      if (url.includes("api.gbif.org"))
-        return { count: 120, results: [{ species: "Macaca radiata" }] };
+      if (url.includes("api.inaturalist.org"))
+        return {
+          total_results: 120,
+          results: [{ taxon: { name: "Macaca radiata", preferred_common_name: "Bonnet Macaque" } }],
+        };
+      if (url.includes("wikivoyage.org/w/api.php"))
+        return { query: { geosearch: [{ title: "Nandi Hills" }] } };
+      if (url.includes("wikivoyage.org/api/rest_v1"))
+        return { extract: "A hill station near Bangalore.", type: "standard" };
       return {};
     });
     const out = await fetchLiveEnrichment(13.37, 77.68, getJson);
     expect(out.image?.url).toBe("photo.jpg");
     expect(out.highlights).toBe("A popular hill station.");
     expect(out.nearestTown).toBe("Nandi");
-    expect(out.wildlife).toEqual({ records: 120, species: ["Macaca radiata"] });
+    expect(out.wildlife).toEqual({ records: 120, species: [{ name: "Bonnet Macaque" }] });
+    expect(out.voyage).toEqual({
+      title: "Nandi Hills",
+      url: "https://en.wikivoyage.org/wiki/Nandi_Hills",
+      summary: "A hill station near Bangalore.",
+    });
     // Summary URL was derived from the geosearch title.
     expect(getJson).toHaveBeenCalledWith(expect.stringContaining("summary/Nandi%20Hills"));
   });
@@ -105,41 +118,62 @@ describe("fetchLiveEnrichment", () => {
       highlights: undefined,
       nearestTown: "Solo",
       wildlife: undefined,
+      voyage: undefined,
     });
   });
 });
 
-describe("parseWildlife", () => {
-  it("summarises record count and distinct binomial species", () => {
-    const w = parseWildlife({
-      count: 29484,
-      results: [
-        { species: "Macaca radiata", class: "Mammalia" },
-        { species: "Macaca radiata", class: "Mammalia" }, // duplicate collapses
-        { species: "Lepus nigricollis" },
-        { scientificName: "Athene brama Temminck" }, // trimmed to binomial
-      ],
-    })!;
-    expect(w.records).toBe(29484);
-    expect(w.species).toEqual(["Macaca radiata", "Lepus nigricollis", "Athene brama"]);
+describe("parseWildlife (iNaturalist)", () => {
+  const obs = (sci: string, common?: string, photo?: string) => ({
+    taxon: {
+      name: sci,
+      ...(common ? { preferred_common_name: common } : {}),
+      ...(photo
+        ? { default_photo: { square_url: photo, attribution: "(c) someone, CC BY-NC" } }
+        : {}),
+    },
   });
 
-  it("drops genus-only and authored rows that aren't species", () => {
+  it("prefers common names and carries the CC photo + attribution", () => {
     const w = parseWildlife({
-      count: 5,
-      results: [{ scientificName: "Tachyspiza Kaup, 1844" }, { scientificName: "Corvus" }],
+      total_results: 494,
+      results: [
+        obs("Lycodon deccanensis", "Deccan Wolf Snake", "https://inat/sq.jpg"),
+        obs("Lycodon deccanensis", "Deccan Wolf Snake", "https://inat/sq.jpg"), // dup collapses
+        obs("Pellorneum ruficeps", undefined, undefined), // no common name → binomial
+      ],
     })!;
-    expect(w.species).toEqual([]);
+    expect(w.records).toBe(494);
+    expect(w.species).toEqual([
+      {
+        name: "Deccan Wolf Snake",
+        photo: "https://inat/sq.jpg",
+        attribution: "(c) someone, CC BY-NC",
+      },
+      { name: "Pellorneum ruficeps" },
+    ]);
   });
 
   it("caps the list and tolerates junk input", () => {
-    // Real binomials carry no digits (that's what the authored-name filter
-    // catches), so vary the epithet with letters.
-    const many = Array.from({ length: 20 }, (_, i) => ({
-      species: `Genus ${String.fromCharCode(97 + i)}species`,
-    }));
-    expect(parseWildlife({ count: 20, results: many }, 4)!.species).toHaveLength(4);
+    const many = Array.from({ length: 20 }, (_, i) =>
+      obs(`Genus sp${i}`, `Common ${i}`, undefined),
+    );
+    expect(parseWildlife({ total_results: 20, results: many }, 4)!.species).toHaveLength(4);
     expect(parseWildlife({})).toBeUndefined();
-    expect(parseWildlife({ count: 0, results: [] })).toBeUndefined();
+    expect(parseWildlife({ total_results: 0, results: [] })).toBeUndefined();
+  });
+});
+
+describe("parseVoyage", () => {
+  it("builds the article stub from a geosearch hit", () => {
+    const v = parseVoyage({ query: { geosearch: [{ title: "Nandi Hills" }] } });
+    expect(v).toEqual({
+      title: "Nandi Hills",
+      url: "https://en.wikivoyage.org/wiki/Nandi_Hills",
+    });
+  });
+
+  it("returns undefined when nothing is nearby", () => {
+    expect(parseVoyage({ query: { geosearch: [] } })).toBeUndefined();
   });
 });

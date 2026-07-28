@@ -1,11 +1,14 @@
 /**
  * build-gazetteer — occasional build tool (NOT the weekly cron). Downloads the
- * OCR'd plain text of public-domain Imperial Gazetteer of India (1908) volumes
- * from archive.org, extracts coordinate-bearing summit entries, matches them to
- * our treks by name AND coordinate, and bakes a short attributed excerpt onto
- * the matches as `historicalNote`.
+ * OCR'd plain text of public-domain gazetteer volumes from archive.org across
+ * SEVERAL series (Imperial Gazetteer 1908, Rice's Mysore Gazetteer 1897, the
+ * Bombay Presidency series, the Madras District Gazetteers), extracts
+ * coordinate-bearing summit entries, matches them to our treks by name AND
+ * coordinate AND elevation, and bakes a short attributed excerpt onto the
+ * matches as `historicalNote` — each note credited to the series it came from.
  *
- * Text is cached under scripts/.cache/gazetteer so re-runs need no network.
+ * Text is cached under scripts/.cache/gazetteer (with a manifest recording each
+ * volume's series), so re-runs need no network.
  *   npm run build:gazetteer
  */
 import { execSync } from "node:child_process";
@@ -19,9 +22,41 @@ import { parseGazetteerEntries, matchEntries, type GazetteerEntry } from "./sour
 const here = dirname(fileURLToPath(import.meta.url));
 const treksFile = resolve(here, "../src/data/treks.json");
 const cacheDir = resolve(here, ".cache/gazetteer");
+const manifestFile = resolve(cacheDir, "manifest.json");
 
-const SOURCE_NAME = "Imperial Gazetteer of India";
-const SOURCE_YEAR = 1908;
+/** A public-domain gazetteer series we mine. Years are the series' era. */
+export interface Series {
+  key: string;
+  name: string;
+  year: number;
+  query: string; // archive.org advancedsearch query
+  maxVolumes: number;
+}
+
+export const SERIES: Series[] = [
+  {
+    key: "imperial",
+    name: "Imperial Gazetteer of India",
+    year: 1908,
+    query: 'title:("Imperial Gazetteer of India") AND mediatype:texts AND format:"DjVuTXT"',
+    maxVolumes: 24,
+  },
+  {
+    key: "mysore",
+    name: "Mysore: A Gazetteer (B. L. Rice)",
+    year: 1897,
+    query: 'title:(Mysore) AND title:(gazetteer) AND mediatype:texts AND format:"DjVuTXT"',
+    maxVolumes: 8,
+  },
+  // Bombay Presidency and Madras District Gazetteers were evaluated and DROPPED:
+  // they are running prose organised by chapter, with almost no per-place
+  // coordinates (the whole Thana "Places of Interest" volume has 15 "latitude"
+  // mentions), so the coordinate-verified matcher — correctly — finds nothing.
+  // A name-only match would risk exactly the mislabelling this design exists to
+  // prevent. Revisit only with a series that uses dictionary-style entries.
+];
+
+const SERIES_NAMES = new Set(SERIES.map((s) => s.name));
 
 /** Return the trek without one optional key (no leftover `undefined` in JSON). */
 function omit(t: Trek, key: keyof Trek): Trek {
@@ -29,14 +64,6 @@ function omit(t: Trek, key: keyof Trek): Trek {
   delete copy[key];
   return copy;
 }
-
-// Archive.org identifiers for these scans are inconsistent (dli.*, in.ernet.*,
-// rbanms.*, …), so they are DISCOVERED via the search API rather than guessed.
-// Bounded so a hand-run stays reasonable; the alphabetical place-name volumes
-// and the southern provincial series are what carry hill entries.
-const MAX_VOLUMES = 24;
-const DISCOVER_QUERY =
-  'title:("Imperial Gazetteer of India") AND mediatype:texts AND format:"DjVuTXT"';
 
 /**
  * Archive.org's `title` is a multi-valued Solr field: most records return a
@@ -50,19 +77,19 @@ function titleOf(raw: unknown): string {
 }
 
 /** Discover candidate volume identifiers, most-relevant first. */
-export function pickVolumes(
-  docs: { identifier?: string; title?: unknown }[],
-  max = MAX_VOLUMES,
-): string[] {
+export function pickVolumes(docs: { identifier?: string; title?: unknown }[], max = 24): string[] {
   // Prefer volumes whose title names an alphabetical range or a southern
-  // province — those hold the place entries we can match.
+  // province — those hold the place entries we can match. "Statistical
+  // appendix" volumes are tables, not prose, so they rank last.
   const score = (title: string): number => {
     const t = title.toLowerCase();
     let s = 0;
     if (/\bvol/.test(t)) s += 1;
-    if (/madras|mysore|coorg|hyderabad|bombay/.test(t)) s += 3;
+    if (/madras|mysore|coorg|hyderabad|bombay|poona|satara|kolaba|nasik|salem|coimbatore/.test(t))
+      s += 3;
     if (/\bto\b/.test(t)) s += 2; // "Pardi To Pusad" — an alphabetical span
     if (/provincial series/.test(t)) s += 1;
+    if (/statistical appendix/.test(t)) s -= 4;
     if (/1885|1886/.test(t)) s -= 1; // older edition, thinner entries
     return s;
   };
@@ -79,10 +106,10 @@ export function pickVolumes(
   );
 }
 
-function discoverVolumes(): string[] {
+function discoverVolumes(series: Series): string[] {
   const url =
-    `https://archive.org/advancedsearch.php?q=${encodeURIComponent(DISCOVER_QUERY)}` +
-    `&fl[]=identifier&fl[]=title&rows=120&output=json`;
+    `https://archive.org/advancedsearch.php?q=${encodeURIComponent(series.query)}` +
+    `&fl[]=identifier&fl[]=title&rows=200&output=json`;
   try {
     const json = JSON.parse(
       execSync(`curl -sSL -m 60 -A "TrailwardBot/0.1 (trek data)" "${url}"`, {
@@ -90,11 +117,37 @@ function discoverVolumes(): string[] {
         maxBuffer: 32 * 1024 * 1024,
       }),
     ) as { response?: { docs?: { identifier?: string; title?: unknown }[] } };
-    return pickVolumes(json.response?.docs ?? []);
+    return pickVolumes(json.response?.docs ?? [], series.maxVolumes);
   } catch (err) {
-    console.warn(`[gazetteer] volume discovery failed: ${(err as Error).message}`);
+    console.warn(`[gazetteer] ${series.key} discovery failed: ${(err as Error).message}`);
     return [];
   }
+}
+
+// volumeId → series key, persisted so cached volumes keep their attribution
+// across runs (legacy cache entries predate the manifest → imperial).
+type Manifest = Record<string, string>;
+
+function loadManifest(): Manifest {
+  let manifest: Manifest = {};
+  try {
+    manifest = JSON.parse(readFileSync(manifestFile, "utf8")) as Manifest;
+  } catch {
+    manifest = {};
+  }
+  // Cached volumes that predate the manifest were all fetched by the original
+  // Imperial-only build — seed them so they keep contributing (and keep their
+  // correct attribution) instead of being orphaned.
+  try {
+    for (const f of readdirSync(cacheDir)) {
+      if (!f.endsWith(".txt")) continue;
+      const id = f.replace(/\.txt$/, "");
+      manifest[id] = manifest[id] ?? "imperial";
+    }
+  } catch {
+    // cache dir may not exist yet
+  }
+  return manifest;
 }
 
 interface ArchiveMeta {
@@ -113,10 +166,7 @@ async function volumeText(id: string): Promise<string | null> {
     meta = JSON.parse(
       execSync(
         `curl -sSL -m 60 -A "TrailwardBot/0.1 (trek data)" "https://archive.org/metadata/${id}"`,
-        {
-          encoding: "utf8",
-          maxBuffer: 64 * 1024 * 1024,
-        },
+        { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
       ),
     ) as ArchiveMeta;
   } catch {
@@ -139,31 +189,39 @@ async function volumeText(id: string): Promise<string | null> {
   }
 }
 
+type SourcedEntry = GazetteerEntry & { source: string; year: number };
+
 async function main(): Promise<void> {
   mkdirSync(cacheDir, { recursive: true });
   const treks = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
+  const manifest = loadManifest();
 
-  // Every volume we've ever cached, plus newly discovered ones: parsing is free
-  // once the text is local, and it means matches accumulate instead of
-  // fluctuating with whatever the search happened to return this time.
-  const cached = readdirSync(cacheDir)
-    .filter((f) => f.endsWith(".txt"))
-    .map((f) => f.replace(/\.txt$/, ""));
-  const volumes = [...new Set([...cached, ...discoverVolumes()])];
-  if (volumes.length === 0) throw new Error("no gazetteer volumes discovered");
-  console.log(`[gazetteer] ${volumes.length} volumes (${cached.length} cached)`);
-
-  const entries: GazetteerEntry[] = [];
-  for (const id of volumes) {
-    const text = await volumeText(id);
-    if (!text) {
-      console.warn(`[gazetteer] ${id}: unavailable, skipped`);
-      continue;
+  // Per series: every volume we've ever cached for it, plus newly discovered
+  // ones — parsing is free once the text is local, so matches accumulate
+  // instead of fluctuating with whatever the search returned this time.
+  const entries: SourcedEntry[] = [];
+  for (const series of SERIES) {
+    const cachedIds = Object.entries(manifest)
+      .filter(([, key]) => key === series.key)
+      .map(([id]) => id);
+    const ids = [...new Set([...cachedIds, ...discoverVolumes(series)])];
+    let found = 0;
+    let ok = 0;
+    for (const id of ids) {
+      const text = await volumeText(id);
+      if (!text) continue;
+      manifest[id] = manifest[id] ?? series.key;
+      // A volume can be discovered by two queries (Imperial "provincial series
+      // Mysore" matches both); its entries count once, under its first series.
+      if (manifest[id] !== series.key) continue;
+      const parsed = parseGazetteerEntries(text);
+      entries.push(...parsed.map((e) => ({ ...e, source: series.name, year: series.year })));
+      found += parsed.length;
+      ok++;
     }
-    const found = parseGazetteerEntries(text);
-    entries.push(...found);
-    console.log(`[gazetteer] ${id}: ${found.length} coordinate-bearing summit entries`);
+    console.log(`[gazetteer] ${series.key}: ${ok}/${ids.length} volumes, ${found} entries`);
   }
+  writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + "\n", "utf8");
   if (entries.length === 0) throw new Error("no gazetteer entries parsed; refusing to write");
 
   const matches = matchEntries(entries, treks);
@@ -175,8 +233,10 @@ async function main(): Promise<void> {
   const next = treks.map((t) => {
     const e = matches.get(t.id);
     if (!e) {
-      // Drop a stale note if this trek no longer matches (keeps re-runs honest).
-      if (t.historicalNote?.source === SOURCE_NAME) return omit(t, "historicalNote");
+      // Drop a stale note from any of our series if this trek no longer matches.
+      if (t.historicalNote && SERIES_NAMES.has(t.historicalNote.source)) {
+        return omit(t, "historicalNote");
+      }
       return t;
     }
     baked++;
@@ -184,9 +244,9 @@ async function main(): Promise<void> {
       ...t,
       historicalNote: {
         text: e.text,
-        source: SOURCE_NAME,
-        year: SOURCE_YEAR,
-        url: `https://archive.org/search?query=${encodeURIComponent(SOURCE_NAME)}`,
+        source: e.source,
+        year: e.year,
+        url: `https://archive.org/search?query=${encodeURIComponent(e.source)}`,
       },
     };
   });
@@ -195,8 +255,10 @@ async function main(): Promise<void> {
   if (!ds.ok) throw new Error(`[gazetteer] dataset invalid: ${ds.error}`);
   writeFileSync(treksFile, JSON.stringify(ds.treks, null, 2) + "\n", "utf8");
   console.log(`[gazetteer] baked historicalNote onto ${baked} treks.`);
-  for (const t of ds.treks.filter((x) => x.historicalNote).slice(0, 8)) {
-    console.log(`  · ${t.name}: ${t.historicalNote!.text.slice(0, 90)}…`);
+  for (const t of ds.treks.filter((x) => x.historicalNote).slice(0, 14)) {
+    console.log(
+      `  · ${t.name} [${t.historicalNote!.year}]: ${t.historicalNote!.text.slice(0, 80)}…`,
+    );
   }
 }
 

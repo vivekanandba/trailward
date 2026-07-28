@@ -436,9 +436,8 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           </div>
         )}
 
-        {/* Wildlife recorded nearby (spec 23) — fetched live from GBIF on open.
-            Scientific names, because GBIF's occurrence records carry no
-            vernacular names and inventing common names would be guessing. */}
+        {/* Wildlife recorded nearby (spec 23) — fetched live from iNaturalist on
+            open: research-grade observations with common names and CC photos. */}
         {live.wildlife && live.wildlife.species.length > 0 && (
           <div className="mt-4 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
             <div className="flex items-baseline justify-between gap-2">
@@ -446,16 +445,57 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                 Wildlife nearby
               </span>
               <span className="text-xs text-trail-600 dark:text-slate-400">
-                {live.wildlife.records.toLocaleString()} records
+                {live.wildlife.records.toLocaleString()} observations
               </span>
             </div>
-            <p className="mt-1 text-sm italic text-trail-700 dark:text-slate-300">
-              {live.wildlife.species.join(", ")}
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {live.wildlife.species.map((s) => (
+                <li
+                  key={s.name}
+                  title={s.attribution ?? s.name}
+                  className="flex items-center gap-1.5 rounded-full border border-trail-200 bg-white py-0.5 pl-0.5 pr-2 text-xs text-trail-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                >
+                  {s.photo ? (
+                    <img
+                      src={s.photo}
+                      alt=""
+                      loading="lazy"
+                      className="h-5 w-5 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="w-1" />
+                  )}
+                  {s.name}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-[11px] text-trail-500 dark:text-slate-400">
+              Research-grade observations within ~5 km (iNaturalist, CC-licensed photos). Recorded
+              here, not a sighting guarantee.
             </p>
-            <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
-              Birds & mammals recorded within ~5 km (GBIF). Occurrence records, not a sighting
-              guarantee.
-            </p>
+          </div>
+        )}
+
+        {/* Wikivoyage travel article (spec 23) — only notable destinations have
+            one, so it appears rarely but is worth a lot when it does. */}
+        {live.voyage && (
+          <div className="mt-4 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
+            <span className="text-sm font-medium text-trail-800 dark:text-slate-100">
+              Travel guide
+            </span>
+            {live.voyage.summary && (
+              <p className="mt-1 text-sm text-trail-700 dark:text-slate-300">
+                {live.voyage.summary}
+              </p>
+            )}
+            <a
+              href={live.voyage.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block text-xs text-trail-600 underline hover:text-trail-800 dark:text-slate-400 dark:hover:text-slate-200"
+            >
+              {live.voyage.title} on Wikivoyage
+            </a>
           </div>
         )}
 

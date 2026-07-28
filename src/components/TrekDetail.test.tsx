@@ -155,12 +155,19 @@ describe("TrekDetail wildlife (spec 23)", () => {
 
   it("lists species fetched live, with the records count and a caveat", async () => {
     liveEnrich.mockResolvedValueOnce({
-      wildlife: { records: 29484, species: ["Macaca radiata", "Lepus nigricollis"] },
+      wildlife: {
+        records: 29484,
+        species: [
+          { name: "Bonnet Macaque", photo: "https://inat/sq.jpg" },
+          { name: "Lepus nigricollis" },
+        ],
+      },
     });
     render(<TrekDetail trek={gnTrek} origin={origin} onClose={vi.fn()} />);
     expect(await screen.findByText("Wildlife nearby")).toBeInTheDocument();
-    expect(screen.getByText("Macaca radiata, Lepus nigricollis")).toBeInTheDocument();
-    expect(screen.getByText("29,484 records")).toBeInTheDocument();
+    expect(screen.getByText("Bonnet Macaque")).toBeInTheDocument();
+    expect(screen.getByText("Lepus nigricollis")).toBeInTheDocument();
+    expect(screen.getByText("29,484 observations")).toBeInTheDocument();
     expect(screen.getByText(/not a sighting guarantee/)).toBeInTheDocument();
   });
 });
