@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DEFAULT_FILTERS, applyFilters, countByDifficulty, type FilterState } from "./filters";
-import { DEFAULT_ORIGIN, type Trek } from "./trek";
+import { DEFAULT_ORIGIN, type Origin, type Trek } from "./trek";
 
 const origin = DEFAULT_ORIGIN;
 
@@ -218,5 +218,25 @@ describe("countByDifficulty", () => {
       trek({ id: "4" }),
     ];
     expect(countByDifficulty(treks)).toEqual({ Easy: 2, Moderate: 0, Hard: 1 });
+  });
+});
+
+describe("query matches alternate names (spec 25)", () => {
+  it("finds a peak by a name it also goes by", () => {
+    const trek: Trek = {
+      id: "gn-1--bengaluru",
+      name: "West Hill",
+      lat: 12.98,
+      lng: 77.6,
+      cityId: "bangalore",
+      tier: "discovery",
+      altNames: ["Conollys Hill"],
+      sources: [],
+      verified: false,
+    };
+    const origin: Origin = { id: "bangalore", name: "Bengaluru", lat: 12.97, lng: 77.59 };
+    const out = applyFilters([trek], origin, { ...DEFAULT_FILTERS, query: "conolly" });
+    expect(out).toHaveLength(1);
+    expect(applyFilters([trek], origin, { ...DEFAULT_FILTERS, query: "nomatch" })).toHaveLength(0);
   });
 });

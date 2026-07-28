@@ -85,7 +85,7 @@ export function applyFilters(treks: Trek[], origin: Origin, f: FilterState): Tre
     }
 
     if (q) {
-      const hay = `${t.name} ${t.nearestTown ?? ""}`.toLowerCase();
+      const hay = `${t.name} ${t.nearestTown ?? ""} ${(t.altNames ?? []).join(" ")}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
 

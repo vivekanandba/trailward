@@ -115,6 +115,39 @@ export function dedupeAgainstCurated(discovery: Trek[], curated: Trek[]): Trek[]
   return discovery.filter((d) => !curated.some((c) => distanceFrom(c, d) <= CURATED_DEDUP_KM));
 }
 
+// Enrichment baked by the HAND-RUN tools (build:climate, build:gazetteer,
+// build:hillfeatures) — this pipeline regenerates discovery records wholesale,
+// so without carrying these over, every weekly cron run would silently wipe
+// them until someone re-ran the hand tools.
+const PRESERVED_FIELDS = [
+  "bestSeason",
+  "historicalNote",
+  "hillFeatures",
+  "protectedArea",
+  "heritage",
+] as const;
+
+/**
+ * Copy hand-baked enrichment from the previous dataset onto freshly
+ * regenerated records with the same id. A field the new record already has
+ * (e.g. hillFeatures fetched live this run) wins over the preserved value.
+ */
+export function preserveEnrichment(next: Trek[], previous: Trek[]): Trek[] {
+  const prevById = new Map(previous.map((t) => [t.id, t]));
+  return next.map((t) => {
+    const prev = prevById.get(t.id);
+    if (!prev) return t;
+    const out = { ...t };
+    for (const f of PRESERVED_FIELDS) {
+      if (out[f] === undefined && prev[f] !== undefined) {
+        // Type-safe per-field copy: same key on both sides.
+        (out as Record<string, unknown>)[f] = prev[f];
+      }
+    }
+    return out;
+  });
+}
+
 // A GeoNames summit this close to a peak we've already scored (OSM/manual) is the
 // same hill — drop it so we don't double-pin. Coarser than MANUAL_DEDUP so minor
 // coordinate disagreement between sources still collapses to one pin.
@@ -183,6 +216,7 @@ export function toListedTreks(
       ...(s.discoveryScore !== undefined ? { discoveryScore: s.discoveryScore } : {}),
       ...(s.estimatedDifficulty ? { estimatedDifficulty: s.estimatedDifficulty } : {}),
       ...(s.image ? { image: s.image } : {}), // Wikidata P18 photo (spec 18), when present
+      ...(s.altNames && s.altNames.length > 0 ? { altNames: s.altNames } : {}), // spec 25
       sources: [`https://www.geonames.org/${s.id}`],
       verified: false,
     });
@@ -473,7 +507,9 @@ async function main(): Promise<void> {
   const kept = existing
     .filter((t) => t.tier === "curated" || !recomputed.has(t.cityId))
     .map((t) => curatedById.get(t.id) ?? t);
-  const next = [...kept, ...[...recomputed.values()].flat()];
+  // Carry hand-baked enrichment (climate/gazetteer/hillfeatures) onto the
+  // regenerated records so a cron run never silently wipes it.
+  const next = preserveEnrichment([...kept, ...[...recomputed.values()].flat()], existing);
 
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[discover] dataset invalid: ${ds.error}`);
