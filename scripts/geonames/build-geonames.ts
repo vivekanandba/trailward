@@ -23,6 +23,36 @@ const SUMMIT_CODES = new Set(["PK", "PKS", "HLL", "HLLS", "MT", "MTS", "RK", "RK
 const REACH_KM = 520; // a little over Bengaluru's 500 km, so nothing near an edge is lost
 const ROSETTE_RADIUS_M = 450; // same rosette geometry the OSM discovery pipeline uses
 
+/**
+ * Pick display/search-worthy alternate names (spec 25) from the dump's
+ * comma-separated alternatenames column: Latin script only (the UI and search
+ * are Latin-input), deduped against the primary name and each other
+ * (case/diacritic-insensitively), short, and capped — the column often carries
+ * a dozen transliteration micro-variants that add nothing.
+ */
+export function pickAltNames(primary: string, raw: string, max = 3): string[] {
+  if (!raw) return [];
+  const norm = (x: string): string =>
+    x
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z]/g, "");
+  const seen = new Set([norm(primary)]);
+  const out: string[] = [];
+  for (const cand of raw.split(",")) {
+    const name = cand.trim();
+    if (!name || name.length > 40) continue;
+    if (!/^[A-Za-z\u00C0-\u024F' .()-]+$/.test(name)) continue; // Latin-ish only
+    const key = norm(name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
 const round = (x: number, dp = 0): number => {
   const f = 10 ** dp;
   return Math.round(x * f) / f;
@@ -58,7 +88,15 @@ async function main(): Promise<void> {
     const elevRaw = Number(c[15]) || Number(c[16]); // elevation, else SRTM dem
     const elevationM =
       Number.isFinite(elevRaw) && elevRaw > 0 && elevRaw <= 9000 ? Math.round(elevRaw) : undefined;
-    summits.push({ id: c[0], name: c[1], lat, lng, elevationM });
+    const altNames = pickAltNames(c[1], c[3] ?? "");
+    summits.push({
+      id: c[0],
+      name: c[1],
+      lat,
+      lng,
+      elevationM,
+      ...(altNames.length > 0 ? { altNames } : {}),
+    });
   }
   console.log(`[geonames] filtered ${summits.length} summits; DEM-scoring via tiles…`);
 

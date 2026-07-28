@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { cellsFor } from "./build-climate";
+import { pickAltNames } from "./geonames/build-geonames";
 import type { Trek } from "../src/lib/trek";
 import { climateCellKey } from "../src/lib/climate";
 
@@ -118,5 +119,22 @@ describe("matchHeritage (spec 24)", () => {
       matchHeritage(t, [{ lat: 13.3705, lng: 77.576, status: "Monument of National Importance" }]),
     ).toBe("Monument of National Importance");
     expect(matchHeritage(t, [{ lat: 13.4, lng: 77.6, status: "Too Far" }])).toBeUndefined();
+  });
+});
+
+describe("pickAltNames (spec 25)", () => {
+  it("keeps distinct Latin variants, dropping the primary and near-duplicates", () => {
+    expect(pickAltNames("West Hill", "Conollys Hill,West Hill,Wèst Hîll,ವೆಸ್ಟ್ ಹಿಲ್")).toEqual([
+      "Conollys Hill",
+    ]);
+  });
+
+  it("caps the list and skips over-long or empty candidates", () => {
+    const raw = ["A Peak", "B Peak", "C Peak", "D Peak", "", "x".repeat(50)].join(",");
+    expect(pickAltNames("Primary", raw, 3)).toEqual(["A Peak", "B Peak", "C Peak"]);
+  });
+
+  it("returns [] for an empty column", () => {
+    expect(pickAltNames("Name", "")).toEqual([]);
   });
 });

@@ -139,6 +139,17 @@ describe("TrekDetail historical note (spec 21) + hill features (spec 22)", () =>
     expect(screen.getByText("Monument of National Importance")).toBeInTheDocument();
   });
 
+  it("shows alternate names (spec 25)", () => {
+    render(
+      <TrekDetail
+        trek={{ ...baseTrek, altNames: ["Conollys Hill"] }}
+        origin={origin}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Also known as Conollys Hill/)).toBeInTheDocument();
+  });
+
   it("shows summit features as chips", () => {
     render(
       <TrekDetail

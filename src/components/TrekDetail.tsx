@@ -393,6 +393,11 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             ))}
           </div>
         )}
+        {trek.altNames && trek.altNames.length > 0 && (
+          <p className="mb-2 text-xs text-trail-500 dark:text-slate-400">
+            Also known as {trek.altNames.join(", ")}
+          </p>
+        )}
         {highlights && <p className="text-sm text-trail-700 dark:text-slate-300">{highlights}</p>}
         {enriching && !highlights && !image && (
           <p className="text-xs italic text-trail-500 dark:text-slate-400" role="status">

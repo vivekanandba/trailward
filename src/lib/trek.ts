@@ -56,6 +56,9 @@ export interface Trek {
   nightTrek?: boolean;
   highlights?: string;
   nearestTown?: string;
+  // Other names the place goes by (spec 25) — colonial-era, transliteration, or
+  // local variants from GeoNames. Searchable and shown as "also known as".
+  altNames?: string[];
   image?: TrekImage;
   gallery?: TrekImage[]; // extra nearby Commons photos (spec 15)
   // Nearby trailhead POIs (spec 15): nearest of each kind to the summit.
@@ -260,6 +263,15 @@ export function validateTrek(input: unknown): ValidateResult {
     if (!okNote) {
       return fail("historicalNote", "must be {text, source, year, url?} with a plausible year");
     }
+  }
+
+  // Alternate names (spec 25): short non-empty strings.
+  if (input.altNames !== undefined) {
+    const ok =
+      Array.isArray(input.altNames) &&
+      input.altNames.length > 0 &&
+      input.altNames.every((n) => typeof n === "string" && n.length > 0 && n.length <= 60);
+    if (!ok) return fail("altNames", "must be a non-empty array of short strings");
   }
 
   // Protected area + heritage designation (spec 24): non-empty strings.

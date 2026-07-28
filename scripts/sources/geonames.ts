@@ -26,6 +26,8 @@ export interface GeonamesSummit {
   estimatedDifficulty?: Difficulty;
   // Wikidata cross-match (spec 18): a photo when P18 had one.
   image?: TrekImage;
+  // Alternate names from the GeoNames dump (spec 25) — searchable variants.
+  altNames?: string[];
 }
 
 let cache: GeonamesSummit[] | null = null;

@@ -5,6 +5,7 @@ import {
   enrichCuratedTerrain,
   mergeManualPeaks,
   toListedTreks,
+  preserveEnrichment,
   type DiscoverFetchers,
   type RegionConfig,
 } from "./discover-precompute";
@@ -399,5 +400,50 @@ describe("dedupeAgainstCurated", () => {
   it("keeps everything when there are no curated treks", () => {
     const discovery = [mk("osm-1--pune", 18.5, 73.8, "discovery")];
     expect(dedupeAgainstCurated(discovery, [])).toHaveLength(1);
+  });
+});
+
+describe("preserveEnrichment (spec 25 — cron must not wipe hand-baked fields)", () => {
+  const prev: Trek = {
+    id: "gn-1--bengaluru",
+    name: "X",
+    lat: 13,
+    lng: 77,
+    cityId: "bangalore",
+    tier: "discovery",
+    bestSeason: "Dec–Apr (driest)",
+    protectedArea: "BRT Wildlife Sanctuary",
+    hillFeatures: ["fort"],
+    historicalNote: { text: "old", source: "Imperial Gazetteer of India", year: 1908 },
+    sources: [],
+    verified: false,
+  };
+  const fresh: Trek = {
+    id: "gn-1--bengaluru",
+    name: "X",
+    lat: 13,
+    lng: 77,
+    cityId: "bangalore",
+    tier: "discovery",
+    sources: [],
+    verified: false,
+  };
+
+  it("carries hand-baked fields onto the regenerated record", () => {
+    const [out] = preserveEnrichment([fresh], [prev]);
+    expect(out.bestSeason).toBe("Dec–Apr (driest)");
+    expect(out.protectedArea).toBe("BRT Wildlife Sanctuary");
+    expect(out.hillFeatures).toEqual(["fort"]);
+    expect(out.historicalNote?.year).toBe(1908);
+  });
+
+  it("never overwrites a value the fresh record already has", () => {
+    const [out] = preserveEnrichment([{ ...fresh, hillFeatures: ["temple"] }], [prev]);
+    expect(out.hillFeatures).toEqual(["temple"]);
+  });
+
+  it("leaves records with no previous counterpart untouched", () => {
+    const [out] = preserveEnrichment([{ ...fresh, id: "new" }], [prev]);
+    expect(out.bestSeason).toBeUndefined();
   });
 });
