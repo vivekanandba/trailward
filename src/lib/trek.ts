@@ -15,6 +15,21 @@ export type Tier = "curated" | "discovery";
 export type HillFeature = "fort" | "temple" | "cave" | "ruins";
 export const HILL_FEATURES: HillFeature[] = ["fort", "temple", "cave", "ruins"];
 
+/** Valid `landCover` labels (spec 26) — mirrors WORLDCOVER_LABELS values. */
+export const LAND_COVERS: string[] = [
+  "Forest",
+  "Shrubland",
+  "Grassland",
+  "Cropland",
+  "Built-up",
+  "Bare / sparse",
+  "Snow & ice",
+  "Water",
+  "Wetland",
+  "Mangroves",
+  "Moss & lichen",
+];
+
 export interface TrekImage {
   url: string;
   attribution: string; // required when url is present (license credit)
@@ -59,6 +74,9 @@ export interface Trek {
   // Other names the place goes by (spec 25) — colonial-era, transliteration, or
   // local variants from GeoNames. Searchable and shown as "also known as".
   altNames?: string[];
+  // Dominant ground cover around the summit (spec 26, ESA WorldCover 10 m) —
+  // what the climb is like underfoot: forest, shrub, grass, bare rock…
+  landCover?: string;
   image?: TrekImage;
   gallery?: TrekImage[]; // extra nearby Commons photos (spec 15)
   // Nearby trailhead POIs (spec 15): nearest of each kind to the summit.
@@ -262,6 +280,13 @@ export function validateTrek(input: unknown): ValidateResult {
       (h.url === undefined || typeof h.url === "string");
     if (!okNote) {
       return fail("historicalNote", "must be {text, source, year, url?} with a plausible year");
+    }
+  }
+
+  // Land cover (spec 26): must be one of the WorldCover-derived labels.
+  if (input.landCover !== undefined) {
+    if (typeof input.landCover !== "string" || !LAND_COVERS.includes(input.landCover)) {
+      return fail("landCover", `must be one of ${LAND_COVERS.join(" | ")}`);
     }
   }
 

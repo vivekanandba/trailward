@@ -416,6 +416,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           <Fact label="Duration" value={trek.durationHrs ? `${trek.durationHrs} h` : undefined} />
           <Fact label="Nearest town" value={nearestTown} />
           <Fact label="Protected area" value={trek.protectedArea} />
+          <Fact label="Ground cover" value={trek.landCover} />
           <Fact label="Entry fee" value={trek.entryFee} />
           <Fact
             label="Permit"

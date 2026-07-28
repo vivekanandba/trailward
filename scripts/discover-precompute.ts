@@ -121,6 +121,7 @@ export function dedupeAgainstCurated(discovery: Trek[], curated: Trek[]): Trek[]
 // them until someone re-ran the hand tools.
 const PRESERVED_FIELDS = [
   "bestSeason",
+  "landCover",
   "historicalNote",
   "hillFeatures",
   "protectedArea",
