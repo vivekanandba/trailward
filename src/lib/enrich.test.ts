@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
+  parseWildlife,
   parseCommonsPhoto,
   parseWikiTitle,
   parseWikiSummary,
@@ -80,12 +81,15 @@ describe("fetchLiveEnrichment", () => {
       if (url.includes("/page/summary/"))
         return { extract: "A popular hill station.", type: "standard" };
       if (url.includes("nominatim")) return { address: { town: "Nandi" } };
+      if (url.includes("api.gbif.org"))
+        return { count: 120, results: [{ species: "Macaca radiata" }] };
       return {};
     });
     const out = await fetchLiveEnrichment(13.37, 77.68, getJson);
     expect(out.image?.url).toBe("photo.jpg");
     expect(out.highlights).toBe("A popular hill station.");
     expect(out.nearestTown).toBe("Nandi");
+    expect(out.wildlife).toEqual({ records: 120, species: ["Macaca radiata"] });
     // Summary URL was derived from the geosearch title.
     expect(getJson).toHaveBeenCalledWith(expect.stringContaining("summary/Nandi%20Hills"));
   });
@@ -96,6 +100,46 @@ describe("fetchLiveEnrichment", () => {
       throw new Error("network");
     });
     const out = await fetchLiveEnrichment(1, 2, getJson);
-    expect(out).toEqual({ image: undefined, highlights: undefined, nearestTown: "Solo" });
+    expect(out).toEqual({
+      image: undefined,
+      highlights: undefined,
+      nearestTown: "Solo",
+      wildlife: undefined,
+    });
+  });
+});
+
+describe("parseWildlife", () => {
+  it("summarises record count and distinct binomial species", () => {
+    const w = parseWildlife({
+      count: 29484,
+      results: [
+        { species: "Macaca radiata", class: "Mammalia" },
+        { species: "Macaca radiata", class: "Mammalia" }, // duplicate collapses
+        { species: "Lepus nigricollis" },
+        { scientificName: "Athene brama Temminck" }, // trimmed to binomial
+      ],
+    })!;
+    expect(w.records).toBe(29484);
+    expect(w.species).toEqual(["Macaca radiata", "Lepus nigricollis", "Athene brama"]);
+  });
+
+  it("drops genus-only and authored rows that aren't species", () => {
+    const w = parseWildlife({
+      count: 5,
+      results: [{ scientificName: "Tachyspiza Kaup, 1844" }, { scientificName: "Corvus" }],
+    })!;
+    expect(w.species).toEqual([]);
+  });
+
+  it("caps the list and tolerates junk input", () => {
+    // Real binomials carry no digits (that's what the authored-name filter
+    // catches), so vary the epithet with letters.
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      species: `Genus ${String.fromCharCode(97 + i)}species`,
+    }));
+    expect(parseWildlife({ count: 20, results: many }, 4)!.species).toHaveLength(4);
+    expect(parseWildlife({})).toBeUndefined();
+    expect(parseWildlife({ count: 0, results: [] })).toBeUndefined();
   });
 });

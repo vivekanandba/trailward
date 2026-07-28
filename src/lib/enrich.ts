@@ -12,10 +12,18 @@
  */
 import type { TrekImage } from "./trek";
 
+export interface Wildlife {
+  /** Total geo-referenced occurrence records near the peak. */
+  records: number;
+  /** A few distinct species actually recorded there (scientific names). */
+  species: string[];
+}
+
 export interface LiveEnrichment {
   image?: TrekImage;
   highlights?: string;
   nearestTown?: string;
+  wildlife?: Wildlife;
 }
 
 function stripHtml(s: string): string {
@@ -67,6 +75,28 @@ export function parseNominatimTown(json: unknown): string | undefined {
   );
 }
 
+/**
+ * GBIF occurrence search → record count + distinct species (spec 23). GBIF's
+ * occurrence records carry scientific names only (no vernacular names), so we
+ * show those as-is rather than inventing common names. Birds + mammals only:
+ * they're what a walker actually notices, and they keep the list short.
+ */
+export function parseWildlife(json: unknown, max = 6): Wildlife | undefined {
+  const d = json as { count?: number; results?: Record<string, unknown>[] };
+  if (typeof d?.count !== "number" || !Array.isArray(d.results)) return undefined;
+  const species: string[] = [];
+  for (const r of d.results) {
+    const name = (r.species as string) ?? (r.scientificName as string);
+    // Genus-only or authored-name rows ("Tachyspiza Kaup, 1844") aren't useful.
+    if (!name || /\d/.test(name) || name.split(" ").length < 2) continue;
+    const binomial = name.split(" ").slice(0, 2).join(" ");
+    if (!species.includes(binomial)) species.push(binomial);
+    if (species.length >= max) break;
+  }
+  if (d.count === 0 && species.length === 0) return undefined;
+  return { records: d.count, species };
+}
+
 type Fetcher = (url: string) => Promise<unknown>;
 
 const defaultFetch: Fetcher = async (url) => {
@@ -97,8 +127,15 @@ export async function fetchLiveEnrichment(
   const townUrl =
     `https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&addressdetails=1` +
     `&lat=${lat}&lon=${lng}`;
+  // ~5 km box around the peak; taxonKey 212 = Aves, 359 = Mammalia.
+  const d = 0.045;
+  const wildlifeUrl =
+    `https://api.gbif.org/v1/occurrence/search?hasCoordinate=true&limit=60` +
+    `&decimalLatitude=${(lat - d).toFixed(3)},${(lat + d).toFixed(3)}` +
+    `&decimalLongitude=${(lng - d).toFixed(3)},${(lng + d).toFixed(3)}` +
+    `&taxonKey=212&taxonKey=359`;
 
-  const [image, highlights, nearestTown] = await Promise.all([
+  const [image, highlights, nearestTown, wildlife] = await Promise.all([
     getJson(commonsUrl)
       .then(parseCommonsPhoto)
       .catch(() => undefined),
@@ -116,7 +153,10 @@ export async function fetchLiveEnrichment(
     getJson(townUrl)
       .then(parseNominatimTown)
       .catch(() => undefined),
+    getJson(wildlifeUrl)
+      .then((j) => parseWildlife(j))
+      .catch(() => undefined),
   ]);
 
-  return { image, highlights, nearestTown };
+  return { image, highlights, nearestTown, wildlife };
 }

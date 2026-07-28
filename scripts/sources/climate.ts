@@ -61,7 +61,12 @@ export interface CellPoint {
 export async function fetchMonthlyRain(
   cells: CellPoint[],
   getJson: (url: string) => Promise<unknown> = (url) =>
-    fetchJson(url, { throttleMs: THROTTLE_MS, timeoutMs: 60_000, retries: 3 }),
+    fetchJson(url, {
+      throttleMs: THROTTLE_MS,
+      timeoutMs: 60_000,
+      retries: 3,
+      waitOutRateLimit: true, // Open-Meteo limits per minute
+    }),
 ): Promise<Map<string, MonthlyRain>> {
   const out = new Map<string, MonthlyRain>();
   for (let i = 0; i < cells.length; i += BATCH) {

@@ -53,6 +53,7 @@ export interface DiscoverFetchers {
   trailAndPois?(peak: { lat: number; lng: number }): Promise<{
     trail?: Trek["trail"];
     pois?: Trek["pois"];
+    hillFeatures?: Trek["hillFeatures"];
   }>;
   /** Optional GeoNames listed summits (spec 16) — appended as lightweight,
    *  unscored "listed" pins (name + elevation only, no DEM cost). */
@@ -320,9 +321,13 @@ export async function precomputeRegion(
     const topTrail = results.slice(0, config.trailLimit);
     const manualsT = results.filter((t) => t.id.startsWith("manual-") && !topTrail.includes(t));
     for (const t of [...topTrail, ...manualsT]) {
-      const { trail, pois } = await fetchers.trailAndPois({ lat: t.lat, lng: t.lng });
+      const { trail, pois, hillFeatures } = await fetchers.trailAndPois({
+        lat: t.lat,
+        lng: t.lng,
+      });
       if (trail) t.trail = trail;
       if (pois && pois.length > 0) t.pois = pois;
+      if (hillFeatures && hillFeatures.length > 0) t.hillFeatures = hillFeatures;
     }
   }
 

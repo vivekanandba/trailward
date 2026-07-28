@@ -61,7 +61,18 @@
     "reliefM": 253,
     "prominenceProxyM": 253,
     "meanSlopeDeg": 16.6,
-    "terrainConfidence": 1
+    "terrainConfidence": 1,
+    "historicalNote": {
+      "text": "Famous fortified hill, 4,851 feet high, in the west of Kolar District, Mysore, It is the highest point in the east of the State and lies at the termination of a range of hills running north to Penukonda and the Bellary District of Madras.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    },
+    "hillFeatures": [
+      "fort",
+      "temple",
+      "ruins"
+    ]
   },
   {
     "id": "savandurga",
@@ -92,7 +103,16 @@
     "reliefM": 299,
     "prominenceProxyM": 299,
     "meanSlopeDeg": 18.9,
-    "terrainConfidence": 1
+    "terrainConfidence": 1,
+    "historicalNote": {
+      "text": "A conspicuous fortified hill, 4,024 feet high, in the west of Bangalore District, Mysore, It is an enormous bare dome-shaped mass of. granite, the summit consisting of two peaks separated by a chasm, each well supplied with water. It was first fortified in 1543 by an officer of the Vijayanagar kings.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    },
+    "hillFeatures": [
+      "temple"
+    ]
   },
   {
     "id": "makalidurga",
@@ -306,7 +326,10 @@
     "reliefM": 20,
     "prominenceProxyM": 6,
     "meanSlopeDeg": 1,
-    "terrainConfidence": 0
+    "terrainConfidence": 0,
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "shivagange",
@@ -4964,7 +4987,13 @@
       }
     ],
     "nearestTown": "Vaddahalli",
-    "bestSeason": "Jan–Apr (driest)"
+    "bestSeason": "Jan–Apr (driest)",
+    "historicalNote": {
+      "text": "Detached hill, 4,399 feet high, in the Chintamani taluk of Kolar District, Mysore, It was fortified by Tipu Sultan, but was taken by the British in 1792.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "osm-10993439358--bengaluru",
@@ -9761,7 +9790,13 @@
       "https://www.openstreetmap.org/node/360213084"
     ],
     "verified": false,
-    "bestSeason": "Jan–Apr (driest)"
+    "bestSeason": "Jan–Apr (driest)",
+    "historicalNote": {
+      "text": "Hill in the District and fa/tik of Salem, Madras and 3,238 feet in height. It is a conspicuous object in the Salem landscape, with its hog-backed shape and its serrated ridges and is widely known for its rich stores of magnetic iron ore. There are five separate beds of this and the supply is almost inexhaustible.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "osm-13335422554--bengaluru",
@@ -13881,7 +13916,13 @@
       "https://www.openstreetmap.org/node/9491285168"
     ],
     "verified": false,
-    "bestSeason": "Jan–Apr (driest)"
+    "bestSeason": "Jan–Apr (driest)",
+    "historicalNote": {
+      "text": "Sacred village and hill in the Mulbagal taluk of Kolar District, Mysore, Population (1901), 949. The region is said to be Avantikakshetra, one of the ten places of greatest sanctity in India. Valmiki is believed to have lived at Avani and Rama to have encamped here on his return from Ceylon.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "osm-5157858622--bengaluru",
@@ -17061,7 +17102,13 @@
       "https://www.openstreetmap.org/node/9477298694"
     ],
     "verified": false,
-    "bestSeason": "Dec–Apr (driest)"
+    "bestSeason": "Dec–Apr (driest)",
+    "historicalNote": {
+      "text": "A bare rocky hill, 3,022 feet high, in the northeast of Chitaldroog District, Mysore, The Kadambas had a fort here called Lunkeya-kote.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "osm-1200012623--bengaluru",
@@ -19461,7 +19508,13 @@
       "https://www.openstreetmap.org/node/2905324755"
     ],
     "verified": false,
-    "bestSeason": "Jan–Apr (driest)"
+    "bestSeason": "Jan–Apr (driest)",
+    "historicalNote": {
+      "text": "Hill in the Molakalmuru taluk of Chitaldroog District, Mysore, Here, in 1892, were discovered Asoka edicts engraved on a great boulder. Isila, to the authorities of which they are addressed, may be the ‘ Sidda- ^ of Siddapura, the village close by on the west.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "osm-3919013176--bengaluru",
@@ -26287,7 +26340,13 @@
       "https://www.geonames.org/1270953"
     ],
     "verified": false,
-    "bestSeason": "Jan–Apr (driest)"
+    "bestSeason": "Jan–Apr (driest)",
+    "historicalNote": {
+      "text": "Hill, 4,770 feet high, in the Gundalpet iaiuk of Mysore District, Mysore, The base is about 16 miles in circuit and the ascent is about 3 miles. The hill is generally enveloped in clouds and mist, whence its name of Himavad Gopalswami, but when clear it commands an extensive view over Mysore and the Wynaad.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "gn-1271039--bengaluru",
@@ -40187,7 +40246,13 @@
       "https://www.geonames.org/10884283"
     ],
     "verified": false,
-    "bestSeason": "Jan–Apr (driest)"
+    "bestSeason": "Jan–Apr (driest)",
+    "historicalNote": {
+      "text": "Hill in the Molakalmuru taluk of Chitaldroog District, Mysore, Here, in 1892, were discovered Asoka edicts engraved on a great boulder. Isila, to the authorities of which they are addressed, may be the ‘ Sidda- ^ of Siddapura, the village close by on the west.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "gn-10884703--bengaluru",
@@ -43191,7 +43256,13 @@
       "https://www.geonames.org/10896349"
     ],
     "verified": false,
-    "bestSeason": "Dec–Apr (driest)"
+    "bestSeason": "Dec–Apr (driest)",
+    "historicalNote": {
+      "text": "Isolated conical hill, 4,389 feet high, in the Hunsur of Mysore District, Mysore, On the summit is a temple of Annadani Mallikarjuna, the family god of the Changalva kings. At the foot of the hill is Bettadpur village, a settlement of the Sanketi Brahmans.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "gn-10896360--bengaluru",
@@ -119938,7 +120009,11 @@
         1311
       ]
     },
-    "bestSeason": "Oct–May (driest)"
+    "bestSeason": "Oct–May (driest)",
+    "hillFeatures": [
+      "temple",
+      "cave"
+    ]
   },
   {
     "id": "osm-9906309791--pune",
@@ -120135,7 +120210,10 @@
         1317
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "osm-8062725872--pune",
@@ -120525,7 +120603,12 @@
         1225
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "fort",
+      "temple",
+      "ruins"
+    ]
   },
   {
     "id": "osm-5458494016--pune",
@@ -120709,7 +120792,10 @@
         1268
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "osm-10720685410--pune",
@@ -120888,7 +120974,10 @@
         880
       ]
     },
-    "bestSeason": "Oct–May (driest)"
+    "bestSeason": "Oct–May (driest)",
+    "hillFeatures": [
+      "temple"
+    ]
   },
   {
     "id": "osm-10855955016--pune",
@@ -121194,7 +121283,10 @@
         1230
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "osm-8062725874--pune",
@@ -129515,7 +129607,10 @@
         "distM": 856
       }
     ],
-    "bestSeason": "Oct–May (driest)"
+    "bestSeason": "Oct–May (driest)",
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "osm-7732089700--mumbai",
@@ -130219,7 +130314,11 @@
         1311
       ]
     },
-    "bestSeason": "Oct–May (driest)"
+    "bestSeason": "Oct–May (driest)",
+    "hillFeatures": [
+      "temple",
+      "cave"
+    ]
   },
   {
     "id": "osm-9906309791--mumbai",
@@ -130416,7 +130515,10 @@
         1317
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "osm-8062725872--mumbai",
@@ -130775,7 +130877,12 @@
         1225
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "fort",
+      "temple",
+      "ruins"
+    ]
   },
   {
     "id": "osm-10720685410--mumbai",
@@ -130954,7 +131061,10 @@
         880
       ]
     },
-    "bestSeason": "Oct–May (driest)"
+    "bestSeason": "Oct–May (driest)",
+    "hillFeatures": [
+      "temple"
+    ]
   },
   {
     "id": "osm-10855955016--mumbai",
@@ -131260,7 +131370,10 @@
         1230
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "osm-8062725874--mumbai",
@@ -131329,7 +131442,11 @@
         1172
       ]
     },
-    "bestSeason": "Oct–May (driest)"
+    "bestSeason": "Oct–May (driest)",
+    "hillFeatures": [
+      "fort",
+      "temple"
+    ]
   },
   {
     "id": "osm-13649015390--mumbai",
@@ -139281,7 +139398,12 @@
         "distM": 410
       }
     ],
-    "bestSeason": "Nov–Mar (driest)"
+    "bestSeason": "Nov–Mar (driest)",
+    "hillFeatures": [
+      "fort",
+      "temple",
+      "ruins"
+    ]
   },
   {
     "id": "osm-1815959520--hyderabad",
@@ -139520,7 +139642,10 @@
         598
       ]
     },
-    "bestSeason": "Nov–Mar (driest)"
+    "bestSeason": "Nov–Mar (driest)",
+    "hillFeatures": [
+      "temple"
+    ]
   },
   {
     "id": "osm-2949063982--hyderabad",
@@ -139601,7 +139726,11 @@
         "distM": 53
       }
     ],
-    "bestSeason": "Nov–Mar (driest)"
+    "bestSeason": "Nov–Mar (driest)",
+    "hillFeatures": [
+      "fort",
+      "temple"
+    ]
   },
   {
     "id": "osm-13336050740--hyderabad",
@@ -139828,7 +139957,10 @@
         313
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "temple"
+    ]
   },
   {
     "id": "osm-8378959681--hyderabad",
@@ -139974,7 +140106,11 @@
         "distM": 140
       }
     ],
-    "bestSeason": "Nov–Mar (driest)"
+    "bestSeason": "Nov–Mar (driest)",
+    "hillFeatures": [
+      "fort",
+      "temple"
+    ]
   },
   {
     "id": "osm-4708831963--hyderabad",
@@ -140141,7 +140277,10 @@
         313
       ]
     },
-    "bestSeason": "Nov–May (driest)"
+    "bestSeason": "Nov–May (driest)",
+    "hillFeatures": [
+      "temple"
+    ]
   },
   {
     "id": "gn-1258260--hyderabad",
@@ -142781,7 +142920,10 @@
       "https://www.geonames.org/10527335"
     ],
     "verified": false,
-    "bestSeason": "Nov–Mar (driest)"
+    "bestSeason": "Nov–Mar (driest)",
+    "hillFeatures": [
+      "fort"
+    ]
   },
   {
     "id": "gn-10595789--hyderabad",
@@ -147191,7 +147333,10 @@
         967
       ]
     },
-    "bestSeason": "Nov–Apr (driest)"
+    "bestSeason": "Nov–Apr (driest)",
+    "hillFeatures": [
+      "temple"
+    ]
   },
   {
     "id": "osm-370904196--chikmagalur",
@@ -161522,7 +161667,13 @@
       "https://www.geonames.org/10896349"
     ],
     "verified": false,
-    "bestSeason": "Dec–Apr (driest)"
+    "bestSeason": "Dec–Apr (driest)",
+    "historicalNote": {
+      "text": "Isolated conical hill, 4,389 feet high, in the Hunsur of Mysore District, Mysore, On the summit is a temple of Annadani Mallikarjuna, the family god of the Changalva kings. At the foot of the hill is Bettadpur village, a settlement of the Sanketi Brahmans.",
+      "source": "Imperial Gazetteer of India",
+      "year": 1908,
+      "url": "https://archive.org/search?query=Imperial%20Gazetteer%20of%20India"
+    }
   },
   {
     "id": "gn-10896360--chikmagalur",

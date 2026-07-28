@@ -104,6 +104,67 @@ describe("TrekDetail lazy enrichment (spec 19)", () => {
   });
 });
 
+describe("TrekDetail historical note (spec 21) + hill features (spec 22)", () => {
+  it("renders the note with its source, year, and a changed-since caveat", () => {
+    const trek: Trek = {
+      ...baseTrek,
+      historicalNote: {
+        text: "A conspicuous fortified hill, 4,024 feet high.",
+        source: "Imperial Gazetteer of India",
+        year: 1908,
+        url: "https://archive.org/",
+      },
+    };
+    render(<TrekDetail trek={trek} origin={origin} onClose={vi.fn()} />);
+    expect(screen.getByText("Historical note")).toBeInTheDocument();
+    expect(screen.getByText(/conspicuous fortified hill/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Imperial Gazetteer of India" })).toBeInTheDocument();
+    expect(screen.getByText(/1908.*conditions have changed/s)).toBeInTheDocument();
+  });
+
+  it("shows summit features as chips", () => {
+    render(
+      <TrekDetail
+        trek={{ ...baseTrek, hillFeatures: ["fort", "temple"] }}
+        origin={origin}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Fort")).toBeInTheDocument();
+    expect(screen.getByText("Temple")).toBeInTheDocument();
+  });
+
+  it("renders neither section when the data is absent", () => {
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    expect(screen.queryByText("Historical note")).not.toBeInTheDocument();
+    expect(screen.queryByText("Fort")).not.toBeInTheDocument();
+  });
+});
+
+describe("TrekDetail wildlife (spec 23)", () => {
+  const gnTrek: Trek = {
+    id: "gn-9--bengaluru",
+    name: "Bare Hill",
+    lat: 13.4,
+    lng: 77.7,
+    cityId: "bangalore",
+    tier: "discovery",
+    sources: ["https://www.geonames.org/9"],
+    verified: false,
+  };
+
+  it("lists species fetched live, with the records count and a caveat", async () => {
+    liveEnrich.mockResolvedValueOnce({
+      wildlife: { records: 29484, species: ["Macaca radiata", "Lepus nigricollis"] },
+    });
+    render(<TrekDetail trek={gnTrek} origin={origin} onClose={vi.fn()} />);
+    expect(await screen.findByText("Wildlife nearby")).toBeInTheDocument();
+    expect(screen.getByText("Macaca radiata, Lepus nigricollis")).toBeInTheDocument();
+    expect(screen.getByText("29,484 records")).toBeInTheDocument();
+    expect(screen.getByText(/not a sighting guarantee/)).toBeInTheDocument();
+  });
+});
+
 describe("TrekDetail rainfall profile (spec 20)", () => {
   // baseTrek sits at 13.5/77.69 → a climate cell we sampled, so the panel renders
   // from the committed climate.json.

@@ -3,7 +3,8 @@
  * simplify, length) are unit-tested; fetchTrail wires Overpass geometry + a DEM
  * elevation sampler and is best-effort (a peak with no nearby path → no trail).
  */
-import type { Trek } from "../../src/lib/trek";
+import type { HillFeature, Trek } from "../../src/lib/trek";
+import { HILL_FEATURES } from "../../src/lib/trek";
 import { distanceFrom } from "../../src/lib/distance";
 import { fetchOverpass } from "./overpass";
 import type { LatLng } from "./elevation";
@@ -47,6 +48,30 @@ export function parsePois(json: unknown, summit: { lat: number; lng: number }): 
 
 const distM_ = (lat: number, lng: number, s: { lat: number; lng: number }): number =>
   distanceFrom({ id: "", name: "", lat, lng }, s) * 1000;
+
+/**
+ * Pure: Overpass elements → what's ON the hill (spec 22). Unlike parsePois this
+ * accepts ways/relations too (forts and temple compounds are mapped as areas, so
+ * they have no lat/lon of their own), and it doesn't need a distance — the query
+ * already restricts the radius. Deduped and returned in a stable order so the
+ * output doesn't churn between builds.
+ */
+export function parseHillFeatures(json: unknown): HillFeature[] {
+  const elements = (json as { elements?: unknown })?.elements;
+  if (!Array.isArray(elements)) return [];
+  const found = new Set<HillFeature>();
+  for (const el of elements as { tags?: Record<string, unknown> }[]) {
+    const t = el?.tags ?? {};
+    if (t.historic === "fort" || t.historic === "castle" || t.fortification_type) found.add("fort");
+    if (t.historic === "ruins" || t.ruins === "yes") found.add("ruins");
+    if (t.historic === "archaeological_site") found.add("ruins");
+    if (t.amenity === "place_of_worship") found.add("temple");
+    if (t.natural === "cave_entrance") found.add("cave");
+    // viewpoint/water intentionally absent — see HillFeature in src/lib/trek.ts.
+  }
+  // Stable, meaningful order rather than insertion order.
+  return HILL_FEATURES.filter((f) => found.has(f));
+}
 
 /** Pure: Overpass `out geom` ways → polylines of [lat, lng]. */
 export function parseTrailWays(json: unknown): Pt[][] {
@@ -140,6 +165,7 @@ export function buildTrail(
 export interface TrailAndPois {
   trail?: Trek["trail"];
   pois?: Trek["pois"];
+  hillFeatures?: Trek["hillFeatures"];
 }
 
 /**
@@ -154,6 +180,10 @@ export async function fetchTrailAndPois(
   let raw: unknown;
   try {
     const around = `${summit.lat},${summit.lng}`;
+    // One combined query: the trail, trailhead POIs, and what's ON the hill
+    // (spec 22). Summit features use a tight 600 m radius so a temple in the
+    // village below isn't credited to the summit; nodes and ways/relations both
+    // count (forts are usually mapped as areas).
     const query =
       `[out:json][timeout:60];(` +
       `way(around:1200,${around})[highway~"^(path|footway|track|steps)$"];` +
@@ -161,6 +191,10 @@ export async function fetchTrailAndPois(
       `node(around:1500,${around})[amenity=drinking_water];` +
       `node(around:1500,${around})[natural=spring];` +
       `node(around:1500,${around})[tourism=viewpoint];` +
+      `nwr(around:600,${around})[historic~"^(fort|ruins|archaeological_site)$"];` +
+      `nwr(around:600,${around})[amenity=place_of_worship];` +
+      `nwr(around:600,${around})[natural=cave_entrance];` +
+      `nwr(around:600,${around})[historic=fort];` +
       `);out geom;`;
     raw = await fetchOverpass(query);
   } catch {
@@ -170,6 +204,8 @@ export async function fetchTrailAndPois(
   const out: TrailAndPois = {};
   const pois = parsePois(raw, summit);
   if (pois.length > 0) out.pois = pois;
+  const features = parseHillFeatures(raw);
+  if (features.length > 0) out.hillFeatures = features;
 
   const picked = pickNearestTrail(parseTrailWays(raw), summit);
   if (picked) {

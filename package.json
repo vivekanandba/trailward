@@ -24,6 +24,8 @@
     "build:discovery": "tsx scripts/discover-precompute.ts",
     "build:geonames": "tsx scripts/geonames/build-geonames.ts",
     "build:climate": "tsx scripts/build-climate.ts",
+    "build:gazetteer": "tsx scripts/build-gazetteer.ts",
+    "build:hillfeatures": "tsx scripts/build-hillfeatures.ts",
     "validate:data": "tsx scripts/validate-data.ts"
   },
   "dependencies": {

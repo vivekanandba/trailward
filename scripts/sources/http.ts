@@ -52,12 +52,15 @@ const REQUEST_TIMEOUT_MS = 15_000;
 /** A failure that must not be retried (e.g. a 4xx that won't change on retry). */
 class NonRetryableError extends Error {}
 
-/** A 429: retryable, but only after a long wait (per-minute windows). */
+/** A 429: retryable, but often only after a long wait (per-minute windows). */
 class RateLimitError extends Error {}
 
-// Rate-limit windows are per-minute on some endpoints (Open-Meteo), so a
-// half-second backoff is useless — wait out the window instead.
-const RATE_LIMIT_BACKOFF_MS = 65_000;
+// Open-Meteo enforces a *per-minute* weighted limit, so a half-second backoff is
+// useless there — the caller opts into waiting the window out. It is NOT the
+// default: Overpass also 429s under load, but it has mirror failover and
+// recovers quickly, and a 65 s sleep per attempt there turns a 140-summit build
+// into hours.
+export const RATE_LIMIT_BACKOFF_MS = 65_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -81,6 +84,9 @@ interface GetOptions {
   /** Per-host min gap between requests (ms). Defaults to MIN_GAP_MS (1 req/s);
    *  set lower for high-throughput endpoints like S3 static tiles. */
   throttleMs?: number;
+  /** Wait out a whole rate-limit window (~65 s) on a 429 instead of the normal
+   *  short backoff. Only for endpoints with per-minute quotas (Open-Meteo). */
+  waitOutRateLimit?: boolean;
 }
 
 /** Fetch a URL's text, enforcing the allowlist, rate limit, and retries. */
@@ -119,7 +125,8 @@ export async function fetchText(url: string, opts: GetOptions = {}): Promise<str
       lastErr = err;
       if (err instanceof NonRetryableError) break;
       if (attempt < retries) {
-        await sleep(err instanceof RateLimitError ? RATE_LIMIT_BACKOFF_MS : 500 * (attempt + 1));
+        const long = err instanceof RateLimitError && opts.waitOutRateLimit;
+        await sleep(long ? RATE_LIMIT_BACKOFF_MS : 500 * (attempt + 1));
       }
     }
   }
