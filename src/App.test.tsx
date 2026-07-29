@@ -18,11 +18,13 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Trailward" })).toBeInTheDocument();
   });
 
-  it("shows curated Bangalore treks in the list by default", () => {
+  it("shows curated Bangalore treks in the list by default", async () => {
     render(<App />);
-    expect(screen.getByText("Skandagiri")).toBeInTheDocument();
+    // The dataset is a lazily-imported ~22 MB chunk (spec 27); jsdom's module
+    // transform of it is slow the first time, hence the generous timeout.
+    expect(await screen.findByText("Skandagiri", {}, { timeout: 20_000 })).toBeInTheDocument();
     expect(screen.getByText("Nandi Hills")).toBeInTheDocument();
-  });
+  }, 30_000);
 
   it("renders the filter controls and a reset action", () => {
     render(<App />);

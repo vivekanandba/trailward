@@ -27,6 +27,7 @@
     "build:gazetteer": "tsx scripts/build-gazetteer.ts",
     "build:hillfeatures": "tsx scripts/build-hillfeatures.ts",
     "build:landcover": "tsx scripts/build-landcover.ts",
+    "build:detect": "tsx scripts/build-detect.ts",
     "validate:data": "tsx scripts/validate-data.ts"
   },
   "dependencies": {

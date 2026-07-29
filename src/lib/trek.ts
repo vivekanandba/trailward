@@ -98,6 +98,9 @@ export interface Trek {
   // Provenance
   sources: string[]; // URLs; ≥1 for curated
   verified: boolean;
+  // True when this summit was found by scanning the DEM itself (spec 27) —
+  // no name database lists it; the name is a placeholder.
+  detected?: boolean;
 }
 
 export interface Origin {
@@ -281,6 +284,11 @@ export function validateTrek(input: unknown): ValidateResult {
     if (!okNote) {
       return fail("historicalNote", "must be {text, source, year, url?} with a plausible year");
     }
+  }
+
+  // Terrain-detected flag (spec 27).
+  if (input.detected !== undefined && input.detected !== true) {
+    return fail("detected", "must be true when present");
   }
 
   // Land cover (spec 26): must be one of the WorldCover-derived labels.

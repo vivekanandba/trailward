@@ -1,5 +1,4 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import treksRaw from "./data/treks.json";
 import type { Trek } from "./lib/trek";
 import { loadOrigin, saveOrigin } from "./lib/origin";
 import { DEFAULT_FILTERS, applyFilters, type FilterState } from "./lib/filters";
@@ -31,7 +30,15 @@ const FeedbackForm = lazy(() =>
   })),
 );
 
-const ALL_TREKS = treksRaw as Trek[];
+// The dataset is a dynamic import so Vite splits it into its own chunk: with
+// ~43k records (terrain detection, spec 27) it is far larger than the app code,
+// and bundling it would block first paint on a ~2 MB download. This way the
+// shell paints immediately and the peaks stream in.
+let TREKS_CACHE: Trek[] | null = null;
+async function loadAllTreks(): Promise<Trek[]> {
+  if (!TREKS_CACHE) TREKS_CACHE = (await import("./data/treks.json")).default as Trek[];
+  return TREKS_CACHE;
+}
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
@@ -111,7 +118,21 @@ export default function App() {
   // Records baked for this origin — curated (Bangalore) OR precomputed
   // topography-ranked discovery (preset regions, spec 11). Only a truly unknown
   // origin (none baked) falls through to live discovery (spec 03).
-  const localTreks = useMemo(() => ALL_TREKS.filter((t) => t.cityId === origin.id), [origin.id]);
+  const [allTreks, setAllTreks] = useState<Trek[] | null>(TREKS_CACHE);
+  useEffect(() => {
+    let active = true;
+    if (!allTreks) {
+      loadAllTreks().then((t) => active && setAllTreks(t));
+    }
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const localTreks = useMemo(
+    () => (allTreks ?? []).filter((t) => t.cityId === origin.id),
+    [allTreks, origin.id],
+  );
 
   // Mirror origin/filters/selection into the URL so the view is shareable and
   // survives reload. Opening the detail panel pushes a history entry (so Back
@@ -147,6 +168,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // While the dataset chunk is still loading, localTreks is transiently empty
+    // for EVERY origin — kicking off live Overpass discovery then would be a
+    // spurious network call (and a flash of wrong results) for preset regions.
+    if (allTreks === null) return;
     if (localTreks.length > 0) {
       setDiscovery([]);
       return;
@@ -167,7 +192,7 @@ export default function App() {
     };
     // Re-discover on origin OR radius change (origin.id keys the origin).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin.id, filters.radiusKm]);
+  }, [origin.id, filters.radiusKm, allTreks === null]);
 
   const baseTreks = localTreks.length > 0 ? localTreks : discovery;
   // Precomputed peaks carry a topography rank; live-discovered ones don't.
@@ -337,12 +362,17 @@ export default function App() {
             </p>
           )}
           <ul className="flex-1 divide-y divide-trail-50 dark:divide-slate-700">
+            {allTreks === null && (
+              <li className="p-4 text-sm text-trail-500 dark:text-slate-400" role="status">
+                Loading peaks…
+              </li>
+            )}
             {discovering && (
               <li className="p-4 text-sm text-trail-500 dark:text-slate-400">
                 Discovering peaks near {origin.name}…
               </li>
             )}
-            {!discovering && visible.length === 0 && (
+            {allTreks !== null && !discovering && visible.length === 0 && (
               <li className="p-4 text-sm text-trail-500 dark:text-slate-400">
                 No treks match. Try widening the radius or clearing filters.
                 <button
