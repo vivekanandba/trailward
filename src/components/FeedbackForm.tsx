@@ -4,6 +4,7 @@ import {
   validateFeedback,
   type FeedbackKind,
   type FeedbackPayload,
+  feedbackConfigured,
 } from "../lib/feedback";
 
 interface FeedbackFormProps {
@@ -25,7 +26,7 @@ export default function FeedbackForm({
 }: FeedbackFormProps) {
   // Web3Forms key read at render: absence means feedback can't be delivered, so
   // we show a setup hint instead of a dead submit (spec 07).
-  const configured = Boolean(import.meta.env.VITE_WEB3FORMS_KEY);
+  const configured = feedbackConfigured();
   const [kind, setKind] = useState<FeedbackKind>(initialKind ?? "feedback");
   const [message, setMessage] = useState(initialMessage ?? "");
   const [email, setEmail] = useState("");
@@ -137,8 +138,11 @@ export default function FeedbackForm({
             role="status"
             className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
           >
-            Feedback isn't configured yet — set <code>VITE_WEB3FORMS_KEY</code> in your environment
-            (see <code>.env.example</code>) to enable sending.
+            Feedback isn't configured yet — set{" "}
+            <code className="rounded bg-amber-100 px-1 dark:bg-amber-500/20">
+              VITE_NEON_FEEDBACK_URL
+            </code>{" "}
+            in your environment (see <code>.env.example</code>) to enable sending.
           </p>
         )}
 

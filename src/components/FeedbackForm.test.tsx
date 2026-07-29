@@ -90,6 +90,7 @@ describe("FeedbackForm", () => {
 
   it("shows a setup hint and disables Send when the key is missing", () => {
     vi.stubEnv("VITE_WEB3FORMS_KEY", "");
+    vi.stubEnv("VITE_NEON_FEEDBACK_URL", "");
     render(<FeedbackForm onClose={vi.fn()} />);
     expect(screen.getByText(/isn't configured/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
