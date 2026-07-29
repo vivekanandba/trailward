@@ -9,6 +9,7 @@ import {
 interface FeedbackFormProps {
   onClose(): void;
   initialKind?: FeedbackKind;
+  initialMessage?: string;
   initialTrekName?: string;
 }
 
@@ -16,12 +17,17 @@ const MESSAGE_MAX = 1000;
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-export default function FeedbackForm({ onClose, initialKind, initialTrekName }: FeedbackFormProps) {
+export default function FeedbackForm({
+  onClose,
+  initialKind,
+  initialMessage,
+  initialTrekName,
+}: FeedbackFormProps) {
   // Web3Forms key read at render: absence means feedback can't be delivered, so
   // we show a setup hint instead of a dead submit (spec 07).
   const configured = Boolean(import.meta.env.VITE_WEB3FORMS_KEY);
   const [kind, setKind] = useState<FeedbackKind>(initialKind ?? "feedback");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialMessage ?? "");
   const [email, setEmail] = useState("");
   const [trekName, setTrekName] = useState(initialTrekName ?? "");
   const [place, setPlace] = useState("");

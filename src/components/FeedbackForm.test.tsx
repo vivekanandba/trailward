@@ -122,3 +122,18 @@ describe("FeedbackForm", () => {
     expect(submitFeedback).not.toHaveBeenCalled();
   });
 });
+
+describe("FeedbackForm prefill (spec 28)", () => {
+  it("seeds the message with the name-suggestion prefill", () => {
+    render(
+      <FeedbackForm
+        onClose={vi.fn()}
+        initialKind="suggest-trek"
+        initialMessage="Name suggestion for Unnamed peak (d12-1-2-3-4--bengaluru) at 16.72814, 77.99772 — this hill is called: "
+      />,
+    );
+    const message = screen.getByRole("textbox", { name: /notes/i });
+    expect((message as HTMLTextAreaElement).value).toContain("d12-1-2-3-4--bengaluru");
+    expect((message as HTMLTextAreaElement).value).toContain("this hill is called");
+  });
+});

@@ -17,6 +17,8 @@ interface TrekDetailProps {
   trek: Trek;
   origin: Origin;
   onClose(): void;
+  /** Open the name-suggestion form prefilled for this pin (spec 28). */
+  onSuggestName?(): void;
 }
 
 // Readable labels for the OSM-derived summit features (spec 22).
@@ -202,7 +204,7 @@ function RainfallProfile({ monthly }: { monthly: number[] }) {
   );
 }
 
-export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
+export default function TrekDetail({ trek, origin, onClose, onSuggestName }: TrekDetailProps) {
   const [weather, setWeather] = useState<WeatherNow | null>(null);
   const [weatherFailed, setWeatherFailed] = useState(false);
   // Hide the hero if the image URL 404s so a dead photo never leaves a gap.
@@ -391,6 +393,31 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                 <img src={g.url} alt="" loading="lazy" className="h-full w-full object-cover" />
               </a>
             ))}
+          </div>
+        )}
+        {/* Naming actions for terrain-detected pins (spec 28). The Google link
+            is a plain Maps URL — the name is read in Google's own app and never
+            enters our data; the suggest button closes the loop with people who
+            actually know the hill. */}
+        {trek.detected && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${trek.lat},${trek.lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-trail-200 px-3 py-1.5 text-xs font-medium text-trail-700 hover:border-trail-400 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+            >
+              Look up on Google Maps ↗
+            </a>
+            {onSuggestName && (
+              <button
+                type="button"
+                onClick={onSuggestName}
+                className="rounded-lg border border-trail-200 px-3 py-1.5 text-xs font-medium text-trail-700 hover:border-trail-400 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+              >
+                Know this hill's name?
+              </button>
+            )}
           </div>
         )}
         {trek.altNames && trek.altNames.length > 0 && (
