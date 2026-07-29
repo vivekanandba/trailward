@@ -307,7 +307,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
             </span>
             {trek.tier === "discovery" && (
               <span className="rounded-full bg-difficulty-discovery px-2 py-0.5 text-xs font-medium text-white">
-                community · unverified
+                {trek.detected ? "terrain-detected · unverified" : "community · unverified"}
               </span>
             )}
             {/* Heritage designation (spec 24) — an ASI/state monument here. */}

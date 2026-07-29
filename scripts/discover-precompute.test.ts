@@ -5,6 +5,7 @@ import {
   enrichCuratedTerrain,
   mergeManualPeaks,
   toListedTreks,
+  toDetectedTreks,
   preserveEnrichment,
   type DiscoverFetchers,
   type RegionConfig,
@@ -445,5 +446,52 @@ describe("preserveEnrichment (spec 25 — cron must not wipe hand-baked fields)"
   it("leaves records with no previous counterpart untouched", () => {
     const [out] = preserveEnrichment([{ ...fresh, id: "new" }], [prev]);
     expect(out.bestSeason).toBeUndefined();
+  });
+});
+
+describe("terrain-detected summits (spec 27)", () => {
+  const det = {
+    id: "d12-2931-1892-10-20",
+    name: "Unnamed peak (~912 m)",
+    lat: 18.7,
+    lng: 74.0,
+    elevationM: 912,
+    reliefM: 210,
+    prominenceProxyM: 190,
+    meanSlopeDeg: 14.2,
+    terrainConfidence: 0.9,
+    discoveryScore: 0.81,
+    estimatedDifficulty: "Moderate" as const,
+  };
+
+  it("maps a detected summit to a flagged, scored discovery trek", () => {
+    const [t] = toDetectedTreks([det], [], "pune", "geo:18.5204,73.8567");
+    expect(t.id).toBe("d12-2931-1892-10-20--pune");
+    expect(t.detected).toBe(true);
+    expect(t.discoveryScore).toBe(0.81);
+    expect(t.estimatedDifficulty).toBe("Moderate");
+    expect(t.sources[0]).toContain("opentopomap.org");
+    expect(validateTrek(t).ok).toBe(true);
+  });
+
+  it("drops a detected summit near ANY existing pin — named sources win", () => {
+    const named: Trek = {
+      id: "gn-9--pune",
+      name: "Named Hill",
+      lat: 18.7002,
+      lng: 74.0003,
+      cityId: "c",
+      tier: "discovery",
+      sources: [],
+      verified: false,
+    };
+    expect(toDetectedTreks([det], [named], "pune", "c")).toHaveLength(0);
+  });
+
+  it("precomputeRegion appends detected summits after listed ones", async () => {
+    const treks = await precomputeRegion(PUNE, fetchers({ detectedSummits: () => [det] }), CFG);
+    const last = treks[treks.length - 1];
+    expect(last.detected).toBe(true);
+    expect(last.name).toContain("Unnamed peak");
   });
 });

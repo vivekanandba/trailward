@@ -24,6 +24,8 @@ import { PRESET_ORIGINS } from "../src/lib/cities";
 import { fetchPeaks, fetchTourismPoints } from "./sources/overpass";
 import { manualPeaksNear } from "./seed/manual-peaks";
 import { geonamesSummitsNear, type GeonamesSummit } from "./sources/geonames";
+import { detectedSummitsNear } from "./sources/detected";
+import type { DetectedSummit } from "./build-detect";
 import { fetchTrailAndPois } from "./sources/trails";
 import { fetchElevations } from "./sources/elevation";
 import { fetchNearestArticle } from "./sources/geosearch";
@@ -58,6 +60,9 @@ export interface DiscoverFetchers {
   /** Optional GeoNames listed summits (spec 16) — appended as lightweight,
    *  unscored "listed" pins (name + elevation only, no DEM cost). */
   listedSummits?(origin: Origin, radiusKm: number): GeonamesSummit[];
+  /** Optional terrain-detected summits (spec 27) — found by scanning the DEM
+   *  itself; absent from every name database by construction. */
+  detectedSummits?(origin: Origin, radiusKm: number): DetectedSummit[];
 }
 
 // A manual peak this close to an OSM candidate is the same summit — drop the OSM
@@ -165,36 +170,45 @@ const cellKey = (lat: number, lng: number): string =>
  * only. Drops any that duplicate an already-scored peak, and any duplicated
  * among themselves. Grid-bucketed so it stays fast over thousands of candidates.
  */
+/** Grid-bucketed occupancy: O(1)-ish "is anything within `withinKm` of here?". */
+export function makeOccupancy(withinKm = LISTED_DEDUP_KM): {
+  occupy(lat: number, lng: number): void;
+  nearOccupied(lat: number, lng: number): boolean;
+} {
+  const grid = new Map<string, { lat: number; lng: number }[]>();
+  return {
+    occupy(lat: number, lng: number): void {
+      const k = cellKey(lat, lng);
+      (grid.get(k) ?? grid.set(k, []).get(k)!).push({ lat, lng });
+    },
+    nearOccupied(lat: number, lng: number): boolean {
+      const bx = Math.floor(lat / CELL_DEG);
+      const by = Math.floor(lng / CELL_DEG);
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const cell = grid.get(`${bx + dx}:${by + dy}`);
+          if (
+            cell?.some(
+              (p) =>
+                distanceFrom({ id: "c", name: "c", lat, lng }, { lat: p.lat, lng: p.lng }) <=
+                withinKm,
+            )
+          )
+            return true;
+        }
+      }
+      return false;
+    },
+  };
+}
+
 export function toListedTreks(
   summits: GeonamesSummit[],
   scored: Trek[],
   regionSlug: string,
   cityId: string,
 ): Trek[] {
-  const grid = new Map<string, { lat: number; lng: number }[]>();
-  const occupy = (lat: number, lng: number): void => {
-    const k = cellKey(lat, lng);
-    (grid.get(k) ?? grid.set(k, []).get(k)!).push({ lat, lng });
-  };
-  const nearOccupied = (lat: number, lng: number): boolean => {
-    const bx = Math.floor(lat / CELL_DEG);
-    const by = Math.floor(lng / CELL_DEG);
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        const cell = grid.get(`${bx + dx}:${by + dy}`);
-        if (
-          cell?.some(
-            (p) =>
-              distanceFrom({ id: "c", name: "c", lat, lng }, { lat: p.lat, lng: p.lng }) <=
-              LISTED_DEDUP_KM,
-          )
-        )
-          return true;
-      }
-    }
-    return false;
-  };
-
+  const { occupy, nearOccupied } = makeOccupancy();
   for (const s of scored) occupy(s.lat, s.lng);
 
   const listed: Trek[] = [];
@@ -377,7 +391,62 @@ export async function precomputeRegion(
       results.push(...listed);
     }
   }
+
+  // Append terrain-detected summits (spec 27) LAST — any named pin wins over a
+  // detected one at the same spot, so these are strictly the unlisted summits.
+  const det = fetchers.detectedSummits?.(origin, config.radiusKm) ?? [];
+  if (det.length > 0) {
+    const detected = toDetectedTreks(det, results, regionSlug, origin.id);
+    if (detected.length > 0) {
+      console.log(`[discover] ${origin.name}: +${detected.length} terrain-detected summits.`);
+      results.push(...detected);
+    }
+  }
   return results;
+}
+
+// A detected summit near ANY named pin is that pin, seen by the DEM — drop it.
+// Wider than LISTED_DEDUP because detection carries ~40 m pixel error on top of
+// whatever coordinate error the named source has.
+const DETECTED_DEDUP_KM = 0.4;
+
+/**
+ * Terrain-detected summits (spec 27) → discovery treks. Fully scored offline by
+ * build-detect; flagged `detected` so the UI can say where they came from, and
+ * sourced to an OpenTopoMap link so a user can eyeball the contours.
+ */
+export function toDetectedTreks(
+  summits: DetectedSummit[],
+  existing: Trek[],
+  regionSlug: string,
+  cityId: string,
+): Trek[] {
+  const { occupy, nearOccupied } = makeOccupancy(DETECTED_DEDUP_KM);
+  for (const t of existing) occupy(t.lat, t.lng);
+  const out: Trek[] = [];
+  for (const s of summits) {
+    if (nearOccupied(s.lat, s.lng)) continue;
+    occupy(s.lat, s.lng);
+    out.push({
+      id: `${s.id}--${regionSlug}`,
+      name: s.name,
+      lat: s.lat,
+      lng: s.lng,
+      cityId,
+      tier: "discovery",
+      detected: true,
+      elevationM: s.elevationM,
+      reliefM: s.reliefM,
+      prominenceProxyM: s.prominenceProxyM,
+      meanSlopeDeg: s.meanSlopeDeg,
+      terrainConfidence: s.terrainConfidence,
+      discoveryScore: s.discoveryScore,
+      ...(s.estimatedDifficulty ? { estimatedDifficulty: s.estimatedDifficulty } : {}),
+      sources: [`https://opentopomap.org/#map=15/${s.lat}/${s.lng}`],
+      verified: false,
+    });
+  }
+  return out;
 }
 
 /**
@@ -457,6 +526,7 @@ function liveFetchers(): DiscoverFetchers {
     },
     trailAndPois: (peak) => fetchTrailAndPois(peak, fetchElevations),
     listedSummits: (origin, radiusKm) => geonamesSummitsNear(origin, radiusKm),
+    detectedSummits: (origin, radiusKm) => detectedSummitsNear(origin, radiusKm),
   };
 }
 

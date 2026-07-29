@@ -70,9 +70,13 @@ test("hidden-gems filter narrows a preset region's list", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Pune" }).click();
   await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
-  const before = await page.locator("aside li").count();
+  // The list rail is CAPPED at 300 rows, so with terrain-detected pins (spec 27)
+  // row counts no longer move — assert on the true result count instead.
+  const count = async (): Promise<number> =>
+    Number((await page.getByText(/^\d+ treks?$/).innerText()).replace(/\D/g, ""));
+  const before = await count();
   await page.getByLabel("Hidden gems only").check();
-  await expect.poll(async () => page.locator("aside li").count()).toBeLessThan(before);
+  await expect.poll(count).toBeLessThan(before);
 });
 
 test("the map shows a difficulty legend", async ({ page }) => {
