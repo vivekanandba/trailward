@@ -29,6 +29,7 @@
     "build:landcover": "tsx scripts/build-landcover.ts",
     "build:detect": "tsx scripts/build-detect.ts",
     "build:names": "tsx scripts/build-names.ts",
+    "feedback:list": "tsx scripts/feedback-list.ts",
     "validate:data": "tsx scripts/validate-data.ts"
   },
   "dependencies": {
