@@ -200,6 +200,43 @@ describe("TrekDetail wildlife (spec 23)", () => {
   });
 });
 
+describe("TrekDetail naming actions for detected pins (spec 28)", () => {
+  const detTrek: Trek = {
+    id: "d12-1-2-3-4--bengaluru",
+    name: "Unnamed peak (~782 m)",
+    lat: 16.72814,
+    lng: 77.99772,
+    cityId: "bangalore",
+    tier: "discovery",
+    detected: true,
+    sources: ["https://opentopomap.org/#map=15/16.72814/77.99772"],
+    verified: false,
+  };
+
+  it("shows the Google Maps lookup link (Maps URL, not API) and the suggest button", () => {
+    const onSuggestName = vi.fn();
+    render(
+      <TrekDetail trek={detTrek} origin={origin} onClose={vi.fn()} onSuggestName={onSuggestName} />,
+    );
+    const lookup = screen.getByRole("link", { name: /look up on google maps/i });
+    expect(lookup).toHaveAttribute(
+      "href",
+      "https://www.google.com/maps/search/?api=1&query=16.72814,77.99772",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /know this hill's name/i }));
+    expect(onSuggestName).toHaveBeenCalledOnce();
+    expect(screen.getByText(/terrain-detected · unverified/)).toBeInTheDocument();
+  });
+
+  it("shows neither action for ordinary (named-source) pins", () => {
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    expect(screen.queryByRole("link", { name: /look up on google maps/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /know this hill's name/i }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("TrekDetail rainfall profile (spec 20)", () => {
   // baseTrek sits at 13.5/77.69 → a climate cell we sampled, so the panel renders
   // from the committed climate.json.

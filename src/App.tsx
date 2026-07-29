@@ -100,6 +100,9 @@ export default function App() {
   const [discovering, setDiscovering] = useState(false);
   // When set, the feedback panel is open in the given mode (spec 07).
   const [feedbackKind, setFeedbackKind] = useState<FeedbackKind | null>(null);
+  // Optional prefill when the feedback panel is opened FOR something — e.g.
+  // suggesting a name for a terrain-detected pin (spec 28).
+  const [feedbackPrefill, setFeedbackPrefill] = useState<string | undefined>(undefined);
 
   // Light/dark theme (spec 08). The initial class is set pre-paint by an inline
   // script in index.html; here we own the runtime toggle + persistence.
@@ -254,8 +257,9 @@ export default function App() {
 
   // Opening the feedback panel closes any open trek detail so the two
   // right-anchored panels never stack over each other.
-  const openFeedback = (kind: FeedbackKind) => {
+  const openFeedback = (kind: FeedbackKind, prefill?: string) => {
     setSelectedId(undefined);
+    setFeedbackPrefill(prefill);
     setFeedbackKind(kind);
   };
 
@@ -459,6 +463,13 @@ export default function App() {
                 trek={selected}
                 origin={origin}
                 onClose={() => setSelectedId(undefined)}
+                onSuggestName={() =>
+                  openFeedback(
+                    "suggest-trek",
+                    `Name suggestion for ${selected.name} (${selected.id}) at ` +
+                      `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)} — this hill is called: `,
+                  )
+                }
               />
             </Panel>
           )}
@@ -474,8 +485,9 @@ export default function App() {
                 }
               >
                 <FeedbackForm
-                  key={feedbackKind}
+                  key={feedbackKind + (feedbackPrefill ?? "")}
                   initialKind={feedbackKind}
+                  initialMessage={feedbackPrefill}
                   onClose={() => setFeedbackKind(null)}
                 />
               </Suspense>

@@ -49,6 +49,38 @@ export interface DetectedSummit {
   terrainConfidence: number;
   discoveryScore: number;
   estimatedDifficulty: Trek["estimatedDifficulty"];
+  /** Provenance sentence when build-names inferred the name (spec 28). */
+  inferredFrom?: string;
+}
+
+/**
+ * Drop candidates the databases already know: anything within KNOWN_DEDUP_KM
+ * of an existing pin. Grid-bucketed; pure, so the volume-defining dedupe is
+ * testable without tiles or network.
+ */
+export function filterUnknown(
+  peaks: DetectedPeak[],
+  known: { lat: number; lng: number }[],
+): DetectedPeak[] {
+  const cell = 0.008; // ~900 m buckets
+  const grid = new Map<string, { lat: number; lng: number }[]>();
+  for (const k of known) {
+    const key = `${Math.floor(k.lat / cell)}:${Math.floor(k.lng / cell)}`;
+    (grid.get(key) ?? grid.set(key, []).get(key)!).push(k);
+  }
+  const isKnown = (p: DetectedPeak): boolean => {
+    const bx = Math.floor(p.lat / cell);
+    const by = Math.floor(p.lng / cell);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const c = grid.get(`${bx + dx}:${by + dy}`);
+        if (c?.some((k) => distanceFrom({ id: "", name: "", ...k }, p) <= KNOWN_DEDUP_KM))
+          return true;
+      }
+    }
+    return false;
+  };
+  return peaks.filter((p) => !isKnown(p));
 }
 
 async function detectRegion(
@@ -173,27 +205,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Drop everything the databases already know (any existing pin within 400 m).
-  const known = treks.map((t) => ({ lat: t.lat, lng: t.lng }));
-  const cell = 0.008; // ~900 m buckets
-  const grid = new Map<string, { lat: number; lng: number }[]>();
-  for (const k of known) {
-    const key = `${Math.floor(k.lat / cell)}:${Math.floor(k.lng / cell)}`;
-    (grid.get(key) ?? grid.set(key, []).get(key)!).push(k);
-  }
-  const isKnown = (p: DetectedPeak): boolean => {
-    const bx = Math.floor(p.lat / cell);
-    const by = Math.floor(p.lng / cell);
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        const c = grid.get(`${bx + dx}:${by + dy}`);
-        if (c?.some((k) => distanceFrom({ id: "", name: "", ...k }, p) <= KNOWN_DEDUP_KM))
-          return true;
-      }
-    }
-    return false;
-  };
-  const fresh = [...all.values()].filter((p) => !isKnown(p));
+  const fresh = filterUnknown([...all.values()], treks);
   console.log(`[detect] ${all.size} distinct candidates → ${fresh.length} not in any database.`);
 
   if (calibrate) {

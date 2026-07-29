@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
+import { filterUnknown } from "./build-detect";
 import { cellsFor } from "./build-climate";
 import { pickAltNames } from "./geonames/build-geonames";
 import type { Trek } from "../src/lib/trek";
@@ -136,5 +137,14 @@ describe("pickAltNames (spec 25)", () => {
 
   it("returns [] for an empty column", () => {
     expect(pickAltNames("Name", "")).toEqual([]);
+  });
+});
+
+describe("filterUnknown (spec 27 — named databases win)", () => {
+  const peak = { lat: 13.0, lng: 77.0, elevationM: 900, reliefM: 200 };
+  it("drops a candidate within 400 m of an existing pin and keeps distant ones", () => {
+    expect(filterUnknown([peak], [{ lat: 13.002, lng: 77.001 }])).toHaveLength(0);
+    expect(filterUnknown([peak], [{ lat: 13.05, lng: 77.05 }])).toHaveLength(1);
+    expect(filterUnknown([peak], [])).toHaveLength(1);
   });
 });

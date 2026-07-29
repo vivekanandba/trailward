@@ -442,6 +442,7 @@ export function toDetectedTreks(
       terrainConfidence: s.terrainConfidence,
       discoveryScore: s.discoveryScore,
       ...(s.estimatedDifficulty ? { estimatedDifficulty: s.estimatedDifficulty } : {}),
+      ...(s.inferredFrom ? { highlights: s.inferredFrom } : {}), // name provenance (spec 28)
       sources: [`https://opentopomap.org/#map=15/${s.lat}/${s.lng}`],
       verified: false,
     });
