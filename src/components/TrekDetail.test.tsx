@@ -213,27 +213,27 @@ describe("TrekDetail naming actions for detected pins (spec 28)", () => {
     verified: false,
   };
 
-  it("shows the Google Maps lookup link (Maps URL, not API) and the suggest button", () => {
-    const onSuggestName = vi.fn();
-    render(
-      <TrekDetail trek={detTrek} origin={origin} onClose={vi.fn()} onSuggestName={onSuggestName} />,
-    );
+  it("shows the Google Maps lookup link and the prefilled GitHub issue link", () => {
+    render(<TrekDetail trek={detTrek} origin={origin} onClose={vi.fn()} />);
     const lookup = screen.getByRole("link", { name: /look up on google maps/i });
     expect(lookup).toHaveAttribute(
       "href",
       "https://www.google.com/maps/search/?api=1&query=16.72814,77.99772",
     );
-    fireEvent.click(screen.getByRole("button", { name: /know this hill's name/i }));
-    expect(onSuggestName).toHaveBeenCalledOnce();
+    // The suggest link opens a GitHub issue form with the pin prefilled (spec 29).
+    const suggest = screen.getByRole("link", { name: /know this hill's name/i });
+    const u = new URL(suggest.getAttribute("href")!);
+    expect(u.pathname.endsWith("/issues/new")).toBe(true);
+    expect(u.searchParams.get("template")).toBe("name-suggestion.yml");
+    expect(u.searchParams.get("pin-id")).toBe("d12-1-2-3-4--bengaluru");
+    expect(u.searchParams.get("coordinates")).toBe("16.72814, 77.99772");
     expect(screen.getByText(/terrain-detected · unverified/)).toBeInTheDocument();
   });
 
   it("shows neither action for ordinary (named-source) pins", () => {
     render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
     expect(screen.queryByRole("link", { name: /look up on google maps/i })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /know this hill's name/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /know this hill's name/i })).not.toBeInTheDocument();
   });
 });
 

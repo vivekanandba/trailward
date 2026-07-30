@@ -1,11 +1,10 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Trek } from "./lib/trek";
 import { loadOrigin, saveOrigin } from "./lib/origin";
 import { DEFAULT_FILTERS, applyFilters, type FilterState } from "./lib/filters";
 import { discoverPeaks } from "./lib/overpass";
 import { decodeState, encodeState } from "./lib/urlState";
 import { PRESET_ORIGINS } from "./lib/cities";
-import type { FeedbackKind } from "./lib/feedback";
 import TrekMap from "./components/TrekMap";
 import FilterBar from "./components/FilterBar";
 import TrekDetail from "./components/TrekDetail";
@@ -14,21 +13,8 @@ import Panel from "./components/Panel";
 import ThemeToggle from "./components/ThemeToggle";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 import { regionStats, type RegionStats } from "./lib/regionStats";
+import { feedbackUrl, suggestTrekUrl } from "./lib/github";
 import { difficultyColor } from "./lib/difficulty";
-
-// The feedback panel is only mounted on demand, so its code (form, validation,
-// Web3Forms client) stays out of the initial bundle. A failed chunk load (stale
-// tab across a deploy, flaky network) must not crash the app — there is no
-// error boundary above — so fall back to a small retry hint instead.
-const FeedbackForm = lazy(() =>
-  import("./components/FeedbackForm").catch(() => ({
-    default: () => (
-      <p className="p-4 text-sm text-trail-500 dark:text-slate-400" role="alert">
-        Couldn't load the feedback form. Check your connection and reload the page.
-      </p>
-    ),
-  })),
-);
 
 // The dataset is a dynamic import so Vite splits it into its own chunk: with
 // ~43k records (terrain detection, spec 27) it is far larger than the app code,
@@ -98,11 +84,6 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | undefined>(() => initial.selectedId);
   const [discovery, setDiscovery] = useState<Trek[]>([]);
   const [discovering, setDiscovering] = useState(false);
-  // When set, the feedback panel is open in the given mode (spec 07).
-  const [feedbackKind, setFeedbackKind] = useState<FeedbackKind | null>(null);
-  // Optional prefill when the feedback panel is opened FOR something — e.g.
-  // suggesting a name for a terrain-detected pin (spec 28).
-  const [feedbackPrefill, setFeedbackPrefill] = useState<string | undefined>(undefined);
 
   // Light/dark theme (spec 08). The initial class is set pre-paint by an inline
   // script in index.html; here we own the runtime toggle + persistence.
@@ -164,7 +145,6 @@ export default function App() {
       if (s.origin) setOrigin(s.origin);
       setFilters(s.filters);
       setSelectedId(s.selectedId);
-      setFeedbackKind(null);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -255,21 +235,13 @@ export default function App() {
     if (filters.radiusKm > max) setFilters((f) => ({ ...f, radiusKm: max }));
   };
 
-  // Opening the feedback panel closes any open trek detail so the two
-  // right-anchored panels never stack over each other.
-  const openFeedback = (kind: FeedbackKind, prefill?: string) => {
-    setSelectedId(undefined);
-    setFeedbackPrefill(prefill);
-    setFeedbackKind(kind);
-  };
-
   // When a panel is open, inert the rest of the app so assistive tech / pointer
   // can't reach the backdrop — but ONLY on mobile, where the panel is a true
   // full-screen modal. On desktop the detail is a non-modal side panel beside
   // the map, so the map + list stay interactive and clicking another peak
   // switches the open detail (the `inert` map used to swallow those clicks).
   // (`inert` isn't in this @types/react yet, so toggle the DOM property.)
-  const panelOpen = Boolean(selected) || feedbackKind !== null;
+  const panelOpen = Boolean(selected);
   const headerRef = useRef<HTMLElement>(null);
   const asideRef = useRef<HTMLElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -306,13 +278,15 @@ export default function App() {
         <div className="ml-auto w-full max-w-md sm:w-80">
           <OriginSearch origin={origin} onPick={pickOrigin} />
         </div>
-        <button
-          type="button"
-          onClick={() => openFeedback("feedback")}
+        {/* Feedback lives in GitHub Issues (spec 29) — prefilled, zero infra. */}
+        <a
+          href={feedbackUrl()}
+          target="_blank"
+          rel="noreferrer"
           className="rounded-lg border border-trail-200 dark:border-slate-600 px-3 py-2 text-sm font-medium text-trail-700 dark:text-slate-300 hover:border-trail-400 dark:hover:border-slate-500 hover:bg-trail-50 dark:hover:bg-slate-800"
         >
           Feedback
-        </button>
+        </a>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
 
@@ -386,13 +360,14 @@ export default function App() {
                 >
                   Clear filters
                 </button>
-                <button
-                  type="button"
-                  onClick={() => openFeedback("suggest-trek")}
+                <a
+                  href={suggestTrekUrl()}
+                  target="_blank"
+                  rel="noreferrer"
                   className="mt-2 block font-medium text-trail-700 dark:text-slate-300 underline hover:text-trail-900 dark:hover:text-slate-100"
                 >
                   Know a trek we're missing? Suggest it.
-                </button>
+                </a>
               </li>
             )}
             {shown.map((t) => (
@@ -463,34 +438,7 @@ export default function App() {
                 trek={selected}
                 origin={origin}
                 onClose={() => setSelectedId(undefined)}
-                onSuggestName={() =>
-                  openFeedback(
-                    "suggest-trek",
-                    `Name suggestion for ${selected.name} (${selected.id}) at ` +
-                      `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)} — this hill is called: `,
-                  )
-                }
               />
-            </Panel>
-          )}
-          {feedbackKind && (
-            <Panel
-              onClose={() => setFeedbackKind(null)}
-              labelledBy="feedback-title"
-              className="fixed inset-0 z-[1250] overflow-hidden bg-white shadow-2xl focus:outline-none dark:bg-slate-900 lg:absolute lg:inset-y-0 lg:left-auto lg:right-0 lg:z-[1050] lg:w-full lg:max-w-sm lg:border-l lg:border-trail-100 dark:lg:border-slate-700"
-            >
-              <Suspense
-                fallback={
-                  <p className="p-4 text-sm text-trail-500 dark:text-slate-400">Loading…</p>
-                }
-              >
-                <FeedbackForm
-                  key={feedbackKind + (feedbackPrefill ?? "")}
-                  initialKind={feedbackKind}
-                  initialMessage={feedbackPrefill}
-                  onClose={() => setFeedbackKind(null)}
-                />
-              </Suspense>
             </Panel>
           )}
         </main>

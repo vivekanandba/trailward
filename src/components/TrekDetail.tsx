@@ -6,6 +6,7 @@ import { googleMapsDirectionsUrl } from "../lib/directions";
 import { getWeather, type WeatherNow } from "../lib/weather";
 import { toGpx } from "../lib/gpx";
 import { fetchLiveEnrichment, type LiveEnrichment } from "../lib/enrich";
+import { nameSuggestionUrl } from "../lib/github";
 import climateRaw from "../data/climate.json";
 import { climateCellKey, driestMonths, wettestMonth, MONTHS } from "../lib/climate";
 
@@ -17,8 +18,6 @@ interface TrekDetailProps {
   trek: Trek;
   origin: Origin;
   onClose(): void;
-  /** Open the name-suggestion form prefilled for this pin (spec 28). */
-  onSuggestName?(): void;
 }
 
 // Readable labels for the OSM-derived summit features (spec 22).
@@ -204,7 +203,7 @@ function RainfallProfile({ monthly }: { monthly: number[] }) {
   );
 }
 
-export default function TrekDetail({ trek, origin, onClose, onSuggestName }: TrekDetailProps) {
+export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   const [weather, setWeather] = useState<WeatherNow | null>(null);
   const [weatherFailed, setWeatherFailed] = useState(false);
   // Hide the hero if the image URL 404s so a dead photo never leaves a gap.
@@ -395,10 +394,11 @@ export default function TrekDetail({ trek, origin, onClose, onSuggestName }: Tre
             ))}
           </div>
         )}
-        {/* Naming actions for terrain-detected pins (spec 28). The Google link
-            is a plain Maps URL — the name is read in Google's own app and never
-            enters our data; the suggest button closes the loop with people who
-            actually know the hill. */}
+        {/* Naming actions for terrain-detected pins (specs 28/29). The Google
+            link is a plain Maps URL — the name is read in Google's own app and
+            never enters our data; the suggest link opens a PREFILLED GitHub
+            issue, which the weekly apply-suggestions job turns into the pin's
+            real name. */}
         {trek.detected && (
           <div className="mb-3 flex flex-wrap gap-2">
             <a
@@ -409,15 +409,14 @@ export default function TrekDetail({ trek, origin, onClose, onSuggestName }: Tre
             >
               Look up on Google Maps ↗
             </a>
-            {onSuggestName && (
-              <button
-                type="button"
-                onClick={onSuggestName}
-                className="rounded-lg border border-trail-200 px-3 py-1.5 text-xs font-medium text-trail-700 hover:border-trail-400 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800"
-              >
-                Know this hill's name?
-              </button>
-            )}
+            <a
+              href={nameSuggestionUrl(trek)}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-trail-200 px-3 py-1.5 text-xs font-medium text-trail-700 hover:border-trail-400 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+            >
+              Know this hill's name? ↗
+            </a>
           </div>
         )}
         {trek.altNames && trek.altNames.length > 0 && (

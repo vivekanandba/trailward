@@ -1,5 +1,8 @@
 # 07 — Feedback & Suggest-a-Trek
 
+> **Superseded by spec 29**: feedback now goes through prefilled GitHub issue links —
+> the in-app Web3Forms form described below was removed.
+
 ## Purpose
 
 Let friends/visitors send feedback or suggest a trek directly from the site, with **no backend**,

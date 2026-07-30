@@ -12,6 +12,22 @@ import { distanceFrom } from "../../src/lib/distance";
 import type { DetectedSummit } from "../build-detect";
 
 let cache: DetectedSummit[] | null = null;
+let humanCache: Record<string, { name: string; issue: number }> | null = null;
+
+/** Community-supplied names (spec 29), keyed by summit id. */
+export function humanNames(): Record<string, { name: string; issue: number }> {
+  if (!humanCache) {
+    const here = dirname(fileURLToPath(import.meta.url));
+    try {
+      humanCache = JSON.parse(
+        readFileSync(resolve(here, "../detected/human-names.json"), "utf8"),
+      ) as Record<string, { name: string; issue: number }>;
+    } catch {
+      humanCache = {};
+    }
+  }
+  return humanCache;
+}
 
 function all(): DetectedSummit[] {
   if (!cache) {

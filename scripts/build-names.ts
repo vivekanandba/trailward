@@ -40,7 +40,11 @@ async function loadNamerFeatures(): Promise<Map<string, NamerFeature[]>> {
   return grid;
 }
 
-function featuresNear(grid: Map<string, NamerFeature[]>, lat: number, lng: number): NamerFeature[] {
+export function featuresNear(
+  grid: Map<string, NamerFeature[]>,
+  lat: number,
+  lng: number,
+): NamerFeature[] {
   const bx = Math.floor(lat / CELL);
   const by = Math.floor(lng / CELL);
   const out: NamerFeature[] = [];
