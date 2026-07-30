@@ -1,0 +1,22 @@
+name: Suggest a trek
+description: A trek or peak the map is missing entirely.
+title: "Trek suggestion: "
+labels: ["trek-suggestion"]
+body:
+  - type: input
+    id: trek-name
+    attributes:
+      label: Trek name
+      placeholder: Kabbaladurga
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: Nearest town/area, or coordinates if you have them.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes (optional)
+      description: Difficulty, season, anything useful.

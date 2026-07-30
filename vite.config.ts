@@ -30,13 +30,17 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["src/**", "scripts/**"],
-      // Gate below current levels (≈76% lines / 80% branch / 66% funcs) so the
-      // suite can't silently regress; raise as coverage grows.
+      // Ratchet: set just below current levels so the suite can't silently
+      // regress; raise as coverage grows. Recalibrated 70 → 68 when the
+      // in-app feedback form (≈600 covered lines) was REMOVED in favour of
+      // GitHub-issue links (spec 29) — deleting tested code lowers the ratio
+      // without any test getting worse. TrekMap stays e2e-only (Leaflet's SVG
+      // renderer cannot run in jsdom).
       thresholds: {
-        lines: 70,
+        lines: 68,
         branches: 72,
         functions: 60,
-        statements: 70,
+        statements: 68,
       },
     },
   },

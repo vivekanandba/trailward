@@ -1,0 +1,10 @@
+name: Feedback
+description: Anything about Trailward — bugs, ideas, wrong data.
+labels: ["feedback"]
+body:
+  - type: textarea
+    id: message
+    attributes:
+      label: Message
+    validations:
+      required: true

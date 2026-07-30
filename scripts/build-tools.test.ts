@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown } from "./build-detect";
+import { featuresNear } from "./build-names";
 import { cellsFor } from "./build-climate";
 import { pickAltNames } from "./geonames/build-geonames";
 import type { Trek } from "../src/lib/trek";
@@ -146,5 +147,24 @@ describe("filterUnknown (spec 27 — named databases win)", () => {
     expect(filterUnknown([peak], [{ lat: 13.002, lng: 77.001 }])).toHaveLength(0);
     expect(filterUnknown([peak], [{ lat: 13.05, lng: 77.05 }])).toHaveLength(1);
     expect(filterUnknown([peak], [])).toHaveLength(1);
+  });
+});
+
+describe("featuresNear (build-names grid)", () => {
+  it("returns features from the 3×3 neighbourhood buckets only", () => {
+    const CELL = 0.012;
+    const grid = new Map([
+      [
+        `${Math.floor(13.0 / CELL)}:${Math.floor(77.0 / CELL)}`,
+        [{ name: "Near RF", code: "RESF", lat: 13.0, lng: 77.0 }],
+      ],
+      [
+        `${Math.floor(14.0 / CELL)}:${Math.floor(78.0 / CELL)}`,
+        [{ name: "Far RF", code: "RESF", lat: 14.0, lng: 78.0 }],
+      ],
+    ]);
+    const near = featuresNear(grid, 13.0, 77.0).map((f) => f.name);
+    expect(near).toContain("Near RF");
+    expect(near).not.toContain("Far RF");
   });
 });

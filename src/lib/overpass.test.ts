@@ -135,3 +135,57 @@ describe("discoverPeaks (runtime fetch)", () => {
     expect(warn).toHaveBeenCalled();
   });
 });
+
+describe("discoverPeaks (live discovery shell)", () => {
+  const origin = { id: "geo:1,2", name: "Somewhere", lat: 10.5, lng: 76.5 };
+  const el = (id: number, ele?: number) => ({
+    type: "node",
+    id,
+    lat: 10.5,
+    lon: 76.5,
+    tags: { natural: "peak", name: `P${id}`, ...(ele ? { ele: String(ele) } : {}) },
+  });
+
+  it("maps Overpass results to minimal discovery treks", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ elements: [el(1, 900), el(2, 1100)] }))),
+    );
+    const treks = await discoverPeaks(origin, 50);
+    expect(treks.map((t) => t.name)).toEqual(["P2", "P1"]); // elevation-sorted
+    expect(treks[0]).toMatchObject({ id: "osm-2", tier: "discovery", cityId: origin.id });
+    expect("notability" in treks[0]).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it("caps at MAX_DISCOVERY keeping the highest peaks", async () => {
+    const many = Array.from({ length: MAX_DISCOVERY + 20 }, (_, i) => el(i, i));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ elements: many }))),
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const treks = await discoverPeaks(origin, 50);
+    expect(treks).toHaveLength(MAX_DISCOVERY);
+    expect(treks[0].elevationM).toBe(MAX_DISCOVERY + 19); // truncation kept the top
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns [] on HTTP error or network failure (caller keeps prior state)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("busy", { status: 504 })),
+    );
+    expect(await discoverPeaks(origin, 50)).toEqual([]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("offline");
+      }),
+    );
+    expect(await discoverPeaks(origin, 50)).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+});

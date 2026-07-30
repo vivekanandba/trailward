@@ -24,7 +24,7 @@ import { PRESET_ORIGINS } from "../src/lib/cities";
 import { fetchPeaks, fetchTourismPoints } from "./sources/overpass";
 import { manualPeaksNear } from "./seed/manual-peaks";
 import { geonamesSummitsNear, type GeonamesSummit } from "./sources/geonames";
-import { detectedSummitsNear } from "./sources/detected";
+import { detectedSummitsNear, humanNames } from "./sources/detected";
 import type { DetectedSummit } from "./build-detect";
 import { fetchTrailAndPois } from "./sources/trails";
 import { fetchElevations } from "./sources/elevation";
@@ -420,6 +420,7 @@ export function toDetectedTreks(
   existing: Trek[],
   regionSlug: string,
   cityId: string,
+  human: Record<string, { name: string; issue: number }> = humanNames(),
 ): Trek[] {
   const { occupy, nearOccupied } = makeOccupancy(DETECTED_DEDUP_KM);
   for (const t of existing) occupy(t.lat, t.lng);
@@ -427,9 +428,12 @@ export function toDetectedTreks(
   for (const s of summits) {
     if (nearOccupied(s.lat, s.lng)) continue;
     occupy(s.lat, s.lng);
+    // A community-supplied name (spec 29) outranks whatever the summit file
+    // carries, so cron regenerations can never lose it.
+    const h = human[s.id];
     out.push({
       id: `${s.id}--${regionSlug}`,
-      name: s.name,
+      name: h?.name ?? s.name,
       lat: s.lat,
       lng: s.lng,
       cityId,
@@ -442,7 +446,11 @@ export function toDetectedTreks(
       terrainConfidence: s.terrainConfidence,
       discoveryScore: s.discoveryScore,
       ...(s.estimatedDifficulty ? { estimatedDifficulty: s.estimatedDifficulty } : {}),
-      ...(s.inferredFrom ? { highlights: s.inferredFrom } : {}), // name provenance (spec 28)
+      ...(h
+        ? { highlights: `Named by the community via issue #${h.issue}.` }
+        : s.inferredFrom
+          ? { highlights: s.inferredFrom } // name provenance (spec 28)
+          : {}),
       sources: [`https://opentopomap.org/#map=15/${s.lat}/${s.lng}`],
       verified: false,
     });

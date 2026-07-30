@@ -495,3 +495,33 @@ describe("terrain-detected summits (spec 27)", () => {
     expect(last.name).toContain("Unnamed peak");
   });
 });
+
+describe("human-supplied names survive regeneration (spec 29)", () => {
+  const det = {
+    id: "d12-9-9-9-9",
+    name: "Unnamed peak (~500 m)",
+    lat: 18.8,
+    lng: 74.1,
+    elevationM: 500,
+    reliefM: 180,
+    prominenceProxyM: 150,
+    meanSlopeDeg: 12,
+    terrainConfidence: 0.9,
+    discoveryScore: 0.7,
+    estimatedDifficulty: "Moderate" as const,
+  };
+
+  it("applies the community name + issue provenance over the summit file's name", () => {
+    const [t] = toDetectedTreks([det], [], "pune", "c", {
+      "d12-9-9-9-9": { name: "Bilikal Betta", issue: 57 },
+    });
+    expect(t.name).toBe("Bilikal Betta");
+    expect(t.highlights).toBe("Named by the community via issue #57.");
+    expect(validateTrek(t).ok).toBe(true);
+  });
+
+  it("leaves other summits untouched", () => {
+    const [t] = toDetectedTreks([det], [], "pune", "c", {});
+    expect(t.name).toBe("Unnamed peak (~500 m)");
+  });
+});

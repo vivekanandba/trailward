@@ -1,0 +1,39 @@
+# Applies community name suggestions (GitHub issues labelled `name-suggestion`)
+# to the data (spec 29): validates each, renames the pin with provenance,
+# commits, and closes the issue. Runs the day before the weekly data refresh so
+# fresh names ride the same deploy; also on demand.
+name: Apply name suggestions
+
+on:
+  schedule:
+    - cron: "0 2 * * 0" # Sundays 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run apply:names
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Commit applied names
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "trailward-bot"
+            git config user.email "actions@github.com"
+            git add scripts/detected src/data/treks.json
+            git commit -m "chore(names): apply community name suggestions"
+            git push
+          else
+            echo "No suggestions applied."
+          fi

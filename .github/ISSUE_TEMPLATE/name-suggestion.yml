@@ -1,0 +1,37 @@
+name: Name a hill
+description: You know what a terrain-detected summit is actually called — tell us.
+title: "Name suggestion: "
+labels: ["name-suggestion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! If you opened this from the app, the pin id and coordinates are
+        already filled in. Add the hill's name and hit **Submit new issue** —
+        a weekly job applies accepted names to the map automatically.
+  - type: input
+    id: pin-id
+    attributes:
+      label: Pin id
+      description: Filled automatically when you come from the app (looks like d12-…).
+      placeholder: d12-2947-1901-246-99--bengaluru
+    validations:
+      required: true
+  - type: input
+    id: coordinates
+    attributes:
+      label: Coordinates
+      placeholder: "12.77849, 79.09830"
+  - type: input
+    id: suggested-name
+    attributes:
+      label: Suggested name
+      description: The name locals use for this hill.
+      placeholder: Bilikal Betta
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes (optional)
+      description: How do you know it? Any variant spellings?
