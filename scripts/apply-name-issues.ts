@@ -83,8 +83,7 @@ export function applyToData(
     return { ...s, name: h.name, inferredFrom: `Named by the community via issue #${h.issue}.` };
   });
   const outTreks = treks.map((t) => {
-    const m = /^(d12-[\d-]+)--/.exec(t.id);
-    const h = m ? humanNames[m[1]] : undefined;
+    const h = humanNames[t.id];
     if (!h) return t;
     return { ...t, name: h.name, highlights: `Named by the community via issue #${h.issue}.` };
   });

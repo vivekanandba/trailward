@@ -1,0 +1,19 @@
+[
+  {
+    "id": "d12-2910-1851-129-71",
+    "name": "Unnamed hill (~641 m)",
+    "lat": 17.03332,
+    "lng": 75.80618,
+    "tier": "discovery",
+    "detected": true,
+    "elevationM": 641,
+    "reliefM": 107,
+    "prominenceProxyM": 107,
+    "meanSlopeDeg": 12.7,
+    "terrainConfidence": 1,
+    "discoveryScore": 0.726,
+    "estimatedDifficulty": "Moderate",
+    "sources": ["https://opentopomap.org/#map=15/17.03332/75.80618"],
+    "verified": false
+  }
+]

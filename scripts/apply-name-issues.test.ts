@@ -74,7 +74,7 @@ describe("applyToData", () => {
     estimatedDifficulty: "Moderate" as const,
   };
   const trek = {
-    id: "d12-1-2-3-4--bengaluru",
+    id: "d12-1-2-3-4",
     name: "Unnamed peak (~500 m)",
     lat: 13,
     lng: 77,
@@ -86,7 +86,7 @@ describe("applyToData", () => {
   };
   const names = { "d12-1-2-3-4": { name: "Bilikal Betta", issue: 57 } };
 
-  it("renames matching summits and their regioned trek records with provenance", () => {
+  it("renames matching summits and their trek records with provenance", () => {
     const out = applyToData([summit], [trek], names);
     expect(out.summits[0].name).toBe("Bilikal Betta");
     expect(out.summits[0].inferredFrom).toContain("issue #57");
@@ -95,7 +95,7 @@ describe("applyToData", () => {
   });
 
   it("leaves unmatched records untouched (same object identity)", () => {
-    const other = { ...trek, id: "gn-9--bengaluru" };
+    const other = { ...trek, id: "gn-9" };
     const out = applyToData([{ ...summit, id: "d12-9-9-9-9" }], [other], names);
     expect(out.summits[0].name).toBe("Unnamed peak (~500 m)");
     expect(out.treks[0]).toBe(other);

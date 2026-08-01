@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Trek } from "./lib/trek";
 import { loadOrigin, saveOrigin } from "./lib/origin";
 import { DEFAULT_FILTERS, applyFilters, type FilterState } from "./lib/filters";
-import { discoverPeaks } from "./lib/overpass";
 import { decodeState, encodeState } from "./lib/urlState";
 import { PRESET_ORIGINS } from "./lib/cities";
 import TrekMap from "./components/TrekMap";
@@ -14,17 +13,8 @@ import ThemeToggle from "./components/ThemeToggle";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 import { regionStats, type RegionStats } from "./lib/regionStats";
 import { feedbackUrl, suggestTrekUrl } from "./lib/github";
+import { loadTreksAround } from "./lib/cells";
 import { difficultyColor } from "./lib/difficulty";
-
-// The dataset is a dynamic import so Vite splits it into its own chunk: with
-// ~43k records (terrain detection, spec 27) it is far larger than the app code,
-// and bundling it would block first paint on a ~2 MB download. This way the
-// shell paints immediately and the peaks stream in.
-let TREKS_CACHE: Trek[] | null = null;
-async function loadAllTreks(): Promise<Trek[]> {
-  if (!TREKS_CACHE) TREKS_CACHE = (await import("./data/treks.json")).default as Trek[];
-  return TREKS_CACHE;
-}
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
@@ -70,10 +60,8 @@ function RegionStatsCard({ stats }: { stats: RegionStats }) {
   );
 }
 
-// Bengaluru's discovery peaks are precomputed out to 500 km; other origins keep
-// the default 150 km (spec 11). One helper so the slider max and the on-switch
-// clamp can't drift apart.
-const maxRadiusForOrigin = (originId: string): number => (originId === "bangalore" ? 500 : 150);
+// The dataset is nationwide (spec 30) — every origin gets the same reach.
+const MAX_RADIUS_KM = 500;
 
 export default function App() {
   // Seed from the URL (shareable / reload-restorable), falling back to the
@@ -82,8 +70,6 @@ export default function App() {
   const [origin, setOrigin] = useState(() => initial.origin ?? loadOrigin());
   const [filters, setFilters] = useState<FilterState>(() => initial.filters);
   const [selectedId, setSelectedId] = useState<string | undefined>(() => initial.selectedId);
-  const [discovery, setDiscovery] = useState<Trek[]>([]);
-  const [discovering, setDiscovering] = useState(false);
 
   // Light/dark theme (spec 08). The initial class is set pre-paint by an inline
   // script in index.html; here we own the runtime toggle + persistence.
@@ -99,24 +85,24 @@ export default function App() {
     saveTheme(next);
   };
 
-  // Records baked for this origin — curated (Bangalore) OR precomputed
-  // topography-ranked discovery (preset regions, spec 11). Only a truly unknown
-  // origin (none baked) falls through to live discovery (spec 03).
-  const [allTreks, setAllTreks] = useState<Trek[] | null>(TREKS_CACHE);
+  // Nationwide, region-free data (spec 30): fetch exactly the 1° cells the
+  // current origin+radius touches — ANY searched place works, not just the
+  // presets — cached per session, streamed in behind a loading state.
+  const [nearbyTreks, setNearbyTreks] = useState<Trek[] | null>(null);
+  const [loadingCells, setLoadingCells] = useState(true);
   useEffect(() => {
     let active = true;
-    if (!allTreks) {
-      loadAllTreks().then((t) => active && setAllTreks(t));
-    }
+    setLoadingCells(true);
+    loadTreksAround(origin.lat, origin.lng, filters.radiusKm)
+      .then((t) => {
+        if (active) setNearbyTreks(t);
+      })
+      .catch(() => active && setNearbyTreks([]))
+      .finally(() => active && setLoadingCells(false));
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const localTreks = useMemo(
-    () => (allTreks ?? []).filter((t) => t.cityId === origin.id),
-    [allTreks, origin.id],
-  );
+  }, [origin.lat, origin.lng, filters.radiusKm]);
 
   // Mirror origin/filters/selection into the URL so the view is shareable and
   // survives reload. Opening the detail panel pushes a history entry (so Back
@@ -150,36 +136,18 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  useEffect(() => {
-    // While the dataset chunk is still loading, localTreks is transiently empty
-    // for EVERY origin — kicking off live Overpass discovery then would be a
-    // spurious network call (and a flash of wrong results) for preset regions.
-    if (allTreks === null) return;
-    if (localTreks.length > 0) {
-      setDiscovery([]);
-      return;
-    }
-    let active = true;
-    setDiscovering(true);
-    // Debounce so dragging the radius slider/ring doesn't hammer Overpass; the
-    // radius genuinely changes the query, so discovery must re-run on it (the
-    // empty-state even tells users to widen the radius).
-    const handle = setTimeout(() => {
-      discoverPeaks(origin, filters.radiusKm)
-        .then((d) => active && setDiscovery(d))
-        .finally(() => active && setDiscovering(false));
-    }, 500);
-    return () => {
-      active = false;
-      clearTimeout(handle);
-    };
-    // Re-discover on origin OR radius change (origin.id keys the origin).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin.id, filters.radiusKm, allTreks === null]);
-
-  const baseTreks = localTreks.length > 0 ? localTreks : discovery;
-  // Precomputed peaks carry a topography rank; live-discovered ones don't.
-  const topoRanked = baseTreks.some((t) => t.discoveryScore !== undefined);
+  // Cells arrive in arbitrary order — restore the canonical ranking the list
+  // cap depends on: curated first, then hidden-gem score, then relief.
+  const baseTreks = useMemo(() => {
+    const t = [...(nearbyTreks ?? [])];
+    t.sort(
+      (a, b) =>
+        Number(b.tier === "curated") - Number(a.tier === "curated") ||
+        (b.discoveryScore ?? -1) - (a.discoveryScore ?? -1) ||
+        (b.reliefM ?? -1) - (a.reliefM ?? -1),
+    );
+    return t;
+  }, [nearbyTreks]);
   const visible = useMemo(
     () => applyFilters(baseTreks, origin, filters),
     [baseTreks, origin, filters],
@@ -192,7 +160,7 @@ export default function App() {
     [visible],
   );
   const hasCurated = useMemo(() => visible.some((t) => t.tier === "curated"), [visible]);
-  const maxRadiusKm = maxRadiusForOrigin(origin.id);
+  const maxRadiusKm = MAX_RADIUS_KM;
   // Terrain filters (hidden-gems / min-relief) only make sense where peaks carry
   // a score/relief; the region-stats card summarises what's in view (spec 15).
   const showTerrainFilters = useMemo(
@@ -229,10 +197,7 @@ export default function App() {
     setOrigin(o);
     saveOrigin(o);
     setSelectedId(undefined);
-    // Clamp the radius to the new origin's max so a 500 km Bengaluru setting
-    // doesn't carry a mismatched slider/ring onto a 150 km-max origin.
-    const max = maxRadiusForOrigin(o.id);
-    if (filters.radiusKm > max) setFilters((f) => ({ ...f, radiusKm: max }));
+    if (filters.radiusKm > MAX_RADIUS_KM) setFilters((f) => ({ ...f, radiusKm: MAX_RADIUS_KM }));
   };
 
   // When a panel is open, inert the rest of the app so assistive tech / pointer
@@ -329,28 +294,21 @@ export default function App() {
               showTerrainFilters={showTerrainFilters}
             />
           </div>
-          {!discovering && visible.length > 0 && <RegionStatsCard stats={stats} />}
-          {discoveryCount > 0 && !discovering && (
+          {!loadingCells && visible.length > 0 && <RegionStatsCard stats={stats} />}
+          {discoveryCount > 0 && !loadingCells && (
             <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
-              {!topoRanked
-                ? `Showing unverified community peaks near ${origin.name} from OpenStreetMap.`
-                : hasCurated
-                  ? `Plus ${discoveryCount} lesser-known ${discoveryCount === 1 ? "peak" : "peaks"} near ${origin.name}, ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`
-                  : `Peaks near ${origin.name} ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`}
+              {hasCurated
+                ? `Plus ${discoveryCount} lesser-known ${discoveryCount === 1 ? "peak" : "peaks"} near ${origin.name}, ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`
+                : `Peaks near ${origin.name} ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`}
             </p>
           )}
           <ul className="flex-1 divide-y divide-trail-50 dark:divide-slate-700">
-            {allTreks === null && (
+            {loadingCells && (
               <li className="p-4 text-sm text-trail-500 dark:text-slate-400" role="status">
-                Loading peaks…
+                Loading peaks near {origin.name}…
               </li>
             )}
-            {discovering && (
-              <li className="p-4 text-sm text-trail-500 dark:text-slate-400">
-                Discovering peaks near {origin.name}…
-              </li>
-            )}
-            {allTreks !== null && !discovering && visible.length === 0 && (
+            {!loadingCells && visible.length === 0 && (
               <li className="p-4 text-sm text-trail-500 dark:text-slate-400">
                 No treks match. Try widening the radius or clearing filters.
                 <button

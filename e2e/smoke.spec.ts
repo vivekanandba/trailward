@@ -63,7 +63,7 @@ test("a preset region shows topography-ranked discovery peaks", async ({ page })
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByText("Terrain", { exact: true })).toBeVisible();
   await expect(page.getByText(/hidden-gem score/i)).toBeVisible();
-  await expect(page.getByText(/community · unverified/i)).toBeVisible();
+  await expect(page.getByText(/(community|terrain-detected) · unverified/i)).toBeVisible();
 });
 
 test("hidden-gems filter narrows a preset region's list", async ({ page }) => {
@@ -77,6 +77,16 @@ test("hidden-gems filter narrows a preset region's list", async ({ page }) => {
   const before = await count();
   await page.getByLabel("Hidden gems only").check();
   await expect.poll(count).toBeLessThan(before);
+});
+
+test("any city works — a non-preset origin shows nearby peaks (spec 30)", async ({ page }) => {
+  // Mysuru was never a preset region; with region-free cells (spec 30) it gets
+  // real ranked peaks purely by distance.
+  await page.goto("/?oid=geo%3A12.29%2C76.64&olat=12.2958&olng=76.6394&on=Mysuru&r=100");
+  await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
+  await expect(page.getByText(/est\./i).first()).toBeVisible();
+  const count = Number((await page.getByText(/^\d+ treks?$/).innerText()).replace(/\D/g, ""));
+  expect(count).toBeGreaterThan(50);
 });
 
 test("the map shows a difficulty legend", async ({ page }) => {

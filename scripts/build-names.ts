@@ -85,9 +85,8 @@ async function main(): Promise<void> {
   const byId = new Map(summits.map((s) => [s.id, s]));
   let patched = 0;
   const next = treks.map((t) => {
-    const m = /^(d12-[\d-]+)--/.exec(t.id);
-    if (!m) return t;
-    const s = byId.get(m[1]);
+    if (!t.id.startsWith("d12-")) return t;
+    const s = byId.get(t.id);
     if (!s || !s.inferredFrom || t.name === s.name) return t;
     patched++;
     return { ...t, name: s.name, highlights: s.inferredFrom };
