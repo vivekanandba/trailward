@@ -120,7 +120,14 @@ async function detectIndia(calibrate: boolean): Promise<DetectedPeak[]> {
     for (let tx = t0x; tx <= t1x; tx++) {
       scanned++;
       found.push(
-        ...detectPeaks(grid, tx * TILE, ty * TILE, tx * TILE + TILE - 1, ty * TILE + TILE - 1, params),
+        ...detectPeaks(
+          grid,
+          tx * TILE,
+          ty * TILE,
+          tx * TILE + TILE - 1,
+          ty * TILE + TILE - 1,
+          params,
+        ),
       );
     }
     if (ty % 10 === 0) {
@@ -129,7 +136,6 @@ async function detectIndia(calibrate: boolean): Promise<DetectedPeak[]> {
   }
   return found;
 }
-
 
 /** Offline terrain scoring from the same z12 grid (no API calls). */
 async function score(peaks: DetectedPeak[]): Promise<DetectedSummit[]> {
