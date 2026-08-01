@@ -168,3 +168,23 @@ describe("corrupt-pixel guard", () => {
     expect(detectPeaks(gridOf(f), 20, 20, 80, 80, PARAMS)).toHaveLength(0);
   });
 });
+
+describe("highland banding (spec 30)", () => {
+  it("applies the stricter relief floor above the highland elevation", () => {
+    const params = {
+      minReliefM: 80,
+      nmsRadiusPx: 8,
+      reliefRadiusPx: 12,
+      highland: { elevM: 2500, minReliefM: 300, nmsRadiusPx: 8 },
+    };
+    // A 3000 m cone with only 120 m of relief: fine in the lowlands, rejected
+    // in the high country.
+    const highSmall = (x: number, y: number): number =>
+      Math.max(2880, 3000 - 10 * Math.hypot(x - 50, y - 50));
+    expect(detectPeaks(gridOf(highSmall), 20, 20, 80, 80, params)).toHaveLength(0);
+    // The same shape at 500 m qualifies (relief 120 ≥ 80).
+    const lowSmall = (x: number, y: number): number =>
+      Math.max(380, 500 - 10 * Math.hypot(x - 50, y - 50));
+    expect(detectPeaks(gridOf(lowSmall), 20, 20, 80, 80, params)).toHaveLength(1);
+  });
+});

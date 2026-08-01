@@ -10,9 +10,6 @@ import { createReadStream, writeFileSync, existsSync, mkdirSync } from "node:fs"
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { distanceFrom } from "../../src/lib/distance";
-import { DEFAULT_ORIGIN } from "../../src/lib/trek";
-import { PRESET_ORIGINS } from "../../src/lib/cities";
 import { rosetteRing, computeTerrain, estimateDifficulty } from "../../src/lib/terrain";
 import { scoreDiscovery, type ObscuritySignals } from "../../src/lib/discoveryScore";
 import { createDemTiles } from "../sources/demtiles";
@@ -20,7 +17,6 @@ import { fetchWikidataKnown } from "../sources/wikidata";
 import type { GeonamesSummit } from "../sources/geonames";
 
 const SUMMIT_CODES = new Set(["PK", "PKS", "HLL", "HLLS", "MT", "MTS", "RK", "RKS"]);
-const REACH_KM = 520; // a little over Bengaluru's 500 km, so nothing near an edge is lost
 const ROSETTE_RADIUS_M = 450; // same rosette geometry the OSM discovery pipeline uses
 
 /**
@@ -61,8 +57,10 @@ const round = (x: number, dp = 0): number => {
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, "india-summits.json");
 
+// Nationwide (spec 30): every summit in the dump, bounded only by a sanity
+// bbox for India + its Himalayan margins.
 function inReach(lat: number, lng: number): boolean {
-  return PRESET_ORIGINS.some((o) => distanceFrom(o, { lat, lng }) <= REACH_KM);
+  return lat >= 6 && lat <= 37 && lng >= 67 && lng <= 98;
 }
 
 async function main(): Promise<void> {
@@ -140,8 +138,15 @@ async function crossMatchWikidata(summits: GeonamesSummit[]): Promise<void> {
   const byId = new Map(summits.map((s) => [s.id, s]));
   let matched = 0;
   let photos = 0;
-  for (const origin of PRESET_ORIGINS) {
-    const radiusKm = origin.id === DEFAULT_ORIGIN.id ? 500 : 150;
+  // Nationwide via a 6° grid of box queries — one all-India box times out.
+  const boxes: { id: string; name: string; lat: number; lng: number }[] = [];
+  for (let lat = 9; lat <= 36; lat += 6) {
+    for (let lng = 70; lng <= 97; lng += 6) {
+      boxes.push({ id: `box:${lat},${lng}`, name: `box ${lat},${lng}`, lat, lng });
+    }
+  }
+  for (const origin of boxes) {
+    const radiusKm = 480; // ~half the 6° box diagonal — slight overlap is fine
     let known;
     try {
       known = await fetchWikidataKnown(origin, radiusKm);
