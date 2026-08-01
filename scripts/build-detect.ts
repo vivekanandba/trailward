@@ -11,8 +11,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
-import { PRESET_ORIGINS } from "../src/lib/cities";
-import { DEFAULT_ORIGIN, type Trek } from "../src/lib/trek";
+import { type Trek } from "../src/lib/trek";
 import { distanceFrom } from "../src/lib/distance";
 import { rosetteRing, computeTerrain, estimateDifficulty } from "../src/lib/terrain";
 import { scoreDiscovery } from "../src/lib/discoveryScore";
@@ -21,7 +20,6 @@ import {
   detectPeaks,
   globalPixel,
   metresPerPixel,
-  DETECT_ZOOM,
   type DetectedPeak,
 } from "./sources/peakdetect";
 
@@ -83,61 +81,55 @@ export function filterUnknown(
   return peaks.filter((p) => !isKnown(p));
 }
 
-async function detectRegion(
-  origin: (typeof PRESET_ORIGINS)[number],
-  radiusKm: number,
-  calibrate: boolean,
-): Promise<DetectedPeak[]> {
-  const mpp = metresPerPixel(origin.lat);
+// India + Himalayan margins; includes some ocean, which scans as sea level.
+const INDIA = { latMin: 6, latMax: 36, lngMin: 68, lngMax: 97.5 };
+
+async function detectIndia(calibrate: boolean): Promise<DetectedPeak[]> {
+  const midLat = 20;
+  const mpp = metresPerPixel(midLat);
   const params = {
     minReliefM: calibrate ? 60 : MIN_RELIEF_M,
     nmsRadiusPx: Math.round(600 / mpp),
     reliefRadiusPx: Math.round(1000 / mpp),
+    highland: {
+      elevM: 2500,
+      minReliefM: 300,
+      nmsRadiusPx: Math.round(1500 / mpp),
+    },
   };
-  const { gx, gy } = globalPixel(origin.lat, origin.lng);
-  const rPx = (radiusKm * 1000) / mpp;
-  const t0x = Math.floor((gx - rPx) / TILE);
-  const t1x = Math.floor((gx + rPx) / TILE);
-  const t0y = Math.floor((gy - rPx) / TILE);
-  const t1y = Math.floor((gy + rPx) / TILE);
-
-  const { grid, prefetch } = createTileGrid({ cacheDir });
+  const nw = globalPixel(INDIA.latMax, INDIA.lngMin);
+  const se = globalPixel(INDIA.latMin, INDIA.lngMax);
+  const t0x = Math.floor(nw.gx / TILE);
+  const t1x = Math.floor(se.gx / TILE);
+  const t0y = Math.floor(nw.gy / TILE);
+  const t1y = Math.floor(se.gy / TILE);
+  const { grid, prefetch } = createTileGrid({ cacheDir, maxTiles: 4 * (t1x - t0x + 3) });
   const found: DetectedPeak[] = [];
   let scanned = 0;
   const total = (t1x - t0x + 1) * (t1y - t0y + 1);
+  const prefetchRow = async (ty: number): Promise<void> => {
+    if (ty < t0y - 1 || ty > t1y + 1) return;
+    await Promise.all(
+      Array.from({ length: t1x - t0x + 3 }, (_, i) => t0x - 1 + i).map((tx) => prefetch(tx, ty)),
+    );
+  };
+  await prefetchRow(t0y - 1);
+  await prefetchRow(t0y);
   for (let ty = t0y; ty <= t1y; ty++) {
+    await prefetchRow(ty + 1);
     for (let tx = t0x; tx <= t1x; tx++) {
       scanned++;
-      // Skip tiles whose centre is well outside the radius (with margin).
-      const cx = (tx + 0.5) * TILE;
-      const cy = (ty + 0.5) * TILE;
-      if (Math.hypot(cx - gx, cy - gy) > rPx + TILE) continue;
-      // 3×3 neighbourhood so maxima/relief windows can cross tile edges.
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          await prefetch(tx + dx, ty + dy);
-        }
-      }
-      const peaks = detectPeaks(
-        grid,
-        tx * TILE,
-        ty * TILE,
-        tx * TILE + TILE - 1,
-        ty * TILE + TILE - 1,
-        params,
+      found.push(
+        ...detectPeaks(grid, tx * TILE, ty * TILE, tx * TILE + TILE - 1, ty * TILE + TILE - 1, params),
       );
-      for (const p of peaks) {
-        if (distanceFrom(origin, p) <= radiusKm) found.push(p);
-      }
-      if (scanned % 500 === 0) {
-        console.log(
-          `[detect]   ${origin.name}: ${scanned}/${total} tiles, ${found.length} candidates…`,
-        );
-      }
+    }
+    if (ty % 10 === 0) {
+      console.log(`[detect]   ${scanned}/${total} tiles, ${found.length} candidates…`);
     }
   }
   return found;
 }
+
 
 /** Offline terrain scoring from the same z12 grid (no API calls). */
 async function score(peaks: DetectedPeak[]): Promise<DetectedSummit[]> {
@@ -193,15 +185,15 @@ async function main(): Promise<void> {
   mkdirSync(dirname(outFile), { recursive: true });
   const treks = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
 
+  // All-India scan (spec 30): one pass over the whole bbox with Himalaya
+  // banding — above 2,500 m the relief floor rises to 300 m and NMS widens to
+  // ~1.5 km, or every ridge crest in the high mountains becomes a "summit".
   const all = new Map<string, DetectedPeak>();
-  for (const origin of PRESET_ORIGINS) {
-    const radiusKm = origin.id === DEFAULT_ORIGIN.id ? 500 : 150;
-    console.log(`[detect] ${origin.name}: scanning ${radiusKm} km at z${DETECT_ZOOM}…`);
-    const peaks = await detectRegion(origin, radiusKm, calibrate);
-    console.log(`[detect] ${origin.name}: ${peaks.length} raw candidates.`);
+  {
+    const peaks = await detectIndia(calibrate);
     for (const p of peaks) {
       const { gx, gy } = globalPixel(p.lat, p.lng);
-      all.set(`${Math.floor(gx)}/${Math.floor(gy)}`, p); // overlap regions dedupe
+      all.set(`${Math.floor(gx)}/${Math.floor(gy)}`, p);
     }
   }
 

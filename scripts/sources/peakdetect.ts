@@ -68,6 +68,10 @@ export interface DetectParams {
   minReliefM: number; // keep candidates at/above this local relief
   nmsRadiusPx: number; // must be the highest within this radius
   reliefRadiusPx: number; // window for the relief (lowest-ground) measure
+  /** Optional high-country band (spec 30): above `elevM`, stricter thresholds —
+   *  in the Himalaya 100 m of relief is terrain noise, not a summit, and a
+   *  ridge crest would otherwise emit candidates every NMS step. */
+  highland?: { elevM: number; minReliefM: number; nmsRadiusPx: number };
 }
 
 /**
@@ -107,9 +111,11 @@ export function detectPeaks(
       }
       if (!isMax || !greater) continue;
 
+      // High-country band: stricter thresholds above the highland elevation.
+      const hl = params.highland && e >= params.highland.elevM ? params.highland : undefined;
       // Non-maximum suppression: highest within nmsRadiusPx (ties resolved by
       // scan order — the first pixel of an exact-tie plateau wins).
-      const r = params.nmsRadiusPx;
+      const r = hl?.nmsRadiusPx ?? params.nmsRadiusPx;
       let suppressed = false;
       for (let dy = -r; dy <= r && !suppressed; dy++) {
         for (let dx = -r; dx <= r; dx++) {
@@ -139,7 +145,7 @@ export function detectPeaks(
         }
       }
       const reliefM = e - lowest;
-      if (reliefM < params.minReliefM) continue;
+      if (reliefM < (hl?.minReliefM ?? params.minReliefM)) continue;
 
       const { lat, lng } = pixelToLatLng(x + 0.5, y + 0.5);
       out.push({ lat, lng, elevationM: Math.round(e), reliefM: Math.round(reliefM) });
