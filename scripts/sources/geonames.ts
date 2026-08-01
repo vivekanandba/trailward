@@ -49,3 +49,8 @@ function all(): GeonamesSummit[] {
 export function geonamesSummitsNear(origin: Origin, radiusKm: number): GeonamesSummit[] {
   return all().filter((s) => distanceFrom(origin, s) <= radiusKm);
 }
+
+/** Every summit in the committed subset — the nationwide layer (spec 30). */
+export function geonamesSummitsAll(): GeonamesSummit[] {
+  return all();
+}

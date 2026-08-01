@@ -46,3 +46,8 @@ function all(): DetectedSummit[] {
 export function detectedSummitsNear(origin: Origin, radiusKm: number): DetectedSummit[] {
   return all().filter((s) => distanceFrom(origin, s) <= radiusKm);
 }
+
+/** Every detected summit — the nationwide layer (spec 30). */
+export function detectedSummitsAll(): DetectedSummit[] {
+  return all();
+}

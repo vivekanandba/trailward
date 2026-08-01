@@ -40,7 +40,10 @@ export interface Trek {
   name: string;
   lat: number;
   lng: number;
-  cityId: string; // origin id this record was curated for, e.g. "bangalore"
+  // Origin id this record was curated for (curated tier only). Discovery pins
+  // are nationwide and region-free (spec 30) — the app filters by DISTANCE
+  // from whatever origin the user searched, never by city membership.
+  cityId?: string;
   tier: Tier;
 
   // Distances/measures (optional for discovery treks)
@@ -153,8 +156,11 @@ export function validateTrek(input: unknown): ValidateResult {
   if (typeof input.lng !== "number" || input.lng < -180 || input.lng > 180) {
     return fail("lng", "must be a number in [-180, 180]");
   }
-  if (typeof input.cityId !== "string" || input.cityId.length === 0) {
-    return fail("cityId", "must be a non-empty string");
+  if (
+    input.cityId !== undefined &&
+    (typeof input.cityId !== "string" || input.cityId.length === 0)
+  ) {
+    return fail("cityId", "must be a non-empty string when present");
   }
   if (typeof input.tier !== "string" || !TIERS.includes(input.tier as Tier)) {
     return fail("tier", "must be 'curated' or 'discovery'");

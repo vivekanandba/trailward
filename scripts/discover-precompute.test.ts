@@ -66,8 +66,7 @@ describe("precomputeRegion", () => {
     expect(validateTrek(top).ok).toBe(true);
     expect(top.tier).toBe("discovery");
     expect(top.verified).toBe(false);
-    expect(top.cityId).toBe(PUNE.id);
-    expect(top.id).toBe("osm-1--pune"); // region-suffixed id keeps regions unique
+    expect(top.id).toBe("osm-1"); // region-free (spec 30): distance decides reach, not membership
     expect(top.sources[0]).toContain("openstreetmap.org/node/1");
   });
 
@@ -249,7 +248,7 @@ describe("manual peaks (spec 12)", () => {
 
 describe("GeoNames listed summits (spec 16)", () => {
   const scored: Trek = {
-    id: "osm-1--pune",
+    id: "osm-1",
     name: "Scored Peak",
     lat: 18.51,
     lng: 73.84,
@@ -270,8 +269,8 @@ describe("GeoNames listed summits (spec 16)", () => {
   };
 
   it("maps a summit to an unscored listed discovery trek (name + elevation, no topo fields)", () => {
-    const [t] = toListedTreks([summit], [], "pune", "geo:18.5204,73.8567");
-    expect(t.id).toBe("gn-12345--pune");
+    const [t] = toListedTreks([summit], []);
+    expect(t.id).toBe("gn-12345");
     expect(t.name).toBe("Listed Hill");
     expect(t.elevationM).toBe(900);
     expect(t.tier).toBe("discovery");
@@ -299,8 +298,6 @@ describe("GeoNames listed summits (spec 16)", () => {
         },
       ],
       [],
-      "pune",
-      "c",
     );
     expect(t.reliefM).toBe(320);
     expect(t.meanSlopeDeg).toBe(18.5);
@@ -310,34 +307,20 @@ describe("GeoNames listed summits (spec 16)", () => {
   });
 
   it("omits elevationM when GeoNames had none", () => {
-    const [t] = toListedTreks(
-      [{ id: "9", name: "No Elev", lat: 18.7, lng: 74.0 }],
-      [],
-      "pune",
-      "c",
-    );
+    const [t] = toListedTreks([{ id: "9", name: "No Elev", lat: 18.7, lng: 74.0 }], []);
     expect(t.elevationM).toBeUndefined();
     expect(validateTrek(t).ok).toBe(true);
   });
 
   it("drops a summit that duplicates an already-scored peak (within 250 m)", () => {
     const dup: GeonamesSummit = { id: "77", name: "Dup", lat: 18.5101, lng: 73.8401 };
-    expect(toListedTreks([dup], [scored], "pune", "c")).toHaveLength(0);
+    expect(toListedTreks([dup], [scored])).toHaveLength(0);
   });
 
   it("dedupes listed summits against each other", () => {
     const a: GeonamesSummit = { id: "1", name: "A", lat: 18.7, lng: 74.0 };
     const b: GeonamesSummit = { id: "2", name: "B", lat: 18.7001, lng: 74.0001 }; // ~15 m away
-    expect(toListedTreks([a, b], [], "pune", "c").map((t) => t.id)).toEqual(["gn-1--pune"]);
-  });
-
-  it("precomputeRegion appends listed summits below the ranked peaks", async () => {
-    const treks = await precomputeRegion(PUNE, fetchers({ listedSummits: () => [summit] }), CFG);
-    // 2 scored (rugged, flat) + 1 listed, listed last (no score).
-    expect(treks).toHaveLength(3);
-    const listed = treks[treks.length - 1];
-    expect(listed.id).toBe("gn-12345--pune");
-    expect(listed.discoveryScore).toBeUndefined();
+    expect(toListedTreks([a, b], []).map((t) => t.id)).toEqual(["gn-1"]);
   });
 });
 
@@ -391,11 +374,11 @@ describe("dedupeAgainstCurated", () => {
   it("drops a discovery peak that sits on top of a curated trek", () => {
     const curated = [mk("skandagiri", 13.5021, 77.6911, "curated")];
     const discovery = [
-      mk("osm-1--bangalore", 13.5022, 77.6912, "discovery"), // ~15 m away → same summit
-      mk("osm-2--bangalore", 13.9, 77.9, "discovery"), // far → a genuine new peak
+      mk("osm-1", 13.5022, 77.6912, "discovery"), // ~15 m away → same summit
+      mk("osm-2", 13.9, 77.9, "discovery"), // far → a genuine new peak
     ];
     const out = dedupeAgainstCurated(discovery, curated);
-    expect(out.map((t) => t.id)).toEqual(["osm-2--bangalore"]);
+    expect(out.map((t) => t.id)).toEqual(["osm-2"]);
   });
 
   it("keeps everything when there are no curated treks", () => {
@@ -406,7 +389,7 @@ describe("dedupeAgainstCurated", () => {
 
 describe("preserveEnrichment (spec 25 — cron must not wipe hand-baked fields)", () => {
   const prev: Trek = {
-    id: "gn-1--bengaluru",
+    id: "gn-1",
     name: "X",
     lat: 13,
     lng: 77,
@@ -420,7 +403,7 @@ describe("preserveEnrichment (spec 25 — cron must not wipe hand-baked fields)"
     verified: false,
   };
   const fresh: Trek = {
-    id: "gn-1--bengaluru",
+    id: "gn-1",
     name: "X",
     lat: 13,
     lng: 77,
@@ -465,8 +448,8 @@ describe("terrain-detected summits (spec 27)", () => {
   };
 
   it("maps a detected summit to a flagged, scored discovery trek", () => {
-    const [t] = toDetectedTreks([det], [], "pune", "geo:18.5204,73.8567");
-    expect(t.id).toBe("d12-2931-1892-10-20--pune");
+    const [t] = toDetectedTreks([det], []);
+    expect(t.id).toBe("d12-2931-1892-10-20");
     expect(t.detected).toBe(true);
     expect(t.discoveryScore).toBe(0.81);
     expect(t.estimatedDifficulty).toBe("Moderate");
@@ -476,7 +459,7 @@ describe("terrain-detected summits (spec 27)", () => {
 
   it("drops a detected summit near ANY existing pin — named sources win", () => {
     const named: Trek = {
-      id: "gn-9--pune",
+      id: "gn-9",
       name: "Named Hill",
       lat: 18.7002,
       lng: 74.0003,
@@ -485,14 +468,7 @@ describe("terrain-detected summits (spec 27)", () => {
       sources: [],
       verified: false,
     };
-    expect(toDetectedTreks([det], [named], "pune", "c")).toHaveLength(0);
-  });
-
-  it("precomputeRegion appends detected summits after listed ones", async () => {
-    const treks = await precomputeRegion(PUNE, fetchers({ detectedSummits: () => [det] }), CFG);
-    const last = treks[treks.length - 1];
-    expect(last.detected).toBe(true);
-    expect(last.name).toContain("Unnamed peak");
+    expect(toDetectedTreks([det], [named])).toHaveLength(0);
   });
 });
 
@@ -512,7 +488,7 @@ describe("human-supplied names survive regeneration (spec 29)", () => {
   };
 
   it("applies the community name + issue provenance over the summit file's name", () => {
-    const [t] = toDetectedTreks([det], [], "pune", "c", {
+    const [t] = toDetectedTreks([det], [], {
       "d12-9-9-9-9": { name: "Bilikal Betta", issue: 57 },
     });
     expect(t.name).toBe("Bilikal Betta");
@@ -521,7 +497,7 @@ describe("human-supplied names survive regeneration (spec 29)", () => {
   });
 
   it("leaves other summits untouched", () => {
-    const [t] = toDetectedTreks([det], [], "pune", "c", {});
+    const [t] = toDetectedTreks([det], [], {});
     expect(t.name).toBe("Unnamed peak (~500 m)");
   });
 });

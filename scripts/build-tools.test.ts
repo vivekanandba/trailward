@@ -3,6 +3,7 @@ import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown } from "./build-detect";
 import { featuresNear } from "./build-names";
+import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
 import { pickAltNames } from "./geonames/build-geonames";
 import type { Trek } from "../src/lib/trek";
@@ -63,15 +64,15 @@ describe("pickTargets (hill features)", () => {
     expect(ids).not.toContain("plain");
   });
 
-  it("adds the top-scoring discovery peaks per region, without duplicating", () => {
+  it("adds the top-scoring discovery peak per 1° cell, without duplicating", () => {
     const treks = [
       mk({ id: "hi", discoveryScore: 0.9 }),
-      mk({ id: "lo", discoveryScore: 0.1 }),
-      mk({ id: "other", cityId: "pune", discoveryScore: 0.5 }),
+      mk({ id: "lo", discoveryScore: 0.1 }), // same cell as "hi" → loses
+      mk({ id: "other", lat: 18.5, lng: 73.9, discoveryScore: 0.5 }), // its own cell
     ];
-    const ids = pickTargets(treks, 1).map((t) => t.id);
-    expect(ids).toContain("hi"); // top of bangalore
-    expect(ids).toContain("other"); // top of its own region
+    const ids = pickTargets(treks, 6).map((t) => t.id);
+    expect(ids).toContain("hi");
+    expect(ids).toContain("other");
     expect(ids).not.toContain("lo");
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -166,5 +167,29 @@ describe("featuresNear (build-names grid)", () => {
     const near = featuresNear(grid, 13.0, 77.0).map((f) => f.name);
     expect(near).toContain("Near RF");
     expect(near).not.toContain("Far RF");
+  });
+});
+
+describe("region-free migration helpers (spec 30)", () => {
+  it("regionFreeId strips per-region suffixes, leaves curated slugs alone", () => {
+    expect(regionFreeId("gn-11252043--bengaluru")).toBe("gn-11252043");
+    expect(regionFreeId("d12-2947-1901-246-99--bengaluru")).toBe("d12-2947-1901-246-99");
+    expect(regionFreeId("osm-123--pune")).toBe("osm-123");
+    expect(regionFreeId("skandagiri")).toBe("skandagiri");
+  });
+
+  it("mergeDuplicates unions enrichment and prefers a real name over a placeholder", () => {
+    const a = mk({ id: "d12-1--x", name: "Unnamed peak (~500 m)", bestSeason: "Dec–Apr (driest)" });
+    const b = mk({
+      id: "d12-1--y",
+      name: "Bilikal Betta",
+      landCover: "Forest",
+      highlights: "via issue #3",
+    });
+    const merged = mergeDuplicates([a, b]);
+    expect(merged.name).toBe("Bilikal Betta");
+    expect(merged.bestSeason).toBe("Dec–Apr (driest)");
+    expect(merged.landCover).toBe("Forest");
+    expect(merged.cityId).toBeUndefined(); // discovery pins are nationwide now
   });
 });

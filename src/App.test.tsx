@@ -8,11 +8,10 @@ vi.mock("./components/TrekMap", () => ({
   default: () => <div data-testid="trek-map" />,
 }));
 
-// The real dataset is a ~22 MB lazily-imported chunk (spec 27) — far too slow
-// to transform in jsdom. Mock it with two curated records; the loading flow
-// (dynamic import → state) still runs for real.
-vi.mock("./data/treks.json", () => ({
-  default: [
+// The app fetches spatial cell files at runtime (spec 30); mock the loader
+// with two curated records so the load→state flow still runs for real.
+vi.mock("./lib/cells", () => ({
+  loadTreksAround: async () => [
     {
       id: "skandagiri",
       name: "Skandagiri",

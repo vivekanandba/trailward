@@ -40,17 +40,18 @@ export function pickTargets(treks: Trek[], topPerRegion = TOP_PER_REGION): Trek[
   for (const t of treks) {
     if (t.tier === "curated" || t.trail || t.pois) chosen.set(t.id, t);
   }
-  const byRegion = new Map<string, Trek[]>();
+  // Region-free (spec 30): bucket by 1° cell so the Overpass budget spreads
+  // across the country instead of clustering on one hot area.
+  const byCell = new Map<string, Trek[]>();
   for (const t of treks) {
     if (t.tier !== "discovery") continue;
-    const list = byRegion.get(t.cityId) ?? [];
-    list.push(t);
-    byRegion.set(t.cityId, list);
+    const k = `${Math.floor(t.lat)}:${Math.floor(t.lng)}`;
+    (byCell.get(k) ?? byCell.set(k, []).get(k)!).push(t);
   }
-  for (const list of byRegion.values()) {
+  for (const list of byCell.values()) {
     list
       .sort((a, b) => (b.discoveryScore ?? 0) - (a.discoveryScore ?? 0))
-      .slice(0, topPerRegion)
+      .slice(0, Math.max(1, Math.floor(topPerRegion / 6)))
       .forEach((t) => chosen.set(t.id, t));
   }
   return [...chosen.values()];

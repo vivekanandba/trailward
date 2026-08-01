@@ -23,12 +23,13 @@ jobs:
       - run: npm run build:data
       - run: npm run build:discovery
       - run: npm run validate:data
+      - run: npm run build:chunks
       - name: Commit refreshed data if changed
         run: |
-          if [[ -n "$(git status --porcelain src/data/treks.json)" ]]; then
+          if [[ -n "$(git status --porcelain src/data/treks.json public/data)" ]]; then
             git config user.name "trailward-bot"
             git config user.email "actions@github.com"
-            git add src/data/treks.json
+            git add src/data/treks.json public/data
             git commit -m "chore(data): weekly refresh of treks.json"
             git push
           else

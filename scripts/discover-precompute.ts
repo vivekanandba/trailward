@@ -23,8 +23,8 @@ import type { ParsedPeak } from "../src/lib/overpass";
 import { PRESET_ORIGINS } from "../src/lib/cities";
 import { fetchPeaks, fetchTourismPoints } from "./sources/overpass";
 import { manualPeaksNear } from "./seed/manual-peaks";
-import { geonamesSummitsNear, type GeonamesSummit } from "./sources/geonames";
-import { detectedSummitsNear, humanNames } from "./sources/detected";
+import { geonamesSummitsAll, type GeonamesSummit } from "./sources/geonames";
+import { detectedSummitsAll, humanNames } from "./sources/detected";
 import type { DetectedSummit } from "./build-detect";
 import { fetchTrailAndPois } from "./sources/trails";
 import { fetchElevations } from "./sources/elevation";
@@ -57,12 +57,6 @@ export interface DiscoverFetchers {
     pois?: Trek["pois"];
     hillFeatures?: Trek["hillFeatures"];
   }>;
-  /** Optional GeoNames listed summits (spec 16) — appended as lightweight,
-   *  unscored "listed" pins (name + elevation only, no DEM cost). */
-  listedSummits?(origin: Origin, radiusKm: number): GeonamesSummit[];
-  /** Optional terrain-detected summits (spec 27) — found by scanning the DEM
-   *  itself; absent from every name database by construction. */
-  detectedSummits?(origin: Origin, radiusKm: number): DetectedSummit[];
 }
 
 // A manual peak this close to an OSM candidate is the same summit — drop the OSM
@@ -102,13 +96,6 @@ const round = (x: number, dp = 0): number => {
   const f = 10 ** dp;
   return Math.round(x * f) / f;
 };
-
-function slug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 // A discovery peak this close to a curated trek is almost certainly the same
 // summit; drop it so Bangalore's famous curated hills aren't duplicated as
@@ -202,12 +189,7 @@ export function makeOccupancy(withinKm = LISTED_DEDUP_KM): {
   };
 }
 
-export function toListedTreks(
-  summits: GeonamesSummit[],
-  scored: Trek[],
-  regionSlug: string,
-  cityId: string,
-): Trek[] {
+export function toListedTreks(summits: GeonamesSummit[], scored: Trek[]): Trek[] {
   const { occupy, nearOccupied } = makeOccupancy();
   for (const s of scored) occupy(s.lat, s.lng);
 
@@ -216,11 +198,10 @@ export function toListedTreks(
     if (nearOccupied(s.lat, s.lng)) continue;
     occupy(s.lat, s.lng); // also dedupe listed against each other
     listed.push({
-      id: `gn-${s.id}--${regionSlug}`,
+      id: `gn-${s.id}`,
       name: s.name,
       lat: s.lat,
       lng: s.lng,
-      cityId,
       tier: "discovery",
       ...(s.elevationM !== undefined ? { elevationM: s.elevationM } : {}),
       // Tile-DEM terrain rank (spec 17), when build:geonames resolved it.
@@ -284,7 +265,6 @@ export async function precomputeRegion(
     );
   }
   const tourism = (await fetchers.tourismPoints?.(origin, config.radiusKm)) ?? [];
-  const regionSlug = slug(origin.name);
 
   const results: Trek[] = [];
   for (let i = 0; i < candidates.length; i++) {
@@ -320,11 +300,12 @@ export async function precomputeRegion(
 
     const osmId = c.id.replace(/^osm-/, "");
     results.push({
-      id: `${c.id}--${regionSlug}`,
+      // Region-free (spec 30): one summit, one record, however many origins
+      // can reach it — the app filters by distance, not membership.
+      id: c.id,
       name: c.notability.nameEn ?? c.name,
       lat: c.lat,
       lng: c.lng,
-      cityId: origin.id,
       tier: "discovery",
       elevationM: centerElev === undefined ? undefined : round(centerElev),
       reliefM: round(terrain.reliefM),
@@ -380,28 +361,6 @@ export async function precomputeRegion(
     }
   }
 
-  // Append GeoNames listed summits (spec 16) — deduped against everything we
-  // just scored, added as unscored name+elevation pins. They sort below the
-  // ranked peaks (no discoveryScore), so the UI's ranked view stays on top.
-  const summits = fetchers.listedSummits?.(origin, config.radiusKm) ?? [];
-  if (summits.length > 0) {
-    const listed = toListedTreks(summits, results, regionSlug, origin.id);
-    if (listed.length > 0) {
-      console.log(`[discover] ${origin.name}: +${listed.length} GeoNames listed summits.`);
-      results.push(...listed);
-    }
-  }
-
-  // Append terrain-detected summits (spec 27) LAST — any named pin wins over a
-  // detected one at the same spot, so these are strictly the unlisted summits.
-  const det = fetchers.detectedSummits?.(origin, config.radiusKm) ?? [];
-  if (det.length > 0) {
-    const detected = toDetectedTreks(det, results, regionSlug, origin.id);
-    if (detected.length > 0) {
-      console.log(`[discover] ${origin.name}: +${detected.length} terrain-detected summits.`);
-      results.push(...detected);
-    }
-  }
   return results;
 }
 
@@ -418,8 +377,6 @@ const DETECTED_DEDUP_KM = 0.4;
 export function toDetectedTreks(
   summits: DetectedSummit[],
   existing: Trek[],
-  regionSlug: string,
-  cityId: string,
   human: Record<string, { name: string; issue: number }> = humanNames(),
 ): Trek[] {
   const { occupy, nearOccupied } = makeOccupancy(DETECTED_DEDUP_KM);
@@ -432,11 +389,10 @@ export function toDetectedTreks(
     // carries, so cron regenerations can never lose it.
     const h = human[s.id];
     out.push({
-      id: `${s.id}--${regionSlug}`,
+      id: s.id,
       name: h?.name ?? s.name,
       lat: s.lat,
       lng: s.lng,
-      cityId,
       tier: "discovery",
       detected: true,
       elevationM: s.elevationM,
@@ -534,8 +490,6 @@ function liveFetchers(): DiscoverFetchers {
       return out;
     },
     trailAndPois: (peak) => fetchTrailAndPois(peak, fetchElevations),
-    listedSummits: (origin, radiusKm) => geonamesSummitsNear(origin, radiusKm),
-    detectedSummits: (origin, radiusKm) => detectedSummitsNear(origin, radiusKm),
   };
 }
 
@@ -555,41 +509,58 @@ async function main(): Promise<void> {
   }
   const curatedById = new Map(enrichedCurated.map((t) => [t.id, t]));
 
-  const recomputed = new Map<string, Trek[]>();
+  // OSM discovery runs as per-origin "enrichment islands" (Overpass can't take
+  // an all-India peaks query in one bite); records are region-free (spec 30),
+  // so a summit reachable from two origins appears once — last write wins.
+  const osmById = new Map<string, Trek>();
+  const succeeded: Origin[] = [];
   for (const origin of PRESET_ORIGINS) {
     const config = configFor(origin);
     try {
       console.log(`[discover] ${origin.name}: discovering peaks within ${config.radiusKm} km…`);
       const treks = await precomputeRegion(origin, fetchers, config);
-      const curatedHere = existing.filter((t) => t.tier === "curated" && t.cityId === origin.id);
-      const deduped = dedupeAgainstCurated(treks, curatedHere);
-      // Never let an empty result (e.g. an Overpass timeout that returns no
-      // elements rather than throwing) wipe a region's existing discovery peaks.
-      const priorDiscovery = existing.filter(
-        (t) => t.tier === "discovery" && t.cityId === origin.id,
-      ).length;
-      if (deduped.length === 0 && priorDiscovery > 0) {
-        console.warn(
-          `[discover] ${origin.name}: 0 peaks returned but ${priorDiscovery} exist — keeping prior.`,
-        );
+      const curated = existing.filter((t) => t.tier === "curated");
+      const deduped = dedupeAgainstCurated(treks, curated);
+      if (deduped.length === 0) {
+        // An Overpass timeout can return no elements rather than throwing —
+        // treat as failure so the region's prior records are kept.
+        console.warn(`[discover] ${origin.name}: 0 peaks returned — keeping prior.`);
         continue;
       }
-      recomputed.set(origin.id, deduped);
-      const note = curatedHere.length ? ` (supplementing ${curatedHere.length} curated)` : "";
-      console.log(`[discover] ${origin.name}: ${deduped.length} ranked discovery peaks${note}.`);
+      for (const t of deduped) osmById.set(t.id, t);
+      succeeded.push(origin);
+      console.log(`[discover] ${origin.name}: ${deduped.length} ranked discovery peaks.`);
     } catch (err) {
       console.warn(`[discover] ${origin.name} skipped: ${(err as Error).message}`);
     }
   }
 
-  // Keep curated (terrain-enriched) + any discovery region we did NOT recompute;
-  // replace the discovery set for every region we did.
-  const kept = existing
-    .filter((t) => t.tier === "curated" || !recomputed.has(t.cityId))
+  // Preserve existing OSM/manual records that this run did NOT reproduce and
+  // that are not inside any successfully recomputed region (e.g. a failed
+  // region's peaks, or historical records beyond the enrichment islands).
+  const inSucceeded = (t: Trek): boolean =>
+    succeeded.some((o) => distanceFrom(o, t) <= configFor(o).radiusKm);
+  for (const t of existing) {
+    if (t.tier !== "discovery") continue;
+    if (!/^(osm|manual)-/.test(t.id)) continue;
+    if (!osmById.has(t.id) && !inSucceeded(t)) osmById.set(t.id, t);
+  }
+
+  const curated = existing
+    .filter((t) => t.tier === "curated")
     .map((t) => curatedById.get(t.id) ?? t);
+  const scored = [...curated, ...osmById.values()];
+
+  // Nationwide layers (spec 30): every GeoNames summit, then every detected
+  // summit, deduped against everything already placed. Named pins always win.
+  const listed = toListedTreks(geonamesSummitsAll(), scored);
+  console.log(`[discover] +${listed.length} GeoNames listed summits (nationwide).`);
+  const detected = toDetectedTreks(detectedSummitsAll(), [...scored, ...listed]);
+  console.log(`[discover] +${detected.length} terrain-detected summits (nationwide).`);
+
   // Carry hand-baked enrichment (climate/gazetteer/hillfeatures) onto the
   // regenerated records so a cron run never silently wipes it.
-  const next = preserveEnrichment([...kept, ...[...recomputed.values()].flat()], existing);
+  const next = preserveEnrichment([...scored, ...listed, ...detected], existing);
 
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[discover] dataset invalid: ${ds.error}`);
@@ -597,7 +568,7 @@ async function main(): Promise<void> {
   const discoveryTotal = ds.treks.filter((t) => t.tier === "discovery").length;
   console.log(
     `[discover] wrote ${ds.treks.length} treks (${discoveryTotal} discovery total; ` +
-      `${recomputed.size} region(s) recomputed this run) → ${file}`,
+      `${succeeded.length} region(s) recomputed this run) → ${file}`,
   );
 }
 
