@@ -119,6 +119,31 @@ describe("createWorldCover", () => {
     const wc = createWorldCover({ level: 0, fetchRange: async () => null });
     expect(await wc.classesAt([{ lat: 0, lng: -30 }])).toEqual([undefined]);
   });
+
+  it("retries a COG after a transient error instead of poisoning the whole 3° tile", async () => {
+    let calls = 0;
+    const fetchRange = vi.fn(async (_name: string, start: number, end: number) => {
+      if (++calls === 1) throw new Error("flaky network");
+      return cog.subarray(start, Math.min(end + 1, cog.length));
+    });
+    const wc = createWorldCover({ level: 0, fetchRange });
+    const out = await wc.classesAt([
+      { lat: 14.9, lng: 75.1 }, // hits the flaky first request → no reading
+      { lat: 14.9, lng: 75.1 }, // must RETRY the header, not see a cached null
+    ]);
+    expect(out).toEqual([undefined, 10]);
+  });
+
+  it("stops refetching a persistently broken COG after repeated failures", async () => {
+    const fetchRange = vi.fn(async () => {
+      throw new Error("malformed forever");
+    });
+    const wc = createWorldCover({ level: 0, fetchRange });
+    const pts = Array.from({ length: 6 }, () => ({ lat: 14.9, lng: 75.1 }));
+    expect(await wc.classesAt(pts)).toEqual(Array(6).fill(undefined));
+    // 3 attempts, then the COG is cached as absent — not one fetch per point.
+    expect(fetchRange).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("dominantLabel natural-first rule", () => {

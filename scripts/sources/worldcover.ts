@@ -184,6 +184,11 @@ export function createWorldCover(
   // keeps the working set tiny anyway.
   const MAX_TILES = 256;
   const tiles = new Map<string, Buffer | null>();
+  // Consecutive failures per COG: transient errors retry, but a COG that keeps
+  // failing degrades to "no reading" (like a 404) instead of refetching its
+  // header for every remaining point that lands in it.
+  const MAX_FAILURES = 3;
+  const failures = new Map<string, number>();
 
   async function levelFor(name: string): Promise<CogLevel | null> {
     if (!headers.has(name)) {
@@ -225,14 +230,22 @@ export function createWorldCover(
             const tileIdx = Math.floor(py / lv.tileH) * tilesAcross + Math.floor(px / lv.tileW);
             const data = await tileData(name, lv, tileIdx);
             if (data) value = data[(py % lv.tileH) * lv.tileW + (px % lv.tileW)];
+            failures.delete(name);
           }
         } catch (err) {
           // Transient failure → leave nothing cached, so the NEXT point retries
           // this COG. (Permanently nulling the header here once poisoned every
           // point in a whole 3° tile for the rest of a run — thousands of
-          // records lost their reading to one flaky request.)
-          console.warn(`[worldcover] ${name}: ${(err as Error).message}`);
-          headers.delete(name);
+          // records lost their reading to one flaky request.) A COG that fails
+          // MAX_FAILURES times in a row is genuinely broken: cache null then.
+          const n = (failures.get(name) ?? 0) + 1;
+          console.warn(`[worldcover] ${name} (failure ${n}): ${(err as Error).message}`);
+          if (n >= MAX_FAILURES) {
+            headers.set(name, null);
+          } else {
+            failures.set(name, n);
+            headers.delete(name);
+          }
         }
         out.push(value);
       }

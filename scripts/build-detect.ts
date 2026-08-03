@@ -114,9 +114,12 @@ export function inIndia(p: { lat: number; lng: number }, mask: Set<string>): boo
 }
 
 async function loadIndiaMask(): Promise<Set<string>> {
-  const { createReadStream } = await import("node:fs");
+  const { createReadStream, existsSync } = await import("node:fs");
   const { createInterface } = await import("node:readline");
   const dump = resolve(here, "geonames/.cache/IN.txt");
+  if (!existsSync(dump)) {
+    throw new Error(`India mask needs ${dump} — run \`npm run build:geonames\` first.`);
+  }
   const coords: { lat: number; lng: number }[] = [];
   const rl = createInterface({ input: createReadStream(dump, "utf8"), crlfDelay: Infinity });
   for await (const line of rl) {
