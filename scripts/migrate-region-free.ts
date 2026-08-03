@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   }
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[migrate] dataset invalid: ${ds.error}`);
-  writeFileSync(treksFile, JSON.stringify(ds.treks, null, 2) + "\n", "utf8");
+  writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
   console.log(`[migrate] ${treks.length} records → ${ds.treks.length} region-free.`);
 }
 

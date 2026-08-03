@@ -179,6 +179,10 @@ export function createWorldCover(
       }));
 
   const headers = new Map<string, CogLevel[] | null>();
+  // Decompressed internal tiles are ~1 MB each; an all-India run touches ~2,000
+  // of them, so cap the cache (FIFO) — callers sample in spatial order, which
+  // keeps the working set tiny anyway.
+  const MAX_TILES = 256;
   const tiles = new Map<string, Buffer | null>();
 
   async function levelFor(name: string): Promise<CogLevel | null> {
@@ -200,6 +204,7 @@ export function createWorldCover(
         tiles.set(key, null);
       } else {
         const raw = await fetchRange(name, off, off + len - 1);
+        if (tiles.size >= MAX_TILES) tiles.delete(tiles.keys().next().value!);
         tiles.set(key, raw ? inflateSync(raw) : null);
       }
     }
@@ -222,9 +227,12 @@ export function createWorldCover(
             if (data) value = data[(py % lv.tileH) * lv.tileW + (px % lv.tileW)];
           }
         } catch (err) {
-          // A malformed/absent tile degrades to "no reading" for this point.
+          // Transient failure → leave nothing cached, so the NEXT point retries
+          // this COG. (Permanently nulling the header here once poisoned every
+          // point in a whole 3° tile for the rest of a run — thousands of
+          // records lost their reading to one flaky request.)
           console.warn(`[worldcover] ${name}: ${(err as Error).message}`);
-          headers.set(name, null);
+          headers.delete(name);
         }
         out.push(value);
       }

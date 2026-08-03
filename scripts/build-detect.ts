@@ -84,6 +84,50 @@ export function filterUnknown(
 // India + Himalayan margins; includes some ocean, which scans as sea level.
 const INDIA = { latMin: 6, latMax: 36, lngMin: 68, lngMax: 97.5 };
 
+/**
+ * The scan bbox unavoidably sweeps Nepal, Pakistan, Tibet, Bangladesh and
+ * Myanmar — where our NAMED layers have no coverage, so famous peaks would
+ * surface as "Unnamed" (Everest as an unnamed pin). Mask to India using the
+ * GeoNames IN dump as a density mask: India is blanketed by ~660k features,
+ * the neighbours by none. A summit within one ~9 km cell of any Indian
+ * feature counts as in-India. Pure given the mask; tested.
+ */
+export const MASK_CELL_DEG = 0.08;
+
+export function buildIndiaMask(featureCoords: Iterable<{ lat: number; lng: number }>): Set<string> {
+  const mask = new Set<string>();
+  for (const f of featureCoords) {
+    mask.add(`${Math.floor(f.lat / MASK_CELL_DEG)}:${Math.floor(f.lng / MASK_CELL_DEG)}`);
+  }
+  return mask;
+}
+
+export function inIndia(p: { lat: number; lng: number }, mask: Set<string>): boolean {
+  const bx = Math.floor(p.lat / MASK_CELL_DEG);
+  const by = Math.floor(p.lng / MASK_CELL_DEG);
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (mask.has(`${bx + dx}:${by + dy}`)) return true;
+    }
+  }
+  return false;
+}
+
+async function loadIndiaMask(): Promise<Set<string>> {
+  const { createReadStream } = await import("node:fs");
+  const { createInterface } = await import("node:readline");
+  const dump = resolve(here, "geonames/.cache/IN.txt");
+  const coords: { lat: number; lng: number }[] = [];
+  const rl = createInterface({ input: createReadStream(dump, "utf8"), crlfDelay: Infinity });
+  for await (const line of rl) {
+    const c = line.split("	");
+    const lat = Number(c[4]);
+    const lng = Number(c[5]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) coords.push({ lat, lng });
+  }
+  return buildIndiaMask(coords);
+}
+
 async function detectIndia(calibrate: boolean): Promise<DetectedPeak[]> {
   const midLat = 20;
   const mpp = metresPerPixel(midLat);
@@ -148,7 +192,10 @@ async function score(peaks: DetectedPeak[]): Promise<DetectedSummit[]> {
       const { gx, gy } = globalPixel(pt.lat, pt.lng);
       await prefetch(Math.floor(gx / TILE), Math.floor(gy / TILE));
       const e = grid.at(Math.floor(gx), Math.floor(gy));
-      elevs.push(Number.isNaN(e) ? undefined : e);
+      // Corrupt DEM pixels also appear as absurd NEGATIVE values (seen: −9,820 m
+      // near Assam, which exploded "relief" to 9,861). Anything outside the
+      // plausible band is a broken sample, not ground.
+      elevs.push(Number.isNaN(e) || e < -430 || e > 9000 ? undefined : e);
     }
     const center = elevs[0] ?? p.elevationM;
     const terrain = computeTerrain(center, elevs.slice(1), 450);
@@ -203,7 +250,10 @@ async function main(): Promise<void> {
     }
   }
 
-  const fresh = filterUnknown([...all.values()], treks);
+  const mask = await loadIndiaMask();
+  const inCountry = [...all.values()].filter((p) => inIndia(p, mask));
+  console.log(`[detect] India mask: ${all.size} → ${inCountry.length} candidates.`);
+  const fresh = filterUnknown(inCountry, treks);
   console.log(`[detect] ${all.size} distinct candidates → ${fresh.length} not in any database.`);
 
   if (calibrate) {

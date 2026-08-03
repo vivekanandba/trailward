@@ -564,7 +564,7 @@ async function main(): Promise<void> {
 
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[discover] dataset invalid: ${ds.error}`);
-  writeFileSync(file, JSON.stringify(ds.treks, null, 2) + "\n", "utf8");
+  writeFileSync(file, JSON.stringify(ds.treks) + "\n", "utf8");
   const discoveryTotal = ds.treks.filter((t) => t.tier === "discovery").length;
   console.log(
     `[discover] wrote ${ds.treks.length} treks (${discoveryTotal} discovery total; ` +

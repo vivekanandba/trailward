@@ -7,6 +7,14 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "/trailward/",
   plugins: [react()],
+  server: {
+    watch: {
+      // Build-tool artifacts, not app inputs. scripts/.cache alone holds >100k
+      // DEM tiles — watching them exhausts the kernel inotify limit (ENOSPC)
+      // and kills the dev server.
+      ignored: ["**/scripts/.cache/**", "**/public/data/**", "**/scripts/detected/**"],
+    },
+  },
   build: {
     rollupOptions: {
       output: {

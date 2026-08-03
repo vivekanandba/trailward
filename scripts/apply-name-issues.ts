@@ -157,7 +157,7 @@ async function main(): Promise<void> {
   writeFileSync(detectedFile, JSON.stringify(applied2.summits) + "\n", "utf8");
   const ds = validateDataset(applied2.treks);
   if (!ds.ok) throw new Error(`[apply-names] dataset invalid: ${ds.error}`);
-  writeFileSync(treksFile, JSON.stringify(ds.treks, null, 2) + "\n", "utf8");
+  writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
   console.log(`[apply-names] applied ${applied} name(s).`);
 }
 

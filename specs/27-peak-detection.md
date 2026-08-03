@@ -32,6 +32,20 @@ candidate in the Savandurga area is Savandurga itself (elev 1217, relief 374).
   decision, not a guess.
 - Output: committed `scripts/detected/india-detected.json` with **stable ids**
   (`d12-<tile>-<pixel>`), so the weekly cron regenerates deterministically.
+- **Id stability caveat (learned the hard way):** ids are stable _across crons_ (which only read
+  the committed file) but NOT across _rescans that change detection parameters_. The all-India
+  rescan computed pixel radii at lat 20 instead of per-region latitudes, shifting NMS winners by
+  ~1 px — 0 of 28,092 prior ids survived, so id-keyed `preserveEnrichment` and `human-names.json`
+  carried nothing. Detected-pin enrichment must be recomputable (bestSeason from climate.json,
+  landCover by re-sampling, names by re-inference); anything id-keyed and NOT recomputable needs a
+  coordinate-based carryover step when rescanning.
+- **All-India scan (spec 30):** one pass over bbox lat 6–36 / lng 68–97.5 with a highland band
+  (≥2,500 m → min relief 300 m, NMS ~1.5 km) so Himalayan ridge crests don't all read as summits,
+  plus an **India mask** — GeoNames IN.txt features on 0.08° cells with a 3×3 neighbourhood —
+  because the bbox unavoidably sweeps Nepal/Pakistan/Tibet/Bangladesh/Myanmar where our named
+  layers have no coverage (Everest would surface as an unnamed pin). Corrupt DEM pixels appear as
+  absurd values in BOTH directions (seen: −9,820 m near Assam → "relief 9,861"); detection skips
+  e > 9000 and the scorer treats e < −430 or e > 9000 as no-reading.
 
 ## Pipeline & UI
 

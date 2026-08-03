@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
-import { filterUnknown } from "./build-detect";
+import { filterUnknown, buildIndiaMask, inIndia } from "./build-detect";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -191,5 +191,18 @@ describe("region-free migration helpers (spec 30)", () => {
     expect(merged.bestSeason).toBe("Dec–Apr (driest)");
     expect(merged.landCover).toBe("Forest");
     expect(merged.cityId).toBeUndefined(); // discovery pins are nationwide now
+  });
+});
+
+describe("India mask (spec 30 — detection must not surface neighbours' peaks)", () => {
+  it("keeps summits near Indian features and drops those far from any", () => {
+    const mask = buildIndiaMask([
+      { lat: 12.97, lng: 77.59 },
+      { lat: 32.2, lng: 77.18 },
+    ]);
+    expect(inIndia({ lat: 12.99, lng: 77.61 }, mask)).toBe(true); // beside Bengaluru
+    expect(inIndia({ lat: 32.21, lng: 77.19 }, mask)).toBe(true); // Himachal
+    expect(inIndia({ lat: 28.0, lng: 84.0 }, mask)).toBe(false); // central Nepal
+    expect(inIndia({ lat: 36.0, lng: 68.35 }, mask)).toBe(false); // Hindu Kush
   });
 });

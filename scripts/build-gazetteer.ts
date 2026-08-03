@@ -253,7 +253,7 @@ async function main(): Promise<void> {
 
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[gazetteer] dataset invalid: ${ds.error}`);
-  writeFileSync(treksFile, JSON.stringify(ds.treks, null, 2) + "\n", "utf8");
+  writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
   console.log(`[gazetteer] baked historicalNote onto ${baked} treks.`);
   for (const t of ds.treks.filter((x) => x.historicalNote).slice(0, 14)) {
     console.log(
