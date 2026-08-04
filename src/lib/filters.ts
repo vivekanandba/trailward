@@ -15,6 +15,7 @@ export interface FilterState {
   query: string; // free-text on name/town
   hiddenGemsOnly: boolean; // discoveryScore >= HIDDEN_GEM_MIN (spec 15)
   minReliefM?: number; // keep peaks with reliefM >= this (rugged filter)
+  namedOnly: boolean; // hide "Unnamed …" terrain-detected pins (spec 31)
 }
 
 // A discovery peak at/above this score counts as a "hidden gem".
@@ -27,6 +28,7 @@ export const DEFAULT_FILTERS: FilterState = {
   nightOnly: false,
   query: "",
   hiddenGemsOnly: false,
+  namedOnly: false,
 };
 
 // Distance from the origin: prefer the precomputed road distance, fall back to
@@ -90,6 +92,8 @@ export function applyFilters(treks: Trek[], origin: Origin, f: FilterState): Tre
     }
 
     if (f.hiddenGemsOnly && (t.discoveryScore ?? 0) < HIDDEN_GEM_MIN) return false;
+
+    if (f.namedOnly && t.name.startsWith("Unnamed")) return false;
 
     if (f.minReliefM !== undefined) {
       if (t.reliefM === undefined || t.reliefM < f.minReliefM) return false;

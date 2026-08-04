@@ -28,6 +28,7 @@
     "build:hillfeatures": "tsx scripts/build-hillfeatures.ts",
     "build:landcover": "tsx scripts/build-landcover.ts",
     "build:detect": "tsx scripts/build-detect.ts",
+    "build:extra": "tsx scripts/build-summits-extra.ts",
     "build:names": "tsx scripts/build-names.ts",
     "build:chunks": "tsx scripts/chunk-data.ts",
     "apply:names": "tsx scripts/apply-name-issues.ts",

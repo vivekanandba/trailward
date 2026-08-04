@@ -23,6 +23,9 @@ jobs:
       - run: npm run build:data
       - run: npm run build:discovery
       - run: npm run validate:data
+      # A rebake can "succeed" while silently stripping enrichment (spec 31) —
+      # refuse to commit if any field count regressed vs the committed data.
+      - run: npx tsx scripts/check-enrichment-drift.ts
       - run: npm run build:chunks
       - name: Commit refreshed data if changed
         run: |

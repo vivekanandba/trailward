@@ -103,6 +103,7 @@ export default function FilterBar({
     filters.permitRequired === undefined &&
     !filters.nightOnly &&
     !filters.hiddenGemsOnly &&
+    !filters.namedOnly &&
     filters.minReliefM === undefined &&
     filters.query.trim() === "";
 
@@ -318,6 +319,15 @@ export default function FilterBar({
               className="h-4 w-4 rounded border-trail-300 accent-trail-600"
             />
             Hidden gems only
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-trail-800 dark:text-slate-100">
+            <input
+              type="checkbox"
+              checked={filters.namedOnly}
+              onChange={(e) => patch({ namedOnly: e.target.checked })}
+              className="h-4 w-4 rounded border-trail-300 accent-trail-600"
+            />
+            Named pins only
           </label>
           <div>
             <div className="flex items-center justify-between text-sm">

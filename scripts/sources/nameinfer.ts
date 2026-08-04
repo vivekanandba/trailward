@@ -25,6 +25,26 @@ export const NAMER_CODES: Record<string, number> = {
   CLF: 0.5,
 };
 
+/**
+ * Village rule (spec 31): ordinary populated places never name a summit —
+ * EXCEPT when the village's own name says it's a hill. "Huliyurdurga" at the
+ * base of a fort hill IS the hill's name; the settlement took it from the
+ * rock. Only plain villages/localities qualify (never PPLA/PPLC admin seats —
+ * "Chandigarh" must not name a nearby knoll), the hill-word must END the
+ * name, and the name is kept whole, never stripped.
+ */
+export const VILLAGE_NAMER_CODES: Record<string, number> = {
+  PPL: 1.0,
+  PPLL: 1.0,
+  PPLX: 1.0,
+};
+
+// Hill words across Indian languages: Kannada betta/gudda, Telugu konda/gutta,
+// Tamil malai, Hindi pahar/garh/tila, Marathi dongar/tekdi, plus pan-Indian
+// giri/durga/parvat and Himalayan dhar/tibba/kangri.
+export const HILL_WORD_RE =
+  /(betta|gudda|gutta|konda|kunda|malai|mala|giri|durga?|garh|qila|kota|kille|parvat(a|am)?|pahar|pahad|dongar|tekdi|tekri|tila|dhar|tibba|kangri|shikhar|hill|peak)$/i;
+
 // Suffixes that name the FEATURE, not the hill. Stripped iteratively so
 // "X Reserved Forest Extension" → "X".
 const SUFFIX_RE =
@@ -93,14 +113,25 @@ export function inferName(
   distanceKm: (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => number,
 ): InferredName | undefined {
   let best: InferredName | undefined;
+  let bestVillage: InferredName | undefined;
   for (const f of features) {
     const maxKm = NAMER_CODES[f.code];
-    if (maxKm === undefined) continue;
+    if (maxKm !== undefined) {
+      const km = distanceKm(summit, f);
+      if (km > maxKm) continue;
+      const name = stripFeatureSuffix(f.name);
+      if (!name) continue;
+      if (!best || km < best.km) best = { name, from: f.name, code: f.code, km };
+      continue;
+    }
+    const villageKm = VILLAGE_NAMER_CODES[f.code];
+    if (villageKm === undefined) continue;
+    const name = f.name.trim();
+    if (name.length < 4 || !HILL_WORD_RE.test(name)) continue;
     const km = distanceKm(summit, f);
-    if (km > maxKm) continue;
-    const name = stripFeatureSuffix(f.name);
-    if (!name) continue;
-    if (!best || km < best.km) best = { name, from: f.name, code: f.code, km };
+    if (km > villageKm) continue;
+    if (!bestVillage || km < bestVillage.km) bestVillage = { name, from: f.name, code: f.code, km };
   }
-  return best;
+  // An ON-hill feature (forest/temple/pass) always outranks the village rule.
+  return best ?? bestVillage;
 }

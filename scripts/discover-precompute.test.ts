@@ -7,6 +7,7 @@ import {
   toListedTreks,
   toDetectedTreks,
   preserveEnrichment,
+  preserveEnrichmentByLocation,
   type DiscoverFetchers,
   type RegionConfig,
 } from "./discover-precompute";
@@ -284,6 +285,24 @@ describe("GeoNames listed summits (spec 16)", () => {
     expect(validateTrek(t).ok).toBe(true);
   });
 
+  it("uses an extra summit's own id and source link (spec 31)", () => {
+    const [t] = toListedTreks(
+      [{ ...summit, fullId: "osmx-991", sourceUrl: "https://www.openstreetmap.org/node/991" }],
+      [],
+    );
+    expect(t.id).toBe("osmx-991");
+    expect(t.sources[0]).toBe("https://www.openstreetmap.org/node/991");
+    expect(validateTrek(t).ok).toBe(true);
+  });
+
+  it("an extra summit within the occupancy radius of a GeoNames pin is dropped", () => {
+    const out = toListedTreks(
+      [summit, { ...summit, id: "x", fullId: "wd-Q9", sourceUrl: "u", lat: summit.lat + 0.001 }],
+      [],
+    );
+    expect(out.map((t) => t.id)).toEqual(["gn-12345"]);
+  });
+
   it("carries DEM-scored fields (spec 17) so the pin ranks like an OSM peak", () => {
     const [t] = toListedTreks(
       [
@@ -424,6 +443,21 @@ describe("preserveEnrichment (spec 25 — cron must not wipe hand-baked fields)"
   it("never overwrites a value the fresh record already has", () => {
     const [out] = preserveEnrichment([{ ...fresh, hillFeatures: ["temple"] }], [prev]);
     expect(out.hillFeatures).toEqual(["temple"]);
+  });
+
+  it("preserveEnrichmentByLocation carries fields across regenerated ids (spec 27)", () => {
+    // Same summit, ~1 px NMS shift → new id, coordinates ~40 m away.
+    const rescanned: Trek = { ...fresh, id: "d12-9-9-9-9", lat: 13.0004, lng: 77.0 };
+    const [out] = preserveEnrichmentByLocation([rescanned], [prev]);
+    expect(out.bestSeason).toBe("Dec–Apr (driest)");
+    expect(out.hillFeatures).toEqual(["fort"]);
+    expect(out.id).toBe("d12-9-9-9-9"); // only fields carry, never identity
+  });
+
+  it("preserveEnrichmentByLocation ignores records beyond the carryover radius", () => {
+    const farAway: Trek = { ...fresh, id: "d12-8-8-8-8", lat: 13.005, lng: 77.0 }; // ~550 m
+    const [out] = preserveEnrichmentByLocation([farAway], [prev]);
+    expect(out.bestSeason).toBeUndefined();
   });
 
   it("leaves records with no previous counterpart untouched", () => {

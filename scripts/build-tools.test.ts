@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown, buildIndiaMask, inIndia } from "./build-detect";
+import { fieldCounts, driftViolations } from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -191,6 +192,36 @@ describe("region-free migration helpers (spec 30)", () => {
     expect(merged.bestSeason).toBe("Dec–Apr (driest)");
     expect(merged.landCover).toBe("Forest");
     expect(merged.cityId).toBeUndefined(); // discovery pins are nationwide now
+  });
+});
+
+describe("enrichment drift guard (spec 31)", () => {
+  const trek = (over: Record<string, unknown>) =>
+    ({ id: "t", name: "T", lat: 12, lng: 77, ...over }) as never;
+
+  it("counts records, non-Unnamed names, and enrichment fields", () => {
+    const counts = fieldCounts([
+      trek({ name: "Skandagiri", bestSeason: "Oct–Feb", landCover: "Forest" }),
+      trek({ name: "Unnamed peak (~900 m)", bestSeason: "Oct–Feb" }),
+    ]);
+    expect(counts).toMatchObject({ records: 2, name: 1, bestSeason: 2, landCover: 1 });
+  });
+
+  it("flags drops beyond tolerance, allows small wobble and growth", () => {
+    const baseline = { records: 1000, bestSeason: 1000, landCover: 500 };
+    expect(driftViolations(baseline, { records: 1000, bestSeason: 995, landCover: 600 })).toEqual(
+      [],
+    );
+    const bad = driftViolations(baseline, { records: 1000, bestSeason: 400, landCover: 500 });
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain("bestSeason: 1000 → 400");
+  });
+
+  it("tolerates single-record wobble on tiny hand-curated fields", () => {
+    // heritage 2 → 1 is a 50% relative drop but only one record — not a failure.
+    expect(driftViolations({ heritage: 2 }, { heritage: 1 })).toEqual([]);
+    // A wipe of a mid-size field still trips even though it's "only" 30 records.
+    expect(driftViolations({ hillFeatures: 30 }, { hillFeatures: 0 })).toHaveLength(1);
   });
 });
 

@@ -174,6 +174,9 @@ function TrekPin({
   // Size discovery pins by their hidden-gem score so top picks read first.
   const baseRadius =
     isDiscovery && trek.discoveryScore !== undefined ? 6 + Math.round(trek.discoveryScore * 5) : 8;
+  // Unnamed terrain-detected pins are the bulk of the nationwide set (spec 31):
+  // render them recessive — smaller, translucent — so named summits read first.
+  const unnamed = trek.name.startsWith("Unnamed");
   const label = trek.difficulty
     ? difficultyLabel(trek.difficulty)
     : trek.estimatedDifficulty
@@ -182,14 +185,14 @@ function TrekPin({
   return (
     <CircleMarker
       center={[trek.lat, trek.lng]}
-      radius={selected ? 11 : baseRadius}
+      radius={selected ? 11 : unnamed ? Math.max(4, baseRadius - 2) : baseRadius}
       pathOptions={{
         // Solid white halo + a drop-shadow (see .trek-pin in index.css) so the
         // marker reads clearly over the busy terrain basemap; solid fill for punch.
         color: selected ? "#1c3927" : "#ffffff",
-        weight: selected ? 3.5 : 2.5,
+        weight: selected ? 3.5 : unnamed ? 1.5 : 2.5,
         fillColor: color,
-        fillOpacity: 1,
+        fillOpacity: unnamed && !selected ? 0.55 : 1,
         className: "trek-pin",
       }}
       eventHandlers={{ click: () => onSelect(trek.id) }}

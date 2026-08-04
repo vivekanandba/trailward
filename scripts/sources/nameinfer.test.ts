@@ -45,9 +45,24 @@ describe("inferName", () => {
     expect(inferName(summit, [temple], km)).toBeUndefined();
   });
 
-  it("never names from villages or unknown codes", () => {
+  it("never names from ordinary villages or unknown codes", () => {
     const village: NamerFeature = { name: "Somehalli", code: "PPL", lat: 13.001, lng: 77.0 };
     expect(inferName(summit, [village], km)).toBeUndefined();
+  });
+
+  it("names from a village whose own name is a hill word, kept whole (spec 31)", () => {
+    const village: NamerFeature = { name: "Huliyurdurga", code: "PPL", lat: 13.005, lng: 77.0 };
+    const hit = inferName(summit, [village], km)!;
+    expect(hit.name).toBe("Huliyurdurga");
+    expect(hit.from).toBe("Huliyurdurga");
+  });
+
+  it("village rule: respects its 1 km radius and loses to an ON-hill feature", () => {
+    const farVillage: NamerFeature = { name: "Nandibetta", code: "PPL", lat: 13.011, lng: 77.0 }; // ~1.2 km
+    expect(inferName(summit, [farVillage], km)).toBeUndefined();
+    const nearVillage: NamerFeature = { name: "Nandibetta", code: "PPL", lat: 13.001, lng: 77.0 };
+    // The forest is FARTHER than the village, but on-hill features always win.
+    expect(inferName(summit, [nearVillage, forest], km)!.name).toBe("Godumalai");
   });
 
   it("skips features whose stripped name is empty", () => {
