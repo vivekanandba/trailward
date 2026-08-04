@@ -216,6 +216,13 @@ describe("enrichment drift guard (spec 31)", () => {
     expect(bad).toHaveLength(1);
     expect(bad[0]).toContain("bestSeason: 1000 → 400");
   });
+
+  it("tolerates single-record wobble on tiny hand-curated fields", () => {
+    // heritage 2 → 1 is a 50% relative drop but only one record — not a failure.
+    expect(driftViolations({ heritage: 2 }, { heritage: 1 })).toEqual([]);
+    // A wipe of a mid-size field still trips even though it's "only" 30 records.
+    expect(driftViolations({ hillFeatures: 30 }, { hillFeatures: 0 })).toHaveLength(1);
+  });
 });
 
 describe("India mask (spec 30 — detection must not surface neighbours' peaks)", () => {

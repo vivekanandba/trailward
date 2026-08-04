@@ -37,16 +37,21 @@ export function fieldCounts(treks: Trek[]): Record<string, number> {
   return counts;
 }
 
-/** Fields whose count dropped more than `tolerance` vs the baseline. */
+// Hand-curated fields have tiny counts (heritage: 2) where one record moving
+// is a huge relative drop — a drop must also exceed this many records to fail.
+const ABSOLUTE_FLOOR = 5;
+
+/** Fields whose count dropped more than `tolerance` AND `floor` vs baseline. */
 export function driftViolations(
   baseline: Record<string, number>,
   current: Record<string, number>,
   tolerance = TOLERANCE,
+  floor = ABSOLUTE_FLOOR,
 ): string[] {
   const out: string[] = [];
   for (const [field, before] of Object.entries(baseline)) {
     const after = current[field] ?? 0;
-    if (before > 0 && after < before * (1 - tolerance)) {
+    if (before > 0 && before - after > floor && after < before * (1 - tolerance)) {
       out.push(
         `${field}: ${before} → ${after} (−${(((before - after) / before) * 100).toFixed(1)}%)`,
       );
