@@ -93,7 +93,7 @@ async function main(): Promise<void> {
   });
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[names] dataset invalid: ${ds.error}`);
-  writeFileSync(treksFile, JSON.stringify(ds.treks, null, 2) + "\n", "utf8");
+  writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
   console.log(`[names] patched ${patched} baked records.`);
   for (const s of summits.filter((x) => x.inferredFrom).slice(0, 10)) {
     console.log(`  · ${s.name}  ← ${s.inferredFrom!.slice(25, 80)}`);

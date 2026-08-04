@@ -157,7 +157,7 @@ async function main(): Promise<void> {
 
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[hillfeatures] dataset invalid: ${ds.error}`);
-  writeFileSync(treksFile, JSON.stringify(ds.treks, null, 2) + "\n", "utf8");
+  writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
   const wf = ds.treks.filter((x) => x.hillFeatures).length;
   const wp = ds.treks.filter((x) => x.protectedArea).length;
   const wh = ds.treks.filter((x) => x.heritage).length;

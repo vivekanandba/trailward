@@ -85,7 +85,7 @@ async function main(): Promise<void> {
 
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[climate] dataset invalid: ${ds.error}`);
-  writeFileSync(treksFile, JSON.stringify(ds.treks, null, 2) + "\n", "utf8");
+  writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
   console.log(`[climate] baked bestSeason onto ${baked} treks.`);
 }
 

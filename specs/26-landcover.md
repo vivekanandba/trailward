@@ -38,6 +38,16 @@ outvote its **bare granite summit** and it labels "Forest"; at 150 m it labels *
   it (spec 25B).
 - Detail panel: a "Ground cover" Fact.
 
+## Failure modes (learned on the all-India bake)
+
+- A transient fetch error must **not** cache `null` for a COG header: one flaky request then
+  poisons every point in a whole 3° tile for the rest of the run, and because the bake drops
+  stale values on "no reading", thousands of records silently _lose_ their landCover. The catch
+  now deletes the header entry so the next point retries; only a genuine 404 caches `null`.
+- Decompressed internal tiles are ~1 MB; a nationwide run touches ~2,000, so the tile cache is
+  FIFO-capped at 256 and `build-landcover` samples in spatial order (COG, then 0.1° cell),
+  writing results back by original index.
+
 ## Not done: Overture Maps places
 
 The other parked candidate needs a parquet + snappy + thrift reader — with no npm and no duckdb on
