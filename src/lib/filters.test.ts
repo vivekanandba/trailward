@@ -207,6 +207,17 @@ describe("applyFilters — terrain filters (spec 15)", () => {
       "curated-noscore",
     ]);
   });
+
+  it("namedOnly hides Unnamed terrain-detected pins (spec 31)", () => {
+    const withUnnamed = [
+      ...treks,
+      trek({ id: "d12-x", name: "Unnamed peak (~912 m)", distanceKm: 1, tier: "discovery" }),
+    ];
+    expect(applyFilters(withUnnamed, origin, filters()).map((t) => t.id)).toContain("d12-x");
+    expect(
+      applyFilters(withUnnamed, origin, filters({ namedOnly: true })).map((t) => t.id),
+    ).toEqual(["gem", "meh", "curated-noscore"]);
+  });
 });
 
 describe("countByDifficulty", () => {

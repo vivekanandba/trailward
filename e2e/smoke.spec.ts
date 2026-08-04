@@ -79,6 +79,19 @@ test("hidden-gems filter narrows a preset region's list", async ({ page }) => {
   await expect.poll(count).toBeLessThan(before);
 });
 
+test("named-pins-only filter hides Unnamed detected pins (spec 31)", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Pune" }).click();
+  await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
+  const count = async (): Promise<number> =>
+    Number((await page.getByText(/^\d+ treks?$/).innerText()).replace(/\D/g, ""));
+  const before = await count();
+  await page.getByLabel("Named pins only").check();
+  await expect.poll(count).toBeLessThan(before);
+  // Every remaining row is a real name — no "Unnamed …" placeholders.
+  await expect(page.getByRole("list").getByText(/^Unnamed (peak|hill)/)).toHaveCount(0);
+});
+
 test("any city works — a non-preset origin shows nearby peaks (spec 30)", async ({ page }) => {
   // Mysuru was never a preset region; with region-free cells (spec 30) it gets
   // real ranked peaks purely by distance.

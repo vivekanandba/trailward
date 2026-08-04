@@ -113,7 +113,7 @@ export function inIndia(p: { lat: number; lng: number }, mask: Set<string>): boo
   return false;
 }
 
-async function loadIndiaMask(): Promise<Set<string>> {
+export async function loadIndiaMask(): Promise<Set<string>> {
   const { createReadStream, existsSync } = await import("node:fs");
   const { createInterface } = await import("node:readline");
   const dump = resolve(here, "geonames/.cache/IN.txt");

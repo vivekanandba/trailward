@@ -24,6 +24,7 @@ import { PRESET_ORIGINS } from "../src/lib/cities";
 import { fetchPeaks, fetchTourismPoints } from "./sources/overpass";
 import { manualPeaksNear } from "./seed/manual-peaks";
 import { geonamesSummitsAll, type GeonamesSummit } from "./sources/geonames";
+import { extraSummitsAll } from "./sources/extrasummits";
 import { detectedSummitsAll, humanNames } from "./sources/detected";
 import type { DetectedSummit } from "./build-detect";
 import { fetchTrailAndPois } from "./sources/trails";
@@ -141,6 +142,52 @@ export function preserveEnrichment(next: Trek[], previous: Trek[]): Trek[] {
   });
 }
 
+// Detected-pin ids encode the NMS-winning DEM pixel, so a rescan with changed
+// parameters regenerates every id (spec 27: 0/28,092 survived the all-India
+// rescan) and id-keyed preservation carries nothing.
+const CARRYOVER_KM = 0.12; // ~3 z12 pixels — the same summit, shifted by NMS
+
+/**
+ * Coordinate-based fallback for `preserveEnrichment` after a rescan: for each
+ * next record still missing preserved fields, adopt them from the nearest
+ * previous record within CARRYOVER_KM. Run id-keyed preservation FIRST; this
+ * only fills what it left undefined. Pure, tested.
+ */
+export function preserveEnrichmentByLocation(next: Trek[], previous: Trek[]): Trek[] {
+  const cell = 0.002; // ~220 m buckets: CARRYOVER_KM always inside the 3×3 block
+  const grid = new Map<string, Trek[]>();
+  for (const p of previous) {
+    const key = `${Math.floor(p.lat / cell)}:${Math.floor(p.lng / cell)}`;
+    (grid.get(key) ?? grid.set(key, []).get(key)!).push(p);
+  }
+  return next.map((t) => {
+    if (PRESERVED_FIELDS.every((f) => t[f] !== undefined)) return t;
+    const bx = Math.floor(t.lat / cell);
+    const by = Math.floor(t.lng / cell);
+    let nearest: Trek | undefined;
+    let nearestKm = CARRYOVER_KM;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (const p of grid.get(`${bx + dx}:${by + dy}`) ?? []) {
+          const km = distanceFrom(p, t);
+          if (km <= nearestKm) {
+            nearest = p;
+            nearestKm = km;
+          }
+        }
+      }
+    }
+    if (!nearest) return t;
+    const out = { ...t };
+    for (const f of PRESERVED_FIELDS) {
+      if (out[f] === undefined && nearest[f] !== undefined) {
+        (out as Record<string, unknown>)[f] = nearest[f];
+      }
+    }
+    return out;
+  });
+}
+
 // A GeoNames summit this close to a peak we've already scored (OSM/manual) is the
 // same hill — drop it so we don't double-pin. Coarser than MANUAL_DEDUP so minor
 // coordinate disagreement between sources still collapses to one pin.
@@ -189,7 +236,11 @@ export function makeOccupancy(withinKm = LISTED_DEDUP_KM): {
   };
 }
 
-export function toListedTreks(summits: GeonamesSummit[], scored: Trek[]): Trek[] {
+/** GeoNames summits, plus extra-source summits (spec 31) that carry their own
+ *  full pin id and provenance link instead of the gn- defaults. */
+type ListableSummit = GeonamesSummit & { fullId?: string; sourceUrl?: string };
+
+export function toListedTreks(summits: ListableSummit[], scored: Trek[]): Trek[] {
   const { occupy, nearOccupied } = makeOccupancy();
   for (const s of scored) occupy(s.lat, s.lng);
 
@@ -198,7 +249,7 @@ export function toListedTreks(summits: GeonamesSummit[], scored: Trek[]): Trek[]
     if (nearOccupied(s.lat, s.lng)) continue;
     occupy(s.lat, s.lng); // also dedupe listed against each other
     listed.push({
-      id: `gn-${s.id}`,
+      id: s.fullId ?? `gn-${s.id}`,
       name: s.name,
       lat: s.lat,
       lng: s.lng,
@@ -213,7 +264,7 @@ export function toListedTreks(summits: GeonamesSummit[], scored: Trek[]): Trek[]
       ...(s.estimatedDifficulty ? { estimatedDifficulty: s.estimatedDifficulty } : {}),
       ...(s.image ? { image: s.image } : {}), // Wikidata P18 photo (spec 18), when present
       ...(s.altNames && s.altNames.length > 0 ? { altNames: s.altNames } : {}), // spec 25
-      sources: [`https://www.geonames.org/${s.id}`],
+      sources: [s.sourceUrl ?? `https://www.geonames.org/${s.id}`],
       verified: false,
     });
   }
@@ -551,16 +602,22 @@ async function main(): Promise<void> {
     .map((t) => curatedById.get(t.id) ?? t);
   const scored = [...curated, ...osmById.values()];
 
-  // Nationwide layers (spec 30): every GeoNames summit, then every detected
-  // summit, deduped against everything already placed. Named pins always win.
-  const listed = toListedTreks(geonamesSummitsAll(), scored);
-  console.log(`[discover] +${listed.length} GeoNames listed summits (nationwide).`);
+  // Nationwide layers (spec 30/31): every GeoNames summit plus the extra-source
+  // sweep (OSM nationwide, Wikidata), then every detected summit, deduped
+  // against everything already placed. Named pins always win — an extra summit
+  // within 400 m of a detected pin replaces it, naming the "Unnamed peak".
+  const listed = toListedTreks([...geonamesSummitsAll(), ...extraSummitsAll()], scored);
+  console.log(`[discover] +${listed.length} listed summits (GeoNames + extra, nationwide).`);
   const detected = toDetectedTreks(detectedSummitsAll(), [...scored, ...listed]);
   console.log(`[discover] +${detected.length} terrain-detected summits (nationwide).`);
 
   // Carry hand-baked enrichment (climate/gazetteer/hillfeatures) onto the
-  // regenerated records so a cron run never silently wipes it.
-  const next = preserveEnrichment([...scored, ...listed, ...detected], existing);
+  // regenerated records so a cron run never silently wipes it — by id first,
+  // then by coordinate for pins whose ids a rescan regenerated (spec 27).
+  const next = preserveEnrichmentByLocation(
+    preserveEnrichment([...scored, ...listed, ...detected], existing),
+    existing,
+  );
 
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[discover] dataset invalid: ${ds.error}`);

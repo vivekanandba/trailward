@@ -15,7 +15,12 @@ import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
 import { validateDataset } from "../src/lib/trek";
 import { distanceFrom } from "../src/lib/distance";
-import { inferName, NAMER_CODES, type NamerFeature } from "./sources/nameinfer";
+import {
+  inferName,
+  NAMER_CODES,
+  VILLAGE_NAMER_CODES,
+  type NamerFeature,
+} from "./sources/nameinfer";
 import type { DetectedSummit } from "./build-detect";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -30,7 +35,7 @@ async function loadNamerFeatures(): Promise<Map<string, NamerFeature[]>> {
   const rl = createInterface({ input: createReadStream(dumpFile, "utf8"), crlfDelay: Infinity });
   for await (const line of rl) {
     const c = line.split("\t");
-    if (!NAMER_CODES[c[7]]) continue;
+    if (!NAMER_CODES[c[7]] && !VILLAGE_NAMER_CODES[c[7]]) continue;
     const lat = Number(c[4]);
     const lng = Number(c[5]);
     if (Number.isNaN(lat) || Number.isNaN(lng) || !c[1]) continue;
