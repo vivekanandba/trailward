@@ -101,6 +101,11 @@ async function fetchWikidata(): Promise<ExtraSummit[]> {
     `SELECT (COUNT(*) AS ?n) WHERE { ?m wdt:P31/wdt:P279* wd:Q8502 ; wdt:P17 wd:Q668 ; wdt:P625 ?c . }`,
   )) as { results?: { bindings?: { n?: { value?: string } }[] } };
   const expected = Number(countJson?.results?.bindings?.[0]?.n?.value ?? 0);
+  // A broken count response would silently DISARM the completeness guard —
+  // India verifiably has thousands of Wikidata mountains, so demand a real count.
+  if (!Number.isFinite(expected) || expected <= 0) {
+    throw new Error(`[extra] Wikidata count query returned no usable total (${expected})`);
+  }
 
   const out: ExtraSummit[] = [];
   let rawTotal = 0;
