@@ -54,6 +54,21 @@ never stripped. An ON-hill feature (forest/temple/pass) always outranks it.
   that "succeeds" while silently stripping fields (the WorldCover poisoning incident) fails CI
   instead of shipping.
 
+## Error-path contract (standing rule for every fetcher)
+
+Every network source module must satisfy, WITH TESTS:
+
+1. **Transient failure retries** — a flaky request never caches a negative result
+   (the WorldCover poisoning class). Only a genuine 404 may cache "absent".
+2. **Persistent failure is loud or bounded** — either the call throws (demtiles,
+   peakdetect: a silently-unscored summit is worse than a dead build) or it
+   degrades after a bounded retry count (worldcover: 3 strikes → "no reading").
+3. **No 200-shaped errors** — Overpass reports server-side timeouts as HTTP 200
+   plus a `remark` and empty elements; that must throw, never parse as "no data".
+4. **Sweeps prove completeness** — a build tool that pages or bands a source
+   runs the cheap count query first and fails below 95% fetched
+   (`assertSweepComplete`; the Wikidata page-1-of-3 bug class).
+
 ## Verification
 
 Unit: Overpass/SPARQL parsers (elevation sanity, WKT lng-first order, label-less Q-ids

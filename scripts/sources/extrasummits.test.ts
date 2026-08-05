@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { parseOsmSummits, parseWikidataSummits } from "./extrasummits";
-import { dedupeExtras } from "../build-summits-extra";
+import { dedupeExtras, fetchOsmBox, assertSweepComplete } from "../build-summits-extra";
+import type { fetchOverpass } from "./overpass";
 
 describe("parseOsmSummits (spec 31)", () => {
   it("keeps named nodes with a plausible elevation, drops the rest", () => {
@@ -73,5 +74,46 @@ describe("dedupeExtras", () => {
       ({ id: fullId, fullId, name: "x", lat, lng, sourceUrl: "u" }) as never;
     const out = dedupeExtras([mk("wd-Q9", 12.5, 77.2), mk("wd-Q9", 12.9, 77.9)]);
     expect(out).toHaveLength(1);
+  });
+});
+
+describe("fetchOsmBox error paths (spec 31)", () => {
+  const node = (id: number, lng: number) => ({
+    type: "node",
+    id,
+    lat: 30,
+    lon: lng,
+    tags: { name: `Peak ${id}` },
+  });
+
+  it("splits a failing box in half and merges both halves", async () => {
+    const fetchImpl = vi.fn(async (query: string) => {
+      // The full band (68–97.5) fails; each half succeeds with one node.
+      if (query.includes("(30,68,32,97.5)")) throw new Error("HTTP 504");
+      if (query.includes("(30,68,32,82.75)")) return { elements: [node(1, 70)] };
+      return { elements: [node(2, 90)] };
+    }) as unknown as typeof fetchOverpass;
+    const out = await fetchOsmBox(30, 32, 68, 97.5, 0, fetchImpl);
+    expect(out.map((s) => s.fullId)).toEqual(["osmx-1", "osmx-2"]);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it("gives up after two levels of splitting so a dead source fails the build", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("HTTP 504");
+    }) as unknown as typeof fetchOverpass;
+    await expect(fetchOsmBox(30, 32, 68, 97.5, 0, fetchImpl)).rejects.toThrow("504");
+  });
+});
+
+describe("assertSweepComplete (spec 31 — no silent caps)", () => {
+  it("passes at/above 95% and on over-fetch (multi-P625 rows)", () => {
+    expect(() => assertSweepComplete(4353, 4353, "Wikidata")).not.toThrow();
+    expect(() => assertSweepComplete(4200, 4353, "Wikidata")).not.toThrow();
+    expect(() => assertSweepComplete(4400, 4353, "Wikidata")).not.toThrow();
+  });
+
+  it("fails on a material shortfall (the page-1-of-3 bug class)", () => {
+    expect(() => assertSweepComplete(2000, 4353, "Wikidata")).toThrow(/incomplete/);
   });
 });
