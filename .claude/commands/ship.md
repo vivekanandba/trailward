@@ -14,6 +14,13 @@ The deterministic GitHub steps are in `scripts/ship.sh`; the judgement
 
 ## Procedure
 
+0. **Spec gate (before anything is committed).** If the change alters
+   behaviour — a new feature, a changed rule, a new data source, a new failure
+   mode learned — a spec in `specs/` must be created or updated IN THIS PR
+   (`git diff --stat` must touch `specs/`). Pure refactors, test-only changes,
+   and generated-data refreshes are exempt. Do not proceed to step 1 until the
+   spec delta exists; if you built first, write the spec now — never ship
+   without one.
 1. **Branch.** If on `main`, create a feature branch first (`git switch -c
 <type>/<slug>`). Never open a PR from `main` onto `main`.
 2. **Commit & push** all pending work with a clear message.
@@ -21,7 +28,11 @@ The deterministic GitHub steps are in `scripts/ship.sh`; the judgement
    `scripts/ship.sh open` → capture the PR number. Do NOT merge yet.
 4. **Review loop** — repeat, up to 5 rounds:
    1. **Reviewer role.** Run the code review and post findings as inline PR
-      comments: `/code-review high --comment`.
+      comments: `/code-review high --comment`. Two findings are ALWAYS in
+      scope regardless of what the tooling reports: (a) a behaviour change
+      whose spec Verification section doesn't name a test that exists in the
+      diff, and (b) a fetcher/build-tool touching the network that violates
+      the error-path contract (spec 31).
    2. If it reports **no findings**, exit the loop.
    3. **Dev role.** Address every finding in the working tree. For each: make
       the fix (or, if you judge the comment wrong, reply on the thread saying
