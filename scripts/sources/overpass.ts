@@ -17,11 +17,14 @@ const OVERPASS_URLS = [
   "https://overpass.kumi.systems/api/interpreter",
 ];
 
-export async function fetchOverpass(query: string): Promise<unknown> {
+export async function fetchOverpass(
+  query: string,
+  fetchImpl: typeof fetchText = fetchText,
+): Promise<unknown> {
   let lastErr: unknown;
   for (const url of OVERPASS_URLS) {
     try {
-      const text = await fetchText(url, {
+      const text = await fetchImpl(url, {
         method: "POST",
         body: query,
         headers: { "content-type": "text/plain" },
@@ -29,7 +32,15 @@ export async function fetchOverpass(query: string): Promise<unknown> {
         // 500 km, peaks+hills); give it well over the query's server-side timeout.
         timeoutMs: 240_000,
       });
-      return JSON.parse(text);
+      const json = JSON.parse(text) as { remark?: string };
+      // Overpass reports server-side failures as HTTP 200 + a "remark" and an
+      // EMPTY elements array — returning that as success silently turns a
+      // timed-out sweep into "this region has no peaks". Treat it as a failure
+      // so the mirror failover (and callers' band-splitting) engage.
+      if (typeof json.remark === "string" && /error|timed out/i.test(json.remark)) {
+        throw new Error(`overpass remark: ${json.remark}`);
+      }
+      return json;
     } catch (err) {
       lastErr = err;
     }

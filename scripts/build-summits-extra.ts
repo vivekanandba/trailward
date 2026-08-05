@@ -37,28 +37,43 @@ const ROSETTE_RADIUS_M = 450; // same geometry as every other scorer
 const WDQS = "https://query.wikidata.org/sparql";
 const WD_PAGE = 2000;
 
+/**
+ * Silent-cap guard (spec 31): a sweep that fetched materially less than the
+ * source says exists must FAIL, not exit 0 — a pagination or parsing bug once
+ * quietly returned page 1 of 3 as "all Wikidata mountains". Pure, tested.
+ */
+export function assertSweepComplete(got: number, expected: number, label: string): void {
+  if (expected > 0 && got < expected * 0.95) {
+    throw new Error(
+      `[extra] ${label} sweep incomplete: fetched ${got} of ${expected} — refusing to write`,
+    );
+  }
+}
+
 /** Fetch one bbox of named peak/hill nodes; a box that keeps 504ing (the high
- *  Himalaya is dense) is split in half and each half retried, twice deep. */
-async function fetchOsmBox(
+ *  Himalaya is dense) is split in half and each half retried, twice deep.
+ *  Exported for tests; `fetchImpl` injects a fake Overpass. */
+export async function fetchOsmBox(
   latMin: number,
   latMax: number,
   lngMin: number,
   lngMax: number,
   depth = 0,
+  fetchImpl: typeof fetchOverpass = fetchOverpass,
 ): Promise<ExtraSummit[]> {
   const bbox = `(${latMin},${lngMin},${latMax},${lngMax})`;
   const query =
     `[out:json][timeout:120];` +
     `(node["natural"="peak"]["name"]${bbox};node["natural"="hill"]["name"]${bbox};);out;`;
   try {
-    return parseOsmSummits(await fetchOverpass(query));
+    return parseOsmSummits(await fetchImpl(query));
   } catch (err) {
     if (depth >= 2) throw err;
     console.warn(`[extra] box ${bbox} failed (${(err as Error).message}); splitting.`);
     const midLng = (lngMin + lngMax) / 2;
     return [
-      ...(await fetchOsmBox(latMin, latMax, lngMin, midLng, depth + 1)),
-      ...(await fetchOsmBox(latMin, latMax, midLng, lngMax, depth + 1)),
+      ...(await fetchOsmBox(latMin, latMax, lngMin, midLng, depth + 1, fetchImpl)),
+      ...(await fetchOsmBox(latMin, latMax, midLng, lngMax, depth + 1, fetchImpl)),
     ];
   }
 }
@@ -74,7 +89,26 @@ async function fetchOsmBands(): Promise<ExtraSummit[]> {
 }
 
 async function fetchWikidata(): Promise<ExtraSummit[]> {
+  const wdFetch = (sparql: string): Promise<unknown> =>
+    fetchJson(`${WDQS}?query=${encodeURIComponent(sparql)}`, {
+      headers: { accept: "application/sparql-results+json" },
+      throttleMs: 1_000, // WDQS asks for gentle pacing
+      timeoutMs: 120_000,
+    });
+
+  // How many exist, so the paged sweep can prove it fetched them all.
+  const countJson = (await wdFetch(
+    `SELECT (COUNT(*) AS ?n) WHERE { ?m wdt:P31/wdt:P279* wd:Q8502 ; wdt:P17 wd:Q668 ; wdt:P625 ?c . }`,
+  )) as { results?: { bindings?: { n?: { value?: string } }[] } };
+  const expected = Number(countJson?.results?.bindings?.[0]?.n?.value ?? 0);
+  // A broken count response would silently DISARM the completeness guard —
+  // India verifiably has thousands of Wikidata mountains, so demand a real count.
+  if (!Number.isFinite(expected) || expected <= 0) {
+    throw new Error(`[extra] Wikidata count query returned no usable total (${expected})`);
+  }
+
   const out: ExtraSummit[] = [];
+  let rawTotal = 0;
   for (let offset = 0; ; offset += WD_PAGE) {
     const sparql =
       `SELECT ?item ?itemLabel ?coord ?ele WHERE {` +
@@ -82,19 +116,20 @@ async function fetchWikidata(): Promise<ExtraSummit[]> {
       ` OPTIONAL { ?item wdt:P2044 ?ele . }` +
       ` SERVICE wikibase:label { bd:serviceParam wikibase:language "en,hi,kn,ta,te,ml,mr,bn". }` +
       ` } ORDER BY ?item LIMIT ${WD_PAGE} OFFSET ${offset}`;
-    const json = await fetchJson(`${WDQS}?query=${encodeURIComponent(sparql)}`, {
-      headers: { accept: "application/sparql-results+json" },
-      throttleMs: 1_000, // WDQS asks for gentle pacing
-      timeoutMs: 120_000,
-    });
+    const json = await wdFetch(sparql);
     const page = parseWikidataSummits(json);
     out.push(...page);
     // Pagination must follow the RAW row count — the parser drops label-less
     // items, so a "thin" parsed page can still mean a full page of results.
     const raw = (json as { results?: { bindings?: unknown[] } })?.results?.bindings?.length ?? 0;
+    rawTotal += raw;
     console.log(`[extra] Wikidata offset ${offset}: ${raw} rows, ${page.length} usable.`);
     if (raw < WD_PAGE) break;
   }
+  // Items with several P625 values produce extra rows, so rawTotal can exceed
+  // the item count — the guard only fires on a SHORTFALL (the pagination-bug
+  // class that once shipped page 1 of 3 as "everything").
+  assertSweepComplete(rawTotal, expected, "Wikidata");
   return out;
 }
 

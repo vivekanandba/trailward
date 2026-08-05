@@ -134,4 +134,21 @@ describe("createDemTiles.elevations", () => {
     const dem = createDemTiles({ z: 12, fetchTile: async () => null });
     expect(await dem.elevations([{ lat: 0, lng: 0 }])).toEqual([undefined]);
   });
+
+  it("propagates a transient fetch error loudly and never poisons the cache", async () => {
+    // Contract (spec 31 error paths): a flaky fetch must FAIL the call — a
+    // silently-unscored summit is worse — and a retry must succeed, i.e. the
+    // failure was not cached as "tile absent".
+    const flat = encodePng(2, 2, [enc(500), enc(500), enc(500), enc(500)]);
+    let calls = 0;
+    const dem = createDemTiles({
+      z: 12,
+      fetchTile: async () => {
+        if (++calls === 1) throw new Error("HTTP 503");
+        return flat;
+      },
+    });
+    await expect(dem.elevations([{ lat: 13, lng: 77 }])).rejects.toThrow("503");
+    expect((await dem.elevations([{ lat: 13, lng: 77 }]))[0]).toBeCloseTo(500, 0);
+  });
 });
