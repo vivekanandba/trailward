@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# resumefit-gates v1.0.0
+set -e
+root="$(git rev-parse --show-toplevel)"
+"$root/scripts/post-merge-notes.sh" || true
