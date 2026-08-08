@@ -25,6 +25,9 @@ implementation in the house. Its three load-bearing ideas, kept:
 Nothing here is speculative hardening: each gate exists because the thing it
 prevents has already happened in one of these projects. Keep it that way — a gate
 without an incident behind it is the kind people delete.
+
+hygiene-ok: this file is the scanner; it necessarily contains credential-shaped
+patterns and the names of the constructs it flags.
 """
 import json
 import os
@@ -32,7 +35,7 @@ import re
 import subprocess
 import sys
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 MARKER = "house-gates"
 CONFIG = ".house-gates.json"
 
@@ -46,6 +49,12 @@ DEFAULTS = {
     "message": True,
     "max_bytes": 512 * 1024,      # 0 disables the size gate
     "protected_branches": [],     # e.g. ["main"] — empty means "don't block"
+    # Ported from resumefit, whose gate set is the richest in the house. Enabled
+    # by the installer only when a repo actually has the thing they guard, since
+    # a gate that cannot apply is noise.
+    "determinism": False,
+    "migrations": False,
+    "artifacts": False,
 }
 
 # ---------------------------------------------------------------- shell helpers
@@ -81,6 +90,7 @@ def load_config(repo="."):
 # example. These must pass: see the module docstring.
 PLACEHOLDER = re.compile(
     r"\.\.\.|xxx+|redacted|placeholder|example|changeme|dummy|sample|your[-_ ]|"
+    r"synth|fake|test[-_]?(key|token|secret)|not[-_]?real|invalid|"
     r"<[a-z_ -]+>|\$\{?[A-Z_]+|os\.environ|process\.env|getenv|import\.meta\.env",
     re.I)
 
@@ -114,10 +124,15 @@ SECRET_PATTERNS = (
 
 EXCEPTION = re.compile(r"hygiene-ok:\s*\S")
 
+# Third-party code we did not write and do not control. Its sample values are not
+# our secrets, and flagging them is how a scanner trains people to ignore it.
+VENDORED = re.compile(r"(^|/)(themes|vendor|node_modules|third_party|"
+                      r"site-packages|\.venv|venv)/")
+
 
 def scan_secrets(path, content):
     """Problems in one staged file. `hygiene-ok: <reason>` exempts the file."""
-    if EXCEPTION.search(content):
+    if EXCEPTION.search(content) or VENDORED.search(path):
         return []
     problems = []
     for pattern, what, advice in SECRET_PATTERNS:
@@ -130,6 +145,73 @@ def scan_secrets(path, content):
                              line.strip()[:72]))
             break                      # one report per pattern is enough
     return problems
+
+
+# resumefit: "Counter.most_common() broke ties in set-iteration order: three
+# workers, three different resumes, and a tracked score that moved on its own.
+# Five days to notice." Only ADDED lines are examined, so existing code need not
+# be rewritten to adopt this.
+NONDETERMINISM = re.compile(
+    r"\.most_common\(\)|\b(?:list|sorted)\(set\(|\bset\([^)]*\)\.pop\(\)")
+NONDETERMINISM_OK = "nondeterminism-ok:"
+
+
+def scan_determinism(path, repo=".", content=None):
+    if not path.endswith(".py"):
+        return []
+    if content and EXCEPTION.search(content):
+        return []
+    diff = git("diff", "--cached", "-U0", "--", path, repo=repo)
+    for line in diff.split("\n"):
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+        body = line[1:]
+        if NONDETERMINISM_OK in body:
+            continue
+        # A comment or a docstring line describing the pattern is not the pattern.
+        # This file flagged itself on the comment explaining this very gate.
+        stripped = body.strip()
+        if stripped.startswith(("#", '"', "'", "*")):
+            continue
+        if NONDETERMINISM.search(body):
+            return [(f"{path} adds ordering-dependent code.",
+                     "Break ties on an explicit key, or mark the line "
+                     f"'# {NONDETERMINISM_OK} <reason>'.",
+                     body.strip()[:72])]
+    return []
+
+
+# resumefit: "0005 blanked data and was safe only because a fresh dump was taken
+# first. Nothing enforced it."
+DESTRUCTIVE_SQL = re.compile(
+    r"\b(?:DROP|TRUNCATE)\b|\bDELETE\s+FROM\b|\bUPDATE\b.*\bSET\b", re.I)
+
+
+def scan_migration(path, content):
+    if "migrations/" not in path or not path.endswith(".sql"):
+        return []
+    code = "\n".join(ln for ln in content.split("\n")
+                     if not ln.strip().startswith("--"))
+    if not DESTRUCTIVE_SQL.search(code):
+        return []
+    if re.search(r"^\s*--.*backup", content, re.I | re.M):
+        return []
+    return [(f"{path} is destructive but names no backup.",
+             "Take a dump, confirm it covers the affected rows, then add: "
+             "-- backup: <dump name> taken immediately before this.", "")]
+
+
+GENERATED = (".docx", ".pdf", ".dump", ".sqlite", ".db")
+
+
+def scan_artifact(path):
+    if path.startswith(("docs/", "public/")) or VENDORED.search(path):
+        return []
+    if path.endswith(GENERATED):
+        return [(f"{path} is a generated/binary artifact.",
+                 "Generated files belong in storage or are rebuilt on demand — "
+                 "git history cannot be cleaned later.", "")]
+    return []
 
 
 def check_protected_branch(repo=".", protected=()):
@@ -171,9 +253,17 @@ def hygiene(repo=".", cfg=None):
         problems += check_size(path, repo, cfg["max_bytes"])
         if is_probably_binary(path, repo):
             continue
+        if cfg["artifacts"]:
+            problems += scan_artifact(path)
         content = git("show", f":{path}", repo=repo)
-        if content and cfg["secrets"]:
+        if not content:
+            continue
+        if cfg["secrets"]:
             problems += scan_secrets(path, content)
+        if cfg["determinism"]:
+            problems += scan_determinism(path, repo, content)
+        if cfg["migrations"]:
+            problems += scan_migration(path, content)
     return problems
 
 
@@ -356,6 +446,15 @@ def suggest_config(repo):
     # "master" produces a config that looks enabled and quietly does nothing.
     head = git("rev-parse", "--abbrev-ref", "HEAD", repo=repo).strip() or "main"
     default = head if head in ("main", "master") else "main"
+    tracked = git("ls-files", repo=repo).split("\n")
+    if any(f.endswith(".py") for f in tracked):
+        cfg["determinism"] = True
+    if any("migrations/" in f and f.endswith(".sql") for f in tracked):
+        cfg["migrations"] = True
+    # Only where the repo isn't already full of them — same logic as max_bytes.
+    if not any(f.endswith(GENERATED) for f in tracked):
+        cfg["artifacts"] = True
+
     cfg["_note_protected_branches"] = (
         f'empty means the branch gate is OFF. Set ["{default}"] to require a '
         "branch per change, as resumefit does.")
