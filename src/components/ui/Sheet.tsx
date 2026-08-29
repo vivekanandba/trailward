@@ -152,7 +152,9 @@ export function Sheet({
 
   return (
     <>
-      {modal && <Scrim onClick={() => closeRef.current?.()} className="fixed inset-0 z-[1190]" />}
+      {/* Modal layers stack strictly ABOVE the persistent results sheet
+          (z-1200) — a scrim below it would leave any exposed strip unfrosted. */}
+      {modal && <Scrim onClick={() => closeRef.current?.()} className="fixed inset-0 z-[1201]" />}
       <div
         ref={ref}
         // A persistent, always-available surface is a REGION; only the modal
@@ -163,7 +165,7 @@ export function Sheet({
         tabIndex={-1}
         data-testid="sheet"
         className={
-          "fixed inset-x-0 bottom-0 z-[1200] flex flex-col rounded-t-2xl bg-white shadow-2xl " +
+          `fixed inset-x-0 bottom-0 ${modal ? "z-[1202]" : "z-[1200]"} flex flex-col rounded-t-2xl bg-white shadow-2xl ` +
           "pb-[env(safe-area-inset-bottom)] focus:outline-none dark:bg-slate-900 " +
           className
         }

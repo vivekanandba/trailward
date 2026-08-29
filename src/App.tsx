@@ -226,6 +226,11 @@ export default function App() {
   // detail as modal layers above it.
   const [resultsSnap, setResultsSnap] = useState(1); // 0 peek · 1 half · 2 full
   const [detailSnap, setDetailSnap] = useState(0); // 0 half · 1 full
+  // Every trek opens at HALF (spec 33) — a full-drag on one must not leak
+  // into the next.
+  useEffect(() => {
+    setDetailSnap(0);
+  }, [selectedId]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount = useMemo(() => {
     let n = 0;
