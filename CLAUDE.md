@@ -31,6 +31,6 @@ specs/ (33, lightweight style) · e2e/ · scripts/ · dist/
 
 ---
 
-*This file was created when the constitution was introduced, from what the repo shows rather
+_This file was created when the constitution was introduced, from what the repo shows rather
 than from a template. It is deliberately short: grow it from incidents, not from boilerplate,
-and put anything transferable in the constitution via `/lesson`.*
+and put anything transferable in the constitution via `/lesson`._
