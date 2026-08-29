@@ -4,6 +4,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Self-hosted variable fonts (spec 33) — tailwind.config declared these
+   families for months while nothing loaded them and every device silently fell
+   back to system UI. Committed woff2 (fontsource builds, OFL), latin subset;
+   the url is relative to this file so Vite rewrites it under /trailward/. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("./assets/fonts/bricolage-grotesque-latin-var.woff2") format("woff2-variations");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/inter-latin-var.woff2") format("woff2-variations");
+}
+
 @layer base {
   html,
   body,
@@ -48,4 +67,15 @@
 }
 .dark .leaflet-control-attribution a {
   color: #93c5fd; /* blue-300 */
+}
+
+/* Motion is an enhancement, never a requirement (spec 33). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

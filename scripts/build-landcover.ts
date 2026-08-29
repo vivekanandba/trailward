@@ -37,14 +37,19 @@ async function main(): Promise<void> {
       return ka < kb ? -1 : ka > kb ? 1 : a - b;
     });
   let baked = 0;
+  let dropped = 0;
   let done = 0;
-  const next: Trek[] = new Array(treks.length);
+  const next: (Trek | undefined)[] = new Array(treks.length);
   for (const i of order) {
     const t = treks[i];
     const pts = [{ lat: t.lat, lng: t.lng }, ...rosetteRing({ lat: t.lat, lng: t.lng }, RING_M)];
     const classes = await wc.classesAt(pts);
     const label = dominantLabel(classes.filter((c): c is number => c !== undefined));
-    if (label) {
+    if (label === "Water" && t.detected) {
+      // A terrain-DETECTED "summit" standing in open water is a corrupt DEM
+      // sample by definition (spec 33) — drop the record, don't annotate it.
+      dropped++;
+    } else if (label) {
       next[i] = { ...t, landCover: label };
       baked++;
     } else {
@@ -57,13 +62,15 @@ async function main(): Promise<void> {
     if (done % 5000 === 0) console.log(`[landcover]   ${done}/${treks.length} (${baked} covered)…`);
   }
 
-  const ds = validateDataset(next);
+  const kept = next.filter((t): t is Trek => t !== undefined);
+  const ds = validateDataset(kept);
   if (!ds.ok) throw new Error(`[landcover] dataset invalid: ${ds.error}`);
   writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
   const counts = new Map<string, number>();
   for (const t of ds.treks) {
     if (t.landCover) counts.set(t.landCover, (counts.get(t.landCover) ?? 0) + 1);
   }
+  if (dropped > 0) console.log(`[landcover] dropped ${dropped} detected pin(s) in open water.`);
   console.log(`[landcover] baked landCover onto ${baked}/${treks.length} treks:`);
   for (const [label, n] of [...counts].sort((a, b) => b[1] - a[1])) {
     console.log(`  ${label}: ${n}`);

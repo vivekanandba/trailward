@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Origin } from "../lib/trek";
 import { geocode, type GeocodeResult } from "../lib/geocode";
+import { LocateIcon } from "./icons";
 
 interface OriginSearchProps {
   origin: Origin;
@@ -114,7 +115,7 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => results.length && setOpen(true)}
         onKeyDown={onKeyDown}
-        placeholder={`Origin: ${origin.name} — search another place…`}
+        placeholder={`Search a place… (now: ${origin.name})`}
         aria-label="Search for an origin place"
         role="combobox"
         aria-expanded={open}
@@ -131,7 +132,7 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
         title="Use my location"
         className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-base leading-none text-trail-600 hover:bg-trail-50 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
       >
-        {locating ? "…" : "📍"}
+        {locating ? "…" : <LocateIcon />}
       </button>
       {geoError && (
         <p className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">

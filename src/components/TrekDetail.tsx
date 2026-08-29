@@ -9,6 +9,7 @@ import { fetchLiveEnrichment, type LiveEnrichment } from "../lib/enrich";
 import { nameSuggestionUrl } from "../lib/github";
 import climateRaw from "../data/climate.json";
 import { climateCellKey, driestMonths, wettestMonth, MONTHS } from "../lib/climate";
+import { ExternalLinkIcon, XIcon } from "./icons";
 
 // Mean monthly rainfall keyed by climate cell (spec 20) — stored once per cell
 // rather than duplicated onto every trek.
@@ -344,9 +345,9 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           type="button"
           onClick={onClose}
           aria-label="Close details"
-          className="rounded-md p-1 text-trail-500 dark:text-slate-400 hover:bg-trail-50 dark:hover:bg-slate-800"
+          className="rounded-md p-2 text-trail-500 dark:text-slate-400 hover:bg-trail-50 dark:hover:bg-slate-800"
         >
-          ✕
+          <XIcon />
         </button>
       </div>
 
@@ -407,7 +408,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
               rel="noreferrer"
               className="rounded-lg border border-trail-200 px-3 py-1.5 text-xs font-medium text-trail-700 hover:border-trail-400 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800"
             >
-              Look up on Google Maps ↗
+              Look up on Google Maps <ExternalLinkIcon className="inline" />
             </a>
             <a
               href={nameSuggestionUrl(trek)}
@@ -415,7 +416,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
               rel="noreferrer"
               className="rounded-lg border border-trail-200 px-3 py-1.5 text-xs font-medium text-trail-700 hover:border-trail-400 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800"
             >
-              Know this hill's name? ↗
+              Know this hill's name? <ExternalLinkIcon className="inline" />
             </a>
           </div>
         )}

@@ -12,7 +12,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import type { Origin, Trek } from "../lib/trek";
-import { difficultyLabel, mapDifficultyColor } from "../lib/difficulty";
+import { difficultyColor, difficultyLabel } from "../lib/difficulty";
 import { distanceFrom } from "../lib/distance";
 import { clusterByGrid } from "../lib/cluster";
 import { loadBasemap, saveBasemap, type Basemap } from "../lib/basemap";
@@ -169,7 +169,7 @@ function TrekPin({
   // Colour by (estimated) difficulty; unknown-difficulty peaks fall back to the
   // slate discovery colour (a white fill vanished into the terrain basemap).
   const shownDifficulty = trek.difficulty ?? trek.estimatedDifficulty;
-  const color = mapDifficultyColor(shownDifficulty);
+  const color = difficultyColor(shownDifficulty);
   const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
   // Size discovery pins by their hidden-gem score so top picks read first.
   const baseRadius =
@@ -190,7 +190,7 @@ function TrekPin({
         // Solid white halo + a drop-shadow (see .trek-pin in index.css) so the
         // marker reads clearly over the busy terrain basemap; solid fill for punch.
         color: selected ? "#1c3927" : "#ffffff",
-        weight: selected ? 3.5 : unnamed ? 1.5 : 2.5,
+        weight: selected ? 3.5 : unnamed ? 1.5 : 3,
         fillColor: color,
         fillOpacity: unnamed && !selected ? 0.55 : 1,
         className: "trek-pin",
@@ -393,12 +393,12 @@ export default function TrekMap({
       </div>
 
       {/* Difficulty legend (spec 15). */}
-      <div className="absolute bottom-6 left-2 z-[500] rounded-lg border border-trail-200 bg-white/90 px-2.5 py-1.5 text-[11px] shadow dark:border-slate-600 dark:bg-slate-800/90">
+      <div className="absolute bottom-8 left-2 z-[500] max-w-[40vw] rounded-lg border border-trail-200 bg-white/90 px-2.5 py-1.5 text-[11px] shadow backdrop-blur-sm dark:border-slate-600 dark:bg-slate-800/90">
         {(["Easy", "Moderate", "Hard"] as const).map((d) => (
           <div key={d} className="flex items-center gap-1.5 text-trail-700 dark:text-slate-300">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: mapDifficultyColor(d) }}
+              style={{ backgroundColor: difficultyColor(d) }}
             />
             {d}
           </div>
