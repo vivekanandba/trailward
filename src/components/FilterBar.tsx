@@ -60,16 +60,22 @@ export default function FilterBar({
   // Search debounce (spec 33): the input echoes keystrokes instantly from
   // local state while the expensive applyFilters-over-everything re-render
   // runs 150 ms after typing pauses. External query changes (Reset, URL
-  // decode) sync back in.
+  // decode) sync back in. The delayed patch spreads from a LATEST-filters ref,
+  // not the render-time closure — otherwise a checkbox toggled inside the
+  // debounce window would be reverted by the stale snapshot.
   const [queryDraft, setQueryDraft] = useState(filters.query);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const filtersRef = useRef(filters);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
   useEffect(() => {
     setQueryDraft(filters.query);
   }, [filters.query]);
   const patchQuery = (query: string) => {
     setQueryDraft(query);
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => patch({ query }), 150);
+    debounceRef.current = setTimeout(() => onChange({ ...filtersRef.current, query }), 150);
   };
   useEffect(() => () => clearTimeout(debounceRef.current), []);
 
