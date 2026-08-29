@@ -12,10 +12,15 @@ import Panel from "./components/Panel";
 import ThemeToggle from "./components/ThemeToggle";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 import { regionStats, type RegionStats } from "./lib/regionStats";
-import { feedbackUrl, suggestTrekUrl } from "./lib/github";
+import { feedbackUrl } from "./lib/github";
 import { loadTreksAround } from "./lib/cells";
 import { difficultyColor } from "./lib/difficulty";
-import { MountainIcon } from "./components/icons";
+import { FilterIcon, MountainIcon } from "./components/icons";
+import TrekList from "./components/TrekList";
+import { Sheet } from "./components/ui/Sheet";
+import { Scrim } from "./components/ui/Scrim";
+import { IconButton } from "./components/ui/Button";
+import { DESKTOP_QUERY, useMediaQuery } from "./lib/useMediaQuery";
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
@@ -212,37 +217,143 @@ export default function App() {
     if (filters.radiusKm > MAX_RADIUS_KM) setFilters((f) => ({ ...f, radiusKm: MAX_RADIUS_KM }));
   };
 
-  // When a panel is open, inert the rest of the app so assistive tech / pointer
-  // can't reach the backdrop — but ONLY on mobile, where the panel is a true
-  // full-screen modal. On desktop the detail is a non-modal side panel beside
-  // the map, so the map + list stay interactive and clicking another peak
-  // switches the open detail (the `inert` map used to swallow those clicks).
-  // (`inert` isn't in this @types/react yet, so toggle the DOM property.)
+  // Breakpoint split is JS-driven (spec 33): the FilterBar's input ids can't
+  // render twice, so mobile and desktop compose DIFFERENT trees from the same
+  // pieces. Defaults to desktop where matchMedia is absent (jsdom).
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+
+  // Mobile sheets (spec 33): results always present (non-modal), filters and
+  // detail as modal layers above it.
+  const [resultsSnap, setResultsSnap] = useState(1); // 0 peek · 1 half · 2 full
+  const [detailSnap, setDetailSnap] = useState(0); // 0 half · 1 full
+  // Every trek opens at HALF (spec 33) — a full-drag on one must not leak
+  // into the next.
+  useEffect(() => {
+    setDetailSnap(0);
+  }, [selectedId]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (filters.difficulties.length) n++;
+    if (filters.types.length) n++;
+    if (filters.elevation) n++;
+    if (filters.trailLengthMaxKm !== undefined) n++;
+    if (filters.durationMaxHrs !== undefined) n++;
+    if (filters.permitRequired !== undefined) n++;
+    if (filters.nightOnly) n++;
+    if (filters.hiddenGemsOnly) n++;
+    if (filters.namedOnly) n++;
+    if (filters.minReliefM !== undefined) n++;
+    if (filters.query.trim()) n++;
+    return n;
+  }, [filters]);
+
+  // When a MODAL layer is open on mobile, inert the rest of the app so
+  // assistive tech / pointer can't reach the backdrop. Desktop detail stays
+  // non-modal (clicking another peak switches the open detail).
   const panelOpen = Boolean(selected);
   const headerRef = useRef<HTMLElement>(null);
   const asideRef = useRef<HTMLElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    // below Tailwind's lg; guarded for environments without matchMedia (jsdom).
-    const mq =
-      typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 1023px)") : null;
-    const apply = () => {
-      const inert = panelOpen && (mq?.matches ?? false);
-      for (const el of [headerRef.current, asideRef.current, mapRef.current]) {
-        if (el) el.inert = inert;
-      }
-    };
-    apply();
-    mq?.addEventListener?.("change", apply);
-    return () => mq?.removeEventListener?.("change", apply);
-  }, [panelOpen]);
+    const inert = !isDesktop && (panelOpen || filtersOpen);
+    for (const el of [headerRef.current, asideRef.current, mapRef.current]) {
+      if (el) el.inert = inert;
+    }
+  }, [panelOpen, filtersOpen, isDesktop]);
+  // Reset transient mobile layers when the breakpoint flips.
+  useEffect(() => {
+    if (isDesktop) setFiltersOpen(false);
+  }, [isDesktop]);
+
+  const filterBar = (
+    <FilterBar
+      filters={filters}
+      onChange={setFilters}
+      resultCount={visible.length}
+      showTrailLength={showTrailLength}
+      showDuration={showDuration}
+      maxRadiusKm={maxRadiusKm}
+      showTerrainFilters={showTerrainFilters}
+    />
+  );
+
+  const presetChips = (
+    <div className="flex gap-2 overflow-x-auto p-3 lg:flex-wrap lg:border-b lg:border-trail-100 lg:p-4 dark:lg:border-slate-700">
+      {PRESET_ORIGINS.map((c) => {
+        const active = c.id === origin.id;
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => pickOrigin(c)}
+            aria-pressed={active}
+            className={`flex-none rounded-full border px-3 py-1 text-xs transition ${
+              active
+                ? "border-transparent bg-trail-600 text-white shadow-sm"
+                : "border-trail-200 bg-white text-trail-700 hover:border-trail-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500"
+            }`}
+          >
+            {c.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const statsAndBanner = (
+    <>
+      {loadingCells && (
+        // Reserve the stats card's slot so the rail doesn't jump when the
+        // real card arrives (spec 33).
+        <div aria-hidden className="border-b border-trail-100 px-4 py-3 dark:border-slate-700">
+          <div className="h-4 w-2/3 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+          <div className="mt-2 h-2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+        </div>
+      )}
+      {!loadingCells && visible.length > 0 && <RegionStatsCard stats={stats} />}
+      {discoveryCount > 0 && !loadingCells && (
+        <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
+          {hasCurated
+            ? `Plus ${discoveryCount} lesser-known ${discoveryCount === 1 ? "peak" : "peaks"} near ${origin.name}, ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`
+            : `Peaks near ${origin.name} ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`}
+        </p>
+      )}
+    </>
+  );
+
+  const trekList = (
+    <TrekList
+      treks={shown}
+      loading={loadingCells}
+      originName={origin.name}
+      selectedId={selectedId}
+      onSelect={setSelectedId}
+      overflow={overflow}
+      empty={!loadingCells && visible.length === 0}
+      onClearFilters={() => setFilters(DEFAULT_FILTERS)}
+    />
+  );
+
+  const trekMap = (
+    <TrekMap
+      origin={origin}
+      radiusKm={filters.radiusKm}
+      treks={visible}
+      selectedId={selectedId}
+      onSelect={setSelectedId}
+      onRadiusChange={(km) => setFilters((f) => ({ ...f, radiusKm: km }))}
+      maxRadiusKm={maxRadiusKm}
+      theme={theme}
+    />
+  );
 
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
       <header
         ref={headerRef}
-        className="z-[1100] flex flex-wrap items-center gap-3 border-b border-trail-100 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm"
+        className="flex flex-wrap items-center gap-3 border-b border-trail-100 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
       >
         <div className="flex items-center gap-2">
           <MountainIcon className="text-2xl text-trail-600 dark:text-trail-400" aria-hidden />
@@ -253,193 +364,148 @@ export default function App() {
         <div className="ml-auto w-full max-w-md sm:w-80">
           <OriginSearch origin={origin} onPick={pickOrigin} />
         </div>
-        {/* Feedback lives in GitHub Issues (spec 29) — prefilled, zero infra. */}
-        <a
-          href={feedbackUrl()}
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-lg border border-trail-200 dark:border-slate-600 px-3 py-2 text-sm font-medium text-trail-700 dark:text-slate-300 hover:border-trail-400 dark:hover:border-slate-500 hover:bg-trail-50 dark:hover:bg-slate-800"
-        >
-          Feedback
-        </a>
+        {/* Feedback lives in GitHub Issues (spec 29) — prefilled, zero infra.
+            On mobile it moves into the results sheet footer to keep one row. */}
+        {isDesktop && (
+          <a
+            href={feedbackUrl()}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-trail-200 px-3 py-2 text-sm font-medium text-trail-700 hover:border-trail-400 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+          >
+            Feedback
+          </a>
+        )}
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
 
-      {/* Body */}
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* Filters + list rail */}
-        <aside
-          ref={asideRef}
-          className="order-2 flex min-h-0 w-full flex-1 flex-col overflow-y-auto border-trail-100 dark:border-slate-700 lg:order-1 lg:w-80 lg:flex-none lg:border-r"
-        >
-          {/* Preset origin chips — quick jumps to a few regions (spec 03). */}
-          <div className="flex flex-wrap gap-2 border-b border-trail-100 p-4 dark:border-slate-700">
-            {PRESET_ORIGINS.map((c) => {
-              const active = c.id === origin.id;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => pickOrigin(c)}
-                  aria-pressed={active}
-                  className={`rounded-full border px-3 py-1 text-xs transition ${
-                    active
-                      ? "border-transparent bg-trail-600 text-white shadow-sm"
-                      : "border-trail-200 bg-white text-trail-700 hover:border-trail-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500"
-                  }`}
-                >
-                  {c.name}
-                </button>
-              );
-            })}
-          </div>
-          <div className="border-b border-trail-100 dark:border-slate-700 p-4">
-            <FilterBar
-              filters={filters}
-              onChange={setFilters}
-              resultCount={visible.length}
-              showTrailLength={showTrailLength}
-              showDuration={showDuration}
-              maxRadiusKm={maxRadiusKm}
-              showTerrainFilters={showTerrainFilters}
-            />
-          </div>
-          {loadingCells && (
-            // Reserve the stats card's slot so the rail doesn't jump when the
-            // real card arrives (spec 33).
-            <div aria-hidden className="border-b border-trail-100 px-4 py-3 dark:border-slate-700">
-              <div className="h-4 w-2/3 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-              <div className="mt-2 h-2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+      {isDesktop ? (
+        /* Desktop: rail + map, detail as a non-modal slide-over with a visual scrim. */
+        <div className="flex min-h-0 flex-1 flex-row">
+          <aside
+            ref={asideRef}
+            className="flex min-h-0 w-80 flex-none flex-col overflow-y-auto border-r border-trail-100 dark:border-slate-700"
+          >
+            {presetChips}
+            <div className="border-b border-trail-100 p-4 dark:border-slate-700">{filterBar}</div>
+            {statsAndBanner}
+            {trekList}
+          </aside>
+
+          <main className="relative min-h-0 flex-1">
+            <div ref={mapRef} className="h-full w-full">
+              {trekMap}
             </div>
-          )}
-          {!loadingCells && visible.length > 0 && <RegionStatsCard stats={stats} />}
-          {discoveryCount > 0 && !loadingCells && (
-            <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
-              {hasCurated
-                ? `Plus ${discoveryCount} lesser-known ${discoveryCount === 1 ? "peak" : "peaks"} near ${origin.name}, ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`
-                : `Peaks near ${origin.name} ranked by terrain (relief, steepness) and how off-the-beaten-path they are — community, unverified.`}
-            </p>
-          )}
-          <ul className="flex-1 divide-y divide-trail-50 dark:divide-slate-700">
-            {loadingCells && (
+            {selected && (
               <>
-                <li className="sr-only" role="status">
-                  Loading peaks near {origin.name}…
-                </li>
-                {Array.from({ length: 6 }, (_, i) => (
-                  <li
-                    key={`skeleton-${i}`}
-                    aria-hidden
-                    className="flex items-center gap-3 px-4 py-3"
-                  >
-                    <div className="h-9 w-9 flex-none animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-                    <div className="min-w-0 flex-1">
-                      <div className="h-4 w-1/2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-                      <div className="mt-1.5 h-3 w-3/4 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-                    </div>
-                  </li>
-                ))}
+                {/* Visual-only frosting over the MAP (spec 33): the panel reads
+                    as a layer, while pins stay clickable to switch the detail. */}
+                <Scrim pointerEvents={false} className="absolute inset-0 z-[1001]" />
+                <Panel
+                  onClose={() => setSelectedId(undefined)}
+                  labelledBy="trek-detail-title"
+                  modal={false}
+                  className="panel-enter absolute inset-y-0 right-0 z-[1010] w-full max-w-sm overflow-hidden border-l border-trail-100 bg-white shadow-2xl focus:outline-none dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <TrekDetail
+                    trek={selected}
+                    origin={origin}
+                    onClose={() => setSelectedId(undefined)}
+                  />
+                </Panel>
               </>
             )}
-            {!loadingCells && visible.length === 0 && (
-              <li className="p-4 text-sm text-trail-500 dark:text-slate-400">
-                No treks match. Try widening the radius or clearing filters.
-                <button
-                  type="button"
-                  onClick={() => setFilters(DEFAULT_FILTERS)}
-                  className="mt-2 block font-medium text-trail-700 dark:text-slate-300 underline hover:text-trail-900 dark:hover:text-slate-100"
-                >
-                  Clear filters
-                </button>
-                <a
-                  href={suggestTrekUrl()}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 block font-medium text-trail-700 dark:text-slate-300 underline hover:text-trail-900 dark:hover:text-slate-100"
-                >
-                  Know a trek we're missing? Suggest it.
-                </a>
-              </li>
-            )}
-            {/* Skeletons REPLACE results while loading — stale rows mixed
-                under a loading indicator read as current data (spec 33). */}
-            {!loadingCells &&
-              shown.map((t) => (
-                <li key={t.id} id={`trek-row-${t.id}`}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(t.id)}
-                    aria-current={t.id === selectedId || undefined}
-                    className={`flex w-full items-center gap-3 border-l-4 px-4 py-3 text-left hover:bg-trail-50 dark:hover:bg-slate-800 ${
-                      t.id === selectedId
-                        ? "border-trail-600 bg-trail-50 dark:border-trail-400 dark:bg-slate-800"
-                        : "border-transparent"
-                    }`}
-                  >
-                    {t.image && (
-                      <img
-                        src={t.image.url}
-                        alt=""
-                        loading="lazy"
-                        className="h-10 w-10 flex-none rounded object-cover"
-                      />
-                    )}
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-trail-900 dark:text-slate-100">
-                        {t.name}
-                      </span>
-                      <span className="block text-xs text-trail-500 dark:text-slate-400">
-                        {t.difficulty ??
-                          (t.estimatedDifficulty ? `est. ${t.estimatedDifficulty}` : "Unverified")}
-                        {t.elevationM ? ` · ${t.elevationM} m` : ""}
-                        {t.reliefM !== undefined
-                          ? ` · ${t.reliefM} m relief`
-                          : t.nearestTown
-                            ? ` · ${t.nearestTown}`
-                            : ""}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            {!loadingCells && overflow > 0 && (
-              <li className="px-4 py-3 text-xs text-trail-500 dark:text-slate-400">
-                +{overflow.toLocaleString()} more on the map. Zoom in, search, or filter (relief,
-                hidden gems, difficulty) to narrow the list.
-              </li>
-            )}
-          </ul>
-        </aside>
-
-        {/* Map + detail */}
-        <main className="relative order-1 h-[52dvh] min-h-[260px] flex-none lg:order-2 lg:h-auto lg:min-h-0 lg:flex-1">
+          </main>
+        </div>
+      ) : (
+        /* Mobile: full-height map behind a results sheet; filters and detail
+           are modal sheet layers (spec 33 / spec 08's bottom-sheet contract). */
+        <div className="relative min-h-0 flex-1">
           <div ref={mapRef} className="h-full w-full">
-            <TrekMap
-              origin={origin}
-              radiusKm={filters.radiusKm}
-              treks={visible}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              onRadiusChange={(km) => setFilters((f) => ({ ...f, radiusKm: km }))}
-              maxRadiusKm={maxRadiusKm}
-              theme={theme}
-            />
+            {trekMap}
           </div>
+
+          <Sheet
+            snapPoints={[0.22, 0.55, 0.92]}
+            snap={resultsSnap}
+            onSnapChange={setResultsSnap}
+            labelledBy="results-sheet-title"
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-trail-100 px-4 pb-2 dark:border-slate-700">
+              <h2
+                id="results-sheet-title"
+                className="text-sm font-semibold text-trail-800 dark:text-slate-100"
+              >
+                {loadingCells ? `Searching near ${origin.name}…` : `${visible.length} treks`}
+              </h2>
+              <IconButton
+                aria-label={`Filters${activeFilterCount ? ` (${activeFilterCount} active)` : ""}`}
+                variant="secondary"
+                onClick={() => setFiltersOpen(true)}
+                className="relative"
+              >
+                <FilterIcon />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-trail-600 px-1 text-[11px] font-bold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </IconButton>
+            </div>
+            {presetChips}
+            {statsAndBanner}
+            {trekList}
+            <div className="border-t border-trail-100 p-4 text-center dark:border-slate-700">
+              <a
+                href={feedbackUrl()}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-medium text-trail-700 underline dark:text-slate-300"
+              >
+                Feedback
+              </a>
+            </div>
+          </Sheet>
+
+          {filtersOpen && (
+            <Sheet
+              snapPoints={[0.92]}
+              snap={0}
+              onSnapChange={() => {}}
+              modal
+              onClose={() => setFiltersOpen(false)}
+              labelledBy="filters-sheet-title"
+            >
+              <div className="px-4 pb-6">
+                <h2
+                  id="filters-sheet-title"
+                  className="pb-3 text-sm font-semibold text-trail-800 dark:text-slate-100"
+                >
+                  Filters
+                </h2>
+                {filterBar}
+              </div>
+            </Sheet>
+          )}
+
           {selected && (
-            <Panel
+            <Sheet
+              snapPoints={[0.55, 0.92]}
+              snap={detailSnap}
+              onSnapChange={setDetailSnap}
+              modal
               onClose={() => setSelectedId(undefined)}
               labelledBy="trek-detail-title"
-              className="fixed inset-0 z-[1200] overflow-hidden bg-white shadow-2xl focus:outline-none dark:bg-slate-900 lg:absolute lg:inset-y-0 lg:left-auto lg:right-0 lg:z-[1000] lg:w-full lg:max-w-sm lg:border-l lg:border-trail-100 dark:lg:border-slate-700"
             >
               <TrekDetail
                 trek={selected}
                 origin={origin}
                 onClose={() => setSelectedId(undefined)}
               />
-            </Panel>
+            </Sheet>
           )}
-        </main>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

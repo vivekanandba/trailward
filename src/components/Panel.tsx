@@ -1,74 +1,41 @@
-import { useEffect, useRef, type ReactNode } from "react";
-
-const FOCUSABLE =
-  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+import { useRef, type ReactNode } from "react";
+import { useDialogFocus } from "../lib/useDialogFocus";
 
 interface PanelProps {
   onClose(): void;
   labelledBy: string; // id of the heading that names the dialog
+  /**
+   * Modal (default): aria-modal + Tab trap — mobile overlays, where the app
+   * also inerts the background. Non-modal: role="dialog" WITHOUT aria-modal
+   * and no trap — the desktop side panel, which deliberately keeps the map
+   * and list interactive so clicking another pin switches the detail
+   * (spec 33: the old panel claimed aria-modal="true" while being non-modal,
+   * telling screen readers the still-interactive page was gone).
+   */
+  modal?: boolean;
   className?: string;
   children: ReactNode;
 }
 
 /**
- * A slide-over that behaves as an accessible modal dialog (spec 08): it focuses
- * itself on open, traps Tab within, closes on Escape, and restores focus to the
- * control that opened it on close.
+ * A slide-over dialog (spec 08/33): focuses itself on open, closes on Escape,
+ * restores focus to the opener on close; traps Tab only when modal.
  */
-export default function Panel({ onClose, labelledBy, className, children }: PanelProps) {
+export default function Panel({
+  onClose,
+  labelledBy,
+  modal = true,
+  className,
+  children,
+}: PanelProps) {
   const ref = useRef<HTMLDivElement>(null);
-  // Read onClose via a ref so the effect can run exactly once (mount/unmount).
-  // Keying it on onClose would re-run — and refocus the opener — on every
-  // parent re-render, since App passes a fresh closure each time.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-
-  useEffect(() => {
-    const el = ref.current;
-    const opener = document.activeElement as HTMLElement | null;
-    el?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onCloseRef.current();
-        return;
-      }
-      if (e.key !== "Tab" || !el) return;
-      const items = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-        (n) => n.offsetParent !== null,
-      );
-      if (items.length === 0) {
-        e.preventDefault();
-        el.focus();
-        return;
-      }
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement;
-      if (e.shiftKey && (active === first || active === el)) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    el?.addEventListener("keydown", onKeyDown);
-    return () => {
-      el?.removeEventListener("keydown", onKeyDown);
-      // Restore focus to the opener so keyboard users aren't dumped at the top.
-      opener?.focus?.();
-    };
-    // Mount/unmount only — onClose is read via ref (see above).
-  }, []);
+  useDialogFocus(ref, { trap: modal, onClose });
 
   return (
     <div
       ref={ref}
       role="dialog"
-      aria-modal="true"
+      aria-modal={modal || undefined}
       aria-labelledby={labelledBy}
       tabIndex={-1}
       className={className}

@@ -69,3 +69,31 @@ describe("App feedback surfaces (spec 29)", () => {
     expect(u.searchParams.get("template")).toBe("feedback.yml");
   });
 });
+
+describe("App mobile branch (spec 33 — jsdom defaults to desktop; mock matchMedia)", () => {
+  function mockMobile() {
+    const mql = (matches: boolean) => ({
+      matches,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((q: string) => mql(!q.includes("min-width: 1024px"))),
+    );
+  }
+
+  it("renders the map-first layout: results sheet with a Filters button, no rail FilterBar", async () => {
+    mockMobile();
+    try {
+      render(<App />);
+      // The results sheet header + its Filters trigger exist…
+      expect(await screen.findByText(/\d+ treks/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Filters/ })).toBeInTheDocument();
+      // …and the always-open FilterBar does NOT (it lives behind the button).
+      expect(screen.queryByLabelText("Search treks")).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

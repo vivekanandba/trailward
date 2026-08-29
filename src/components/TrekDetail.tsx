@@ -286,8 +286,12 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
     const a = document.createElement("a");
     a.href = url;
     a.download = `${trek.id}.gpx`;
+    // In the DOM + deferred revoke: revoking synchronously after click() races
+    // the browser's fetch of the blob and intermittently aborts the download.
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   };
 
   return (

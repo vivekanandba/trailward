@@ -1,4 +1,12 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+// On mobile (spec 33) the FilterBar lives behind the results sheet's Filters
+// button; on desktop it sits in the always-open rail.
+async function openFilters(page: Page): Promise<void> {
+  if ((page.viewportSize()?.width ?? 1440) < 1024) {
+    await page.getByRole("button", { name: /^Filters/ }).click();
+  }
+}
 
 test("default Bangalore view renders map, markers and curated treks", async ({ page }) => {
   await page.goto("/");
@@ -37,6 +45,7 @@ test("selecting a trek opens its detail with a directions link", async ({ page }
 test("difficulty filter narrows the list", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("Skandagiri")).toBeVisible(); // Moderate trek, present by default
+  await openFilters(page);
   await page.getByRole("button", { name: "Hard", exact: true }).click();
   // Filtering to Hard drops the Moderate Skandagiri and keeps a Hard trek.
   await expect(page.getByText("Skandagiri")).toHaveCount(0);
@@ -45,12 +54,18 @@ test("difficulty filter narrows the list", async ({ page }) => {
 
 test("a shared URL restores filters and the open trek", async ({ page }) => {
   await page.goto("/?oid=bangalore&olat=12.97160&olng=77.59460&on=Bengaluru&d=Hard&sel=savandurga");
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("dialog").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Savandurga" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Hard", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  // The restored difficulty chip: in the rail on desktop; on mobile it lives
+  // in the filter sheet, which is inert-blocked behind the open detail — the
+  // restored-filter proof there is the Filters badge instead (checked once
+  // the detail is closed in other flows).
+  if ((page.viewportSize()?.width ?? 1440) >= 1024) {
+    await expect(page.getByRole("button", { name: "Hard", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  }
 });
 
 test("a preset region shows topography-ranked discovery peaks", async ({ page }) => {
@@ -77,8 +92,16 @@ test("hidden-gems filter narrows a preset region's list", async ({ page }) => {
   // The list rail is CAPPED at 300 rows, so with terrain-detected pins (spec 27)
   // row counts no longer move — assert on the true result count instead.
   const count = async (): Promise<number> =>
-    Number((await page.getByText(/^\d+ treks?$/).innerText()).replace(/\D/g, ""));
+    Number(
+      (
+        await page
+          .getByText(/^\d+ treks?$/)
+          .first()
+          .innerText()
+      ).replace(/\D/g, ""),
+    );
   const before = await count();
+  await openFilters(page);
   await page.getByLabel("Hidden gems only").check();
   await expect.poll(count).toBeLessThan(before);
 });
@@ -88,8 +111,16 @@ test("named-pins-only filter hides Unnamed detected pins (spec 31)", async ({ pa
   await page.getByRole("button", { name: "Pune" }).click();
   await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
   const count = async (): Promise<number> =>
-    Number((await page.getByText(/^\d+ treks?$/).innerText()).replace(/\D/g, ""));
+    Number(
+      (
+        await page
+          .getByText(/^\d+ treks?$/)
+          .first()
+          .innerText()
+      ).replace(/\D/g, ""),
+    );
   const before = await count();
+  await openFilters(page);
   await page.getByLabel("Named pins only").check();
   await expect.poll(count).toBeLessThan(before);
   // Every remaining row is a real name — no "Unnamed …" placeholders.
@@ -102,7 +133,14 @@ test("any city works — a non-preset origin shows nearby peaks (spec 30)", asyn
   await page.goto("/?oid=geo%3A12.29%2C76.64&olat=12.2958&olng=76.6394&on=Mysuru&r=100");
   await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
   await expect(page.getByText(/est\./i).first()).toBeVisible();
-  const count = Number((await page.getByText(/^\d+ treks?$/).innerText()).replace(/\D/g, ""));
+  const count = Number(
+    (
+      await page
+        .getByText(/^\d+ treks?$/)
+        .first()
+        .innerText()
+    ).replace(/\D/g, ""),
+  );
   expect(count).toBeGreaterThan(50);
 });
 
