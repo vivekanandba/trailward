@@ -27,7 +27,7 @@ validates and all tests pass**.
 - `.github/workflows/deploy.yml`:
   - `validate-data`: `npm ci && npm run validate:data`
   - `test`: `npm ci && npm run typecheck && npm test`
-  - `e2e`: `npm ci && npx playwright install --with-deps chromium && npm run e2e -- --project=chromium`
+  - `e2e`: `npm ci && npx playwright install --with-deps chromium && npm run e2e` (both Chromium-based projects: desktop + Pixel-7 mobile; includes the spec-33 visual diffs; `test-results/` uploaded as an artifact on every outcome)
   - `build`: `needs: [validate-data, test, e2e]` → `npm run build` → upload Pages artifact
   - `deploy`: `needs: build` → `actions/deploy-pages`
 - Pages source = **GitHub Actions** (set once in repo Settings → Pages).

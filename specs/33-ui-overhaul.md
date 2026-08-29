@@ -82,8 +82,12 @@ screenshot suite locks the finished UI against regression.
 - E2E (updates): mobile smoke tests gain an open-filters/expand-sheet helper; legend assertion
   becomes count-row regex; Panel tests split modal/non-modal; App test gains a matchMedia-
   mocked mobile variant.
-- Visual: `e2e/visual.spec.ts` — 8 states, deterministic stubs, linux-only skip guard,
-  `e2e:update` npm script, CI uploads `test-results/` on failure.
+- Visual: `e2e/visual.spec.ts` — 6 states × 2 projects = 12 committed linux baselines
+  (`e2e/__screenshots__/`), deterministic stubs (flat committed tiles, fixed weather, aborted
+  enrichment hosts), linux-only skip guard, `e2e:update` npm script, `maxDiffPixelRatio: 0.01`,
+  `contextOptions.reducedMotion` suite-wide; CI uploads `test-results/` on every outcome.
+  Gate proven: a one-line cluster-colour change fails at 3% diff; two consecutive clean runs
+  pass byte-identical.
 
 ## Out of scope
 

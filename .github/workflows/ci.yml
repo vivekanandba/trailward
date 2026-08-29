@@ -60,3 +60,12 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # Both projects: desktop chromium AND the Pixel-7 mobile project.
       - run: npm run e2e
+      # Failing visual diffs (-actual/-diff/-expected PNGs) and traces are
+      # useless if discarded — surface them on every run outcome (spec 33).
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results-${{ github.job }}
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore

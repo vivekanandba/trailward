@@ -32,7 +32,8 @@
     "build:names": "tsx scripts/build-names.ts",
     "build:chunks": "tsx scripts/chunk-data.ts",
     "apply:names": "tsx scripts/apply-name-issues.ts",
-    "validate:data": "tsx scripts/validate-data.ts"
+    "validate:data": "tsx scripts/validate-data.ts",
+    "e2e:update": "playwright test --update-snapshots"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
