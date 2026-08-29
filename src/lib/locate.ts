@@ -45,3 +45,23 @@ export async function geolocationGranted(): Promise<boolean> {
     return false;
   }
 }
+
+// ---- Nudge snooze (spec 34): "Not now" must not re-nag every visit. ----
+export const NUDGE_SNOOZE_KEY = "trailward.locationNudgeSnoozedUntil";
+const SNOOZE_DAYS = 7;
+
+export function nudgeSnoozed(now: number = Date.now()): boolean {
+  try {
+    return now < Number(localStorage.getItem(NUDGE_SNOOZE_KEY) ?? 0);
+  } catch {
+    return false;
+  }
+}
+
+export function snoozeNudge(now: number = Date.now()): void {
+  try {
+    localStorage.setItem(NUDGE_SNOOZE_KEY, String(now + SNOOZE_DAYS * 24 * 60 * 60 * 1000));
+  } catch {
+    // Private mode: in-memory dismissal still applies for this session.
+  }
+}

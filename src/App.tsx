@@ -21,7 +21,7 @@ import { Sheet } from "./components/ui/Sheet";
 import { Scrim } from "./components/ui/Scrim";
 import { IconButton } from "./components/ui/Button";
 import { DESKTOP_QUERY, useMediaQuery } from "./lib/useMediaQuery";
-import { geolocationGranted, locateMe } from "./lib/locate";
+import { geolocationGranted, locateMe, nudgeSnoozed, snoozeNudge } from "./lib/locate";
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
@@ -112,7 +112,7 @@ export default function App() {
         } catch {
           // Silent path stays silent: keep the persisted origin.
         }
-      } else if (typeof navigator !== "undefined" && navigator.geolocation) {
+      } else if (typeof navigator !== "undefined" && navigator.geolocation && !nudgeSnoozed()) {
         setLocationNudge(true);
       }
     });
@@ -360,7 +360,10 @@ export default function App() {
           </button>
           <button
             type="button"
-            onClick={() => setLocationNudge(false)}
+            onClick={() => {
+              snoozeNudge(); // a week of quiet — the header pin stays available
+              setLocationNudge(false);
+            }}
             aria-label="Dismiss location suggestion"
             className="rounded-full px-2 py-1 text-trail-500 hover:bg-trail-100 dark:text-slate-400 dark:hover:bg-slate-700"
           >

@@ -18,7 +18,8 @@ ambushing them with a permission prompt.
 - **Soft nudge otherwise.** When permission is not granted, a dismissible banner reads
   "Seeing treks near {origin} — [Use my location] [Not now]". The button runs the same
   user-initiated flow as the header 📍 (native browser prompt allowed, errors shown inline).
-  Never auto-prompts.
+  Never auto-prompts. "Not now" snoozes the nudge for 7 days (localStorage) — it must not
+  re-nag every visit; the header 📍 remains the always-available path.
 - **Directions route from the device, not the search origin.** The Google Maps URL omits the
   origin parameter — Maps starts from the user's live position. Browsing Himachal from a
   Bengaluru search must not produce a 2,400 km route.

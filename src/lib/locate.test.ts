@@ -54,3 +54,16 @@ describe("geolocationGranted (spec 34 — the silent path must never prompt)", (
     expect(await geolocationGranted()).toBe(false);
   });
 });
+
+describe("nudge snooze (spec 34 — 'Not now' must not re-nag every visit)", () => {
+  it("snoozes for seven days, then resurfaces", async () => {
+    const { nudgeSnoozed, snoozeNudge, NUDGE_SNOOZE_KEY } = await import("./locate");
+    localStorage.removeItem(NUDGE_SNOOZE_KEY);
+    expect(nudgeSnoozed()).toBe(false);
+    const t0 = 1_700_000_000_000;
+    snoozeNudge(t0);
+    expect(nudgeSnoozed(t0 + 6 * 24 * 3600 * 1000)).toBe(true);
+    expect(nudgeSnoozed(t0 + 8 * 24 * 3600 * 1000)).toBe(false);
+    localStorage.removeItem(NUDGE_SNOOZE_KEY);
+  });
+});
