@@ -137,6 +137,17 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
+  // A selection made on the MAP must answer in the list too: scroll its row
+  // into view (spec 33). Depends on loadingCells so a DEEP-LINKED selection
+  // scrolls once the rows actually exist, not before. Rows beyond the 300-row
+  // cap have no row — accepted.
+  useEffect(() => {
+    if (!selectedId || loadingCells) return;
+    document
+      .getElementById(`trek-row-${selectedId}`)
+      ?.scrollIntoView({ block: "nearest", behavior: "auto" });
+  }, [selectedId, loadingCells]);
+
   // Cells arrive in arbitrary order — restore the canonical ranking the list
   // cap depends on: curated first, then hidden-gem score, then relief.
   const baseTreks = useMemo(() => {
@@ -354,12 +365,15 @@ export default function App() {
                 under a loading indicator read as current data (spec 33). */}
             {!loadingCells &&
               shown.map((t) => (
-                <li key={t.id}>
+                <li key={t.id} id={`trek-row-${t.id}`}>
                   <button
                     type="button"
                     onClick={() => setSelectedId(t.id)}
-                    className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-trail-50 dark:hover:bg-slate-800 ${
-                      t.id === selectedId ? "bg-trail-50 dark:bg-slate-800" : ""
+                    aria-current={t.id === selectedId || undefined}
+                    className={`flex w-full items-center gap-3 border-l-4 px-4 py-3 text-left hover:bg-trail-50 dark:hover:bg-slate-800 ${
+                      t.id === selectedId
+                        ? "border-trail-600 bg-trail-50 dark:border-trail-400 dark:bg-slate-800"
+                        : "border-transparent"
                     }`}
                   >
                     {t.image && (
