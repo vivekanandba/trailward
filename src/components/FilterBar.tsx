@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { Difficulty, TrekType } from "../lib/trek";
 import { DEFAULT_FILTERS, type FilterState } from "../lib/filters";
 import { DIFFICULTY_COLORS } from "../lib/difficulty";
@@ -55,6 +56,28 @@ export default function FilterBar({
   showTerrainFilters = false,
 }: FilterBarProps) {
   const patch = (p: Partial<FilterState>) => onChange({ ...filters, ...p });
+
+  // Search debounce (spec 33): the input echoes keystrokes instantly from
+  // local state while the expensive applyFilters-over-everything re-render
+  // runs 150 ms after typing pauses. External query changes (Reset, URL
+  // decode) sync back in. The delayed patch spreads from a LATEST-filters ref,
+  // not the render-time closure — otherwise a checkbox toggled inside the
+  // debounce window would be reverted by the stale snapshot.
+  const [queryDraft, setQueryDraft] = useState(filters.query);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const filtersRef = useRef(filters);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+  useEffect(() => {
+    setQueryDraft(filters.query);
+  }, [filters.query]);
+  const patchQuery = (query: string) => {
+    setQueryDraft(query);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => onChange({ ...filtersRef.current, query }), 150);
+  };
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   const toggleDifficulty = (d: Difficulty) =>
     patch({
@@ -117,8 +140,8 @@ export default function FilterBar({
         <input
           id="trek-search"
           type="search"
-          value={filters.query}
-          onChange={(e) => patch({ query: e.target.value })}
+          value={queryDraft}
+          onChange={(e) => patchQuery(e.target.value)}
           placeholder="Search by name or town…"
           className="w-full rounded-lg border border-trail-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm shadow-sm focus:border-trail-500 focus:outline-none focus:ring-2 focus:ring-trail-300"
         />

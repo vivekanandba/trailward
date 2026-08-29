@@ -29,11 +29,21 @@ describe("urlState", () => {
       elevation: [500, 1500],
       permitRequired: false,
       nightOnly: true,
+      hiddenGemsOnly: true,
+      namedOnly: true,
+      minReliefM: 150,
       query: "hill",
     };
     const s = roundTrip(origin, filters, "skandagiri");
     expect(s.filters).toEqual(filters);
     expect(s.selectedId).toBe("skandagiri");
+  });
+
+  it("rejects garbage terrain-filter params (spec 33)", () => {
+    const s = decodeState(new URLSearchParams("hg=yes&nm=0&mr=-5"));
+    expect(s.filters.hiddenGemsOnly).toBe(false);
+    expect(s.filters.namedOnly).toBe(false);
+    expect(s.filters.minReliefM).toBeUndefined();
   });
 
   it("falls back to defaults for missing/invalid params", () => {

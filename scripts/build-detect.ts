@@ -81,6 +81,24 @@ export function filterUnknown(
   return peaks.filter((p) => !isKnown(p));
 }
 
+/**
+ * Physical plausibility gate (spec 33). Corrupt DEM samples slip past the
+ * per-pixel band guards by corrupting the ROSETTE, not the summit pixel — the
+ * "Unnamed peak (~6,426 m)" off the Pune coast scored relief 5,748 m and mean
+ * slope 85.5°. No real Indian summit sustains >60° MEAN slope over a 450 m
+ * rosette (tan 60° ≈ 780 m of drop), local relief beyond 2,500 m at 1 km, or
+ * more relief than its own height above the −430 m floor. Applied to detection
+ * output AND at snapshot load (sources/detected.ts), so the weekly cron
+ * self-heals without a rescan.
+ */
+export function isPlausibleSummit(s: {
+  meanSlopeDeg: number;
+  reliefM: number;
+  elevationM: number;
+}): boolean {
+  return s.meanSlopeDeg <= 60 && s.reliefM <= 2500 && s.reliefM <= s.elevationM + 430;
+}
+
 // India + Himalayan margins; includes some ocean, which scans as sea level.
 const INDIA = { latMin: 6, latMax: 36, lngMin: 68, lngMax: 97.5 };
 
@@ -266,7 +284,11 @@ async function main(): Promise<void> {
     return;
   }
 
-  const scored = await score(fresh);
+  const allScored = await score(fresh);
+  const scored = allScored.filter(isPlausibleSummit);
+  if (scored.length < allScored.length) {
+    console.log(`[detect] plausibility gate dropped ${allScored.length - scored.length}.`);
+  }
   writeFileSync(outFile, JSON.stringify(scored) + "\n", "utf8");
   const peaks = scored.filter((s) => s.name.includes("peak")).length;
   console.log(

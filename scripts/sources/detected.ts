@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Origin } from "../../src/lib/trek";
 import { distanceFrom } from "../../src/lib/distance";
-import type { DetectedSummit } from "../build-detect";
+import { isPlausibleSummit, type DetectedSummit } from "../build-detect";
 
 let cache: DetectedSummit[] | null = null;
 let humanCache: Record<string, { name: string; issue: number }> | null = null;
@@ -34,7 +34,11 @@ function all(): DetectedSummit[] {
     const here = dirname(fileURLToPath(import.meta.url));
     const file = resolve(here, "../detected/india-detected.json");
     try {
-      cache = JSON.parse(readFileSync(file, "utf8")) as DetectedSummit[];
+      // Plausibility gate at LOAD (spec 33): even if the committed snapshot
+      // carries corrupt records, the pipeline never bakes them again.
+      cache = (JSON.parse(readFileSync(file, "utf8")) as DetectedSummit[]).filter(
+        isPlausibleSummit,
+      );
     } catch {
       cache = []; // subset not built yet → no detected summits
     }

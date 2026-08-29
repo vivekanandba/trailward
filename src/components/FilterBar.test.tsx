@@ -17,6 +17,28 @@ function fireChange(el: HTMLElement, value: string) {
   fireEvent.change(el, { target: { value } });
 }
 
+describe("FilterBar search debounce (spec 33)", () => {
+  it("emits the query 150 ms after typing pauses, from the LATEST filters", () => {
+    vi.useFakeTimers();
+    try {
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <FilterBar filters={DEFAULT_FILTERS} onChange={onChange} resultCount={3} />,
+      );
+      fireEvent.change(screen.getByLabelText("Search treks"), { target: { value: "betta" } });
+      expect(onChange).not.toHaveBeenCalled(); // nothing until the pause
+      // A checkbox toggled INSIDE the debounce window must survive the flush —
+      // the delayed patch spreads from a latest-filters ref, not a stale closure.
+      const withNight = { ...DEFAULT_FILTERS, nightOnly: true };
+      rerender(<FilterBar filters={withNight} onChange={onChange} resultCount={3} />);
+      vi.advanceTimersByTime(150);
+      expect(onChange).toHaveBeenCalledWith({ ...withNight, query: "betta" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("FilterBar", () => {
   it("toggles a type chip into filters.types", async () => {
     const user = userEvent.setup();

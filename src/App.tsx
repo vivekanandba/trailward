@@ -15,6 +15,7 @@ import { regionStats, type RegionStats } from "./lib/regionStats";
 import { feedbackUrl, suggestTrekUrl } from "./lib/github";
 import { loadTreksAround } from "./lib/cells";
 import { difficultyColor } from "./lib/difficulty";
+import { MountainIcon } from "./components/icons";
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
@@ -233,9 +234,7 @@ export default function App() {
         className="z-[1100] flex flex-wrap items-center gap-3 border-b border-trail-100 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm"
       >
         <div className="flex items-center gap-2">
-          <span className="text-2xl" aria-hidden>
-            🥾
-          </span>
+          <MountainIcon className="text-2xl text-trail-600 dark:text-trail-400" aria-hidden />
           <h1 className="font-display text-xl font-bold tracking-tight text-trail-800 dark:text-slate-100">
             Trailward
           </h1>
@@ -294,6 +293,14 @@ export default function App() {
               showTerrainFilters={showTerrainFilters}
             />
           </div>
+          {loadingCells && (
+            // Reserve the stats card's slot so the rail doesn't jump when the
+            // real card arrives (spec 33).
+            <div aria-hidden className="border-b border-trail-100 px-4 py-3 dark:border-slate-700">
+              <div className="h-4 w-2/3 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+              <div className="mt-2 h-2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+            </div>
+          )}
           {!loadingCells && visible.length > 0 && <RegionStatsCard stats={stats} />}
           {discoveryCount > 0 && !loadingCells && (
             <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
@@ -304,9 +311,24 @@ export default function App() {
           )}
           <ul className="flex-1 divide-y divide-trail-50 dark:divide-slate-700">
             {loadingCells && (
-              <li className="p-4 text-sm text-trail-500 dark:text-slate-400" role="status">
-                Loading peaks near {origin.name}…
-              </li>
+              <>
+                <li className="sr-only" role="status">
+                  Loading peaks near {origin.name}…
+                </li>
+                {Array.from({ length: 6 }, (_, i) => (
+                  <li
+                    key={`skeleton-${i}`}
+                    aria-hidden
+                    className="flex items-center gap-3 px-4 py-3"
+                  >
+                    <div className="h-9 w-9 flex-none animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+                    <div className="min-w-0 flex-1">
+                      <div className="h-4 w-1/2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+                      <div className="mt-1.5 h-3 w-3/4 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+                    </div>
+                  </li>
+                ))}
+              </>
             )}
             {!loadingCells && visible.length === 0 && (
               <li className="p-4 text-sm text-trail-500 dark:text-slate-400">
@@ -328,42 +350,45 @@ export default function App() {
                 </a>
               </li>
             )}
-            {shown.map((t) => (
-              <li key={t.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(t.id)}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-trail-50 dark:hover:bg-slate-800 ${
-                    t.id === selectedId ? "bg-trail-50 dark:bg-slate-800" : ""
-                  }`}
-                >
-                  {t.image && (
-                    <img
-                      src={t.image.url}
-                      alt=""
-                      loading="lazy"
-                      className="h-10 w-10 flex-none rounded object-cover"
-                    />
-                  )}
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-trail-900 dark:text-slate-100">
-                      {t.name}
+            {/* Skeletons REPLACE results while loading — stale rows mixed
+                under a loading indicator read as current data (spec 33). */}
+            {!loadingCells &&
+              shown.map((t) => (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(t.id)}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-trail-50 dark:hover:bg-slate-800 ${
+                      t.id === selectedId ? "bg-trail-50 dark:bg-slate-800" : ""
+                    }`}
+                  >
+                    {t.image && (
+                      <img
+                        src={t.image.url}
+                        alt=""
+                        loading="lazy"
+                        className="h-10 w-10 flex-none rounded object-cover"
+                      />
+                    )}
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-trail-900 dark:text-slate-100">
+                        {t.name}
+                      </span>
+                      <span className="block text-xs text-trail-500 dark:text-slate-400">
+                        {t.difficulty ??
+                          (t.estimatedDifficulty ? `est. ${t.estimatedDifficulty}` : "Unverified")}
+                        {t.elevationM ? ` · ${t.elevationM} m` : ""}
+                        {t.reliefM !== undefined
+                          ? ` · ${t.reliefM} m relief`
+                          : t.nearestTown
+                            ? ` · ${t.nearestTown}`
+                            : ""}
+                      </span>
                     </span>
-                    <span className="block text-xs text-trail-500 dark:text-slate-400">
-                      {t.difficulty ??
-                        (t.estimatedDifficulty ? `est. ${t.estimatedDifficulty}` : "Unverified")}
-                      {t.elevationM ? ` · ${t.elevationM} m` : ""}
-                      {t.reliefM !== undefined
-                        ? ` · ${t.reliefM} m relief`
-                        : t.nearestTown
-                          ? ` · ${t.nearestTown}`
-                          : ""}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-            {overflow > 0 && (
+                  </button>
+                </li>
+              ))}
+            {!loadingCells && overflow > 0 && (
               <li className="px-4 py-3 text-xs text-trail-500 dark:text-slate-400">
                 +{overflow.toLocaleString()} more on the map. Zoom in, search, or filter (relief,
                 hidden gems, difficulty) to narrow the list.

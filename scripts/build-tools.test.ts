@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
-import { filterUnknown, buildIndiaMask, inIndia } from "./build-detect";
+import { filterUnknown, buildIndiaMask, inIndia, isPlausibleSummit } from "./build-detect";
+import { isImplausibleTrek } from "./scrub-implausible";
 import { fieldCounts, driftViolations } from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
@@ -222,6 +223,40 @@ describe("enrichment drift guard (spec 31)", () => {
     expect(driftViolations({ heritage: 2 }, { heritage: 1 })).toEqual([]);
     // A wipe of a mid-size field still trips even though it's "only" 30 records.
     expect(driftViolations({ hillFeatures: 30 }, { hillFeatures: 0 })).toHaveLength(1);
+  });
+});
+
+describe("plausibility gate (spec 33 — corrupt DEM rosettes must not ship)", () => {
+  it("rejects the real Pune-coast corrupt record and accepts real summits", () => {
+    // The actual record that shipped: "Unnamed peak (~6,426 m)" in open water.
+    expect(isPlausibleSummit({ meanSlopeDeg: 85.5, reliefM: 5748, elevationM: 6426 })).toBe(false);
+    // Savandurga, ground truth from spec 27.
+    expect(isPlausibleSummit({ meanSlopeDeg: 18.5, reliefM: 374, elevationM: 1217 })).toBe(true);
+    // Each rule individually: slope, absolute relief, relief-vs-elevation.
+    expect(isPlausibleSummit({ meanSlopeDeg: 61, reliefM: 300, elevationM: 900 })).toBe(false);
+    expect(isPlausibleSummit({ meanSlopeDeg: 30, reliefM: 2600, elevationM: 7000 })).toBe(false);
+    expect(isPlausibleSummit({ meanSlopeDeg: 30, reliefM: 900, elevationM: 100 })).toBe(false);
+    // Himalayan giant: steep but physically coherent.
+    expect(isPlausibleSummit({ meanSlopeDeg: 45, reliefM: 2400, elevationM: 8000 })).toBe(true);
+  });
+
+  it("isImplausibleTrek scrubs Water-cover detected pins but never named-source pins", () => {
+    const base = { id: "d12-1", name: "X", lat: 12, lng: 77, tier: "discovery" } as never;
+    expect(
+      isImplausibleTrek({ ...(base as object), detected: true, landCover: "Water" } as never),
+    ).toBe(true);
+    expect(
+      isImplausibleTrek({
+        ...(base as object),
+        detected: true,
+        meanSlopeDeg: 20,
+        reliefM: 200,
+        elevationM: 800,
+        landCover: "Forest",
+      } as never),
+    ).toBe(false);
+    // A gn- listed pin in water (island summit!) is untouched.
+    expect(isImplausibleTrek({ ...(base as object), landCover: "Water" } as never)).toBe(false);
   });
 });
 

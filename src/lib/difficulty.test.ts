@@ -1,12 +1,7 @@
 import { describe, it, expect } from "vitest";
-import {
-  DIFFICULTY_COLORS,
-  MAP_DIFFICULTY_COLORS,
-  DISCOVERY_COLOR,
-  difficultyColor,
-  mapDifficultyColor,
-  difficultyLabel,
-} from "./difficulty";
+import { DIFFICULTY_COLORS, DISCOVERY_COLOR, difficultyColor, difficultyLabel } from "./difficulty";
+// @ts-expect-error — untyped JS config; the shape is asserted at the use site.
+import tailwindConfig from "../../tailwind.config.js";
 import type { Difficulty } from "./trek";
 
 const ALL: Difficulty[] = ["Easy", "Moderate", "Hard"];
@@ -37,16 +32,15 @@ describe("difficulty colour tokens (single source)", () => {
     expect(difficultyLabel(undefined)).toMatch(/unverified|unknown/i);
   });
 
-  it("map colours are defined, distinct, and brighter than the badge colours", () => {
-    for (const d of ALL) expect(MAP_DIFFICULTY_COLORS[d]).toMatch(/^#[0-9a-f]{6}$/i);
-    expect(new Set(ALL.map((d) => MAP_DIFFICULTY_COLORS[d])).size).toBe(ALL.length);
-    // Vivid map variants differ from the darker (white-text) badge colours.
-    expect(MAP_DIFFICULTY_COLORS.Moderate).not.toBe(DIFFICULTY_COLORS.Moderate);
-    expect(MAP_DIFFICULTY_COLORS.Hard).not.toBe(DIFFICULTY_COLORS.Hard);
-  });
-
-  it("mapDifficultyColor returns the vivid token or the discovery colour", () => {
-    expect(mapDifficultyColor("Moderate")).toBe(MAP_DIFFICULTY_COLORS.Moderate);
-    expect(mapDifficultyColor(undefined)).toBe(DISCOVERY_COLOR);
+  it("tailwind difficulty tokens are pinned to DIFFICULTY_COLORS (spec 33 — one palette)", () => {
+    const tw = (
+      tailwindConfig as {
+        theme: { extend: { colors: { difficulty: Record<string, string> } } };
+      }
+    ).theme.extend.colors.difficulty;
+    expect(tw.easy).toBe(DIFFICULTY_COLORS.Easy);
+    expect(tw.moderate).toBe(DIFFICULTY_COLORS.Moderate);
+    expect(tw.hard).toBe(DIFFICULTY_COLORS.Hard);
+    expect(tw.discovery).toBe(DISCOVERY_COLOR);
   });
 });
