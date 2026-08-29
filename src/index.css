@@ -53,6 +53,24 @@
 .trek-pin {
   filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.5));
 }
+/* Cluster badge (spec 33): a counted disc, visually distinct from single pins
+   (dark brand fill, no difficulty colour) with a full 44px hit area. */
+.trek-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(28, 57, 39, 0.95); /* trail-900 */
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.dark .trek-cluster {
+  border-color: #cbd5e1; /* slate-300 — white ring vanishes on dark tiles */
+}
 .dark .leaflet-container {
   background: #0f172a; /* slate-900 */
 }

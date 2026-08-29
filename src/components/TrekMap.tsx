@@ -106,6 +106,9 @@ const TILES = {
 // while zoomed out; curated sets (≈16) never cluster.
 const CLUSTER_THRESHOLD = 24;
 const CLUSTER_MAX_ZOOM = 11;
+// Interactive ring radius: 16 px → 32 px diameter, + Leaflet's own tap
+// tolerance ≈ the 44 px touch-target intent without giant overlap in dense areas.
+const HIT_RADIUS_PX = 16;
 
 function prefersReducedMotion(): boolean {
   return (
@@ -127,6 +130,23 @@ function InvalidateOnResize() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [map]);
+  return null;
+}
+
+// Bring a newly selected pin into view: a selection made from the LIST can
+// point at a marker far outside the viewport, so the map answers by panning
+// (spec 33). A pin already comfortably in view never yanks the map.
+function PanToSelected({ treks, selectedId }: { treks: Trek[]; selectedId?: string }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!selectedId) return;
+    const t = treks.find((x) => x.id === selectedId);
+    if (!t) return;
+    const inView = map.getBounds().pad(-0.1).contains([t.lat, t.lng]);
+    if (!inView) map.panTo([t.lat, t.lng], { animate: !prefersReducedMotion() });
+    // Deliberately NOT reacting to treks identity — only a selection change pans.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, selectedId]);
   return null;
 }
 
@@ -183,27 +203,47 @@ function TrekPin({
       ? `est. ${trek.estimatedDifficulty}`
       : "Unverified";
   return (
-    <CircleMarker
-      center={[trek.lat, trek.lng]}
-      radius={selected ? 11 : unnamed ? Math.max(4, baseRadius - 2) : baseRadius}
-      pathOptions={{
-        // Solid white halo + a drop-shadow (see .trek-pin in index.css) so the
-        // marker reads clearly over the busy terrain basemap; solid fill for punch.
-        color: selected ? "#1c3927" : "#ffffff",
-        weight: selected ? 3.5 : unnamed ? 1.5 : 3,
-        fillColor: color,
-        fillOpacity: unnamed && !selected ? 0.55 : 1,
-        className: "trek-pin",
-      }}
-      eventHandlers={{ click: () => onSelect(trek.id) }}
-    >
-      <Tooltip direction="top" offset={[0, -6]}>
-        <span className="font-semibold">{trek.name}</span>
-        <br />
-        {label} · ~{km} km
-        {trek.elevationM ? ` · ${trek.elevationM} m` : ""}
-      </Tooltip>
-    </CircleMarker>
+    <>
+      {selected && (
+        // Soft brand-green halo under the selected pin so "what did I just
+        // open?" is answered on the map itself (spec 33).
+        <CircleMarker
+          center={[trek.lat, trek.lng]}
+          radius={18}
+          interactive={false}
+          pathOptions={{ stroke: false, fillColor: "#2f6b3f", fillOpacity: 0.25 }}
+        />
+      )}
+      <CircleMarker
+        center={[trek.lat, trek.lng]}
+        radius={selected ? 11 : unnamed ? Math.max(4, baseRadius - 2) : baseRadius}
+        interactive={false}
+        pathOptions={{
+          // Solid white halo + a drop-shadow (see .trek-pin in index.css) so the
+          // marker reads clearly over the busy terrain basemap; solid fill for punch.
+          color: selected ? "#1c3927" : "#ffffff",
+          weight: selected ? 3.5 : unnamed ? 1.5 : 3,
+          fillColor: color,
+          fillOpacity: unnamed && !selected ? 0.55 : 1,
+          className: "trek-pin",
+        }}
+      />
+      {/* The interaction surface: an invisible ring well past the visual pin.
+          8–16 px pins were the "my tap did nothing" report (spec 33). */}
+      <CircleMarker
+        center={[trek.lat, trek.lng]}
+        radius={HIT_RADIUS_PX}
+        pathOptions={{ stroke: false, fillOpacity: 0, fillColor: "#000" }}
+        eventHandlers={{ click: () => onSelect(trek.id) }}
+      >
+        <Tooltip direction="top" offset={[0, -6]}>
+          <span className="font-semibold">{trek.name}</span>
+          <br />
+          {label} · ~{km} km
+          {trek.elevationM ? ` · ${trek.elevationM} m` : ""}
+        </Tooltip>
+      </CircleMarker>
+    </>
   );
 }
 
@@ -248,6 +288,26 @@ function Markers({
   );
 
   const clusters = groups.filter((g) => g.members.length > 1);
+  // divIcons are cheap but identity-sensitive: cache per label so React
+  // doesn't churn DOM nodes on every pan (spec 33).
+  const clusterIcon = useMemo(() => {
+    const cache = new Map<string, L.DivIcon>();
+    return (count: number): L.DivIcon => {
+      const label =
+        count > 99 ? "99+" : count > 9 ? `${Math.floor(count / 10) * 10}+` : String(count);
+      let icon = cache.get(label);
+      if (!icon) {
+        icon = L.divIcon({
+          className: "trek-cluster",
+          html: `<span>${label}</span>`,
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+        });
+        cache.set(label, icon);
+      }
+      return icon;
+    };
+  }, []);
   const singles = groups.filter((g) => g.members.length === 1).map((g) => g.members[0]);
   // Render the selected pin last (SVG paint order = z-order for CircleMarkers).
   const orderedSingles = [...singles].sort(
@@ -259,30 +319,38 @@ function Markers({
       {clusters.map((c) => {
         const bounds = L.latLngBounds(c.members.map((m) => [m.lat, m.lng] as [number, number]));
         return (
-          <CircleMarker
+          <Marker
             key={`cluster:${c.members.map((m) => m.id).join(",")}`}
-            center={[c.lat, c.lng]}
-            radius={Math.min(24, 12 + c.members.length)}
-            pathOptions={{
-              color: "#ffffff",
-              weight: 2.5,
-              fillColor: "#1c3927",
-              fillOpacity: 1,
-              className: "trek-pin",
-            }}
+            position={[c.lat, c.lng]}
+            icon={clusterIcon(c.members.length)}
+            keyboard={false}
             eventHandlers={{
-              click: () =>
-                map.fitBounds(bounds, {
-                  padding: [40, 40],
-                  maxZoom: CLUSTER_MAX_ZOOM + 2,
-                  animate: !prefersReducedMotion(),
-                }),
+              click: () => {
+                // A click must always ANSWER (spec 33). When every member is
+                // near-coincident, fitBounds cannot zoom further — open the
+                // strongest member instead of doing visibly nothing.
+                const targetZoom = map.getBoundsZoom(bounds, false, L.point(40, 40));
+                if (targetZoom > map.getZoom()) {
+                  map.fitBounds(bounds, {
+                    padding: [40, 40],
+                    maxZoom: CLUSTER_MAX_ZOOM + 2,
+                    animate: !prefersReducedMotion(),
+                  });
+                } else {
+                  const top = [...c.members].sort(
+                    (a, b) =>
+                      (b.discoveryScore ?? -1) - (a.discoveryScore ?? -1) ||
+                      (b.reliefM ?? -1) - (a.reliefM ?? -1),
+                  )[0];
+                  onSelect(top.id);
+                }
+              },
             }}
           >
-            <Tooltip direction="top" offset={[0, -6]}>
-              {c.members.length} treks — zoom in
+            <Tooltip direction="top" offset={[0, -22]}>
+              {c.members.length} treks — click to zoom
             </Tooltip>
-          </CircleMarker>
+          </Marker>
         );
       })}
       {orderedSingles.map((t) => (
@@ -314,6 +382,14 @@ export default function TrekMap({
     saveBasemap(b);
   };
   const tiles = basemap === "terrain" ? TILES.terrain : theme === "dark" ? TILES.dark : TILES.light;
+  const legendCounts = useMemo(() => {
+    const counts = { Easy: 0, Moderate: 0, Hard: 0, Unverified: 0 };
+    for (const t of treks) {
+      const d = t.difficulty ?? t.estimatedDifficulty;
+      counts[d ?? "Unverified"]++;
+    }
+    return counts;
+  }, [treks]);
   const selectedTrail = treks.find((t) => t.id === selectedId)?.trail;
 
   return (
@@ -334,6 +410,7 @@ export default function TrekMap({
 
         <InvalidateOnResize />
         <FitToResults origin={origin} radiusKm={radiusKm} treks={treks} />
+        <PanToSelected treks={treks} selectedId={selectedId} />
 
         {/* Radius ring + origin marker */}
         <Circle
@@ -392,17 +469,27 @@ export default function TrekMap({
         ))}
       </div>
 
-      {/* Difficulty legend (spec 15). */}
-      <div className="absolute bottom-8 left-2 z-[500] max-w-[40vw] rounded-lg border border-trail-200 bg-white/90 px-2.5 py-1.5 text-[11px] shadow backdrop-blur-sm dark:border-slate-600 dark:bg-slate-800/90">
+      {/* Difficulty legend with live counts (spec 15/33): what the colours
+          mean AND how many of each are in the current result set. */}
+      <div className="absolute bottom-8 left-2 z-[500] max-w-[45vw] rounded-lg border border-trail-200 bg-white/90 px-2.5 py-1.5 text-[11px] shadow backdrop-blur-sm dark:border-slate-600 dark:bg-slate-800/90">
         {(["Easy", "Moderate", "Hard"] as const).map((d) => (
           <div key={d} className="flex items-center gap-1.5 text-trail-700 dark:text-slate-300">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
               style={{ backgroundColor: difficultyColor(d) }}
             />
-            {d}
+            {d} · {legendCounts[d].toLocaleString()}
           </div>
         ))}
+        {legendCounts.Unverified > 0 && (
+          <div className="flex items-center gap-1.5 text-trail-500 dark:text-slate-400">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: "#64748b", opacity: 0.7 }}
+            />
+            Unverified · {legendCounts.Unverified.toLocaleString()}
+          </div>
+        )}
       </div>
     </div>
   );

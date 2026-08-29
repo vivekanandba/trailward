@@ -9,9 +9,13 @@ test("default Bangalore view renders map, markers and curated treks", async ({ p
   // Curated data in the list
   await expect(page.getByText("Skandagiri")).toBeVisible();
 
-  // Leaflet map: tiles + interactive markers (origin, ring, trek pins)
+  // Leaflet map: tiles + interactive markers. Trek pins are SVG paths; dense
+  // sets collapse into counted divIcon cluster badges (spec 33) — both count
+  // as interactive results on the map.
   await expect(page.locator("img.leaflet-tile").first()).toBeVisible();
-  expect(await page.locator("path.leaflet-interactive").count()).toBeGreaterThan(5);
+  const pins = await page.locator("path.leaflet-interactive").count();
+  const clusters = await page.locator(".trek-cluster").count();
+  expect(pins + clusters).toBeGreaterThan(5);
 });
 
 test("Bangalore's full radius caps the list and points overflow to the map (spec 16)", async ({
@@ -102,12 +106,49 @@ test("any city works — a non-preset origin shows nearby peaks (spec 30)", asyn
   expect(count).toBeGreaterThan(50);
 });
 
-test("the map shows a difficulty legend", async ({ page }) => {
+test("the map shows a difficulty legend with live counts", async ({ page }) => {
   await page.goto("/");
-  // Easy/Moderate/Hard also appear as filter chips in the rail; the legend adds
-  // a second occurrence on the map, so each word appears at least twice.
-  await expect(page.getByText("Hard", { exact: true })).toHaveCount(2);
-  await expect(page.getByText("Moderate", { exact: true })).toHaveCount(2);
+  // The legend rows carry counts (spec 33) — "Hard · 12" — distinct from the
+  // bare filter chips in the rail.
+  await expect(page.getByText(/^Hard · [\d,]+$/)).toBeVisible();
+  await expect(page.getByText(/^Moderate · [\d,]+$/)).toBeVisible();
+});
+
+test("cluster badges show counts and clicking one always answers (spec 33)", async ({ page }) => {
+  await page.goto("/");
+  const cluster = page.locator(".trek-cluster").first();
+  await expect(cluster).toBeVisible();
+  await expect(cluster).toHaveText(/^\d+\+?$/); // a visible member count
+  // Tile URLs carry the zoom level (/z/x/y) — the strongest "the map answered"
+  // signal that needs no app internals.
+  const maxTileZoom = async (): Promise<number> => {
+    const srcs = await page
+      .locator("img.leaflet-tile")
+      .evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).src));
+    return Math.max(0, ...srcs.map((u) => Number(/\/(\d+)\/\d+\/\d+/.exec(u)?.[1] ?? 0)));
+  };
+  const zoomBefore = await maxTileZoom();
+  await cluster.click();
+  // The click either zoomed the map in or opened a detail dialog — never nothing.
+  await expect
+    .poll(async () => {
+      const dialogOpen = (await page.getByRole("dialog").count()) > 0;
+      const zoomedIn = (await maxTileZoom()) > zoomBefore;
+      return dialogOpen || zoomedIn ? "answered" : "nothing";
+    })
+    .toBe("answered");
+});
+
+test("selecting from the map highlights and reveals the row in the list (spec 33)", async ({
+  page,
+}) => {
+  await page.goto("/?sel=skandagiri");
+  // Deep-linked selection: the list row carries the current marker and is
+  // scrolled into view. On mobile the detail overlay covers the rail — the
+  // scroll sync is a desktop-rail behaviour.
+  const row = page.locator("#trek-row-skandagiri button");
+  await expect(row).toHaveAttribute("aria-current", "true");
+  if ((page.viewportSize()?.width ?? 0) >= 1024) await expect(row).toBeInViewport();
 });
 
 test("basemap defaults to terrain and toggles to the street map", async ({ page }) => {
