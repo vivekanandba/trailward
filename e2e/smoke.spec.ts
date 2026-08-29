@@ -222,6 +222,32 @@ test("'use my location' sets the origin from geolocation", async ({ page, contex
   );
 });
 
+test("granted permission refreshes the origin on load, silently (spec 34)", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 15.85, longitude: 74.5 });
+  await page.goto("/"); // no clicks: the stale persisted origin refreshes itself
+  await expect(page.getByLabel("Search for an origin place")).toHaveAttribute(
+    "placeholder",
+    /My location/,
+  );
+  // A deep-linked origin is NEVER overridden by the device location.
+  await page.goto("/?oid=bangalore&olat=12.97160&olng=77.59460&on=Bengaluru");
+  await expect(page.getByLabel("Search for an origin place")).toHaveAttribute(
+    "placeholder",
+    /Bengaluru/,
+  );
+});
+
+test("without permission a dismissible location nudge appears (spec 34)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Use my location" }).nth(1)).toBeVisible();
+  await page.getByRole("button", { name: "Dismiss location suggestion" }).click();
+  await expect(page.getByText(/Seeing treks near/)).toHaveCount(0);
+});
+
 test("a trek can be downloaded as GPX", async ({ page }) => {
   await page.goto("/");
   await page.getByText("Skandagiri").first().click();

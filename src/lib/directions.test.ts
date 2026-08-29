@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { googleMapsDirectionsUrl } from "./directions";
-import { DEFAULT_ORIGIN, type Trek } from "./trek";
+import type { Trek } from "./trek";
 
 const trek: Trek = {
   id: "skandagiri",
@@ -14,11 +14,13 @@ const trek: Trek = {
 };
 
 describe("googleMapsDirectionsUrl", () => {
-  it("builds a maps dir URL with origin and destination coords", () => {
-    const url = googleMapsDirectionsUrl(DEFAULT_ORIGIN, trek);
+  it("routes to the trek from the device's LIVE position — origin omitted (spec 34)", () => {
+    const url = googleMapsDirectionsUrl(trek);
     const parsed = new URL(url);
     expect(parsed.hostname).toContain("google.com");
-    expect(parsed.searchParams.get("origin")).toBe("12.9716,77.5946");
+    // No origin param: Maps starts from wherever the user actually is, never
+    // from a stale search origin.
+    expect(parsed.searchParams.get("origin")).toBeNull();
     expect(parsed.searchParams.get("destination")).toBe("13.5021,77.6911");
   });
 });

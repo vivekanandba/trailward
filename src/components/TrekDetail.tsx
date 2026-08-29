@@ -679,7 +679,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
       <div className="border-t border-trail-100 dark:border-slate-700 p-4">
         <div className="flex gap-2">
           <a
-            href={googleMapsDirectionsUrl(origin, trek)}
+            href={googleMapsDirectionsUrl(trek)}
             target="_blank"
             rel="noreferrer"
             className="flex-1 rounded-lg bg-trail-600 py-2 text-center text-sm font-medium text-white hover:bg-trail-700"

@@ -27,8 +27,11 @@ describe("OriginSearch — use my location", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Use my location" }));
 
-    expect(onPick).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "My location", lat: 15.85, lng: 74.5 }),
+    // The flow is async (shared locateMe promise, spec 34) — await the pick.
+    await waitFor(() =>
+      expect(onPick).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "My location", lat: 15.85, lng: 74.5 }),
+      ),
     );
     expect(onPick.mock.calls[0][0].id).toMatch(/^geo:15\.85\d*,74\.5/);
   });
@@ -47,10 +50,10 @@ describe("OriginSearch — use my location", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/couldn't get/i));
   });
 
-  it("errors gracefully when geolocation is unsupported", () => {
+  it("errors gracefully when geolocation is unsupported", async () => {
     vi.stubGlobal("navigator", { ...navigator, geolocation: undefined });
     render(<OriginSearch origin={origin} onPick={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Use my location" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(/available/i);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/available/i));
   });
 });
