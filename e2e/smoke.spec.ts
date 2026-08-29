@@ -154,7 +154,9 @@ test("the map shows a difficulty legend with live counts", async ({ page }) => {
 
 test("cluster badges show counts and clicking one always answers (spec 33)", async ({ page }) => {
   await page.goto("/");
-  const cluster = page.locator(".trek-cluster").first();
+  // Overlapping badges paint in DOM order — the LAST is topmost and can't be
+  // intercepted by a sibling (the first can, which Playwright rejects).
+  const cluster = page.locator(".trek-cluster").last();
   await expect(cluster).toBeVisible();
   await expect(cluster).toHaveText(/^\d+\+?$/); // a visible member count
   // Tile URLs carry the zoom level (/z/x/y) — the strongest "the map answered"
