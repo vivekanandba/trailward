@@ -87,6 +87,22 @@
   color: #93c5fd; /* blue-300 */
 }
 
+/* Desktop detail panel enter (spec 33): slide in from the right so opening
+   reads as a layer arriving, not the page snapping. */
+@keyframes panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.panel-enter {
+  animation: panel-in 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 /* Motion is an enhancement, never a requirement (spec 33). */
 @media (prefers-reduced-motion: reduce) {
   *,

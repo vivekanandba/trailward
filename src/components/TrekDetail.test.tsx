@@ -300,7 +300,9 @@ describe("TrekDetail GPX export", () => {
     const blob = createURL.mock.calls[0][0];
     expect(blob.type).toBe("application/gpx+xml");
     expect(clickSpy).toHaveBeenCalledOnce();
-    expect(revokeURL).toHaveBeenCalledWith("blob:gpx");
+    // Revocation is DEFERRED (spec 33): revoking synchronously after click()
+    // races the browser's blob fetch and intermittently aborts the download.
+    expect(revokeURL).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 });
