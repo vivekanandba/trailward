@@ -21,6 +21,7 @@ import { Sheet } from "./components/ui/Sheet";
 import { Scrim } from "./components/ui/Scrim";
 import { IconButton } from "./components/ui/Button";
 import { DESKTOP_QUERY, useMediaQuery } from "./lib/useMediaQuery";
+import { geolocationGranted, locateMe, nudgeSnoozed, snoozeNudge } from "./lib/locate";
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
@@ -89,6 +90,47 @@ export default function App() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     saveTheme(next);
+  };
+
+  // Live-location origin (spec 34). The persisted origin goes stale the
+  // moment the user travels — refresh it from the device, but never steal a
+  // shared view: a URL that carries an origin or selection always wins.
+  // Silent path: only when geolocation permission is ALREADY granted (no
+  // prompt possible). Otherwise a dismissible nudge offers one tap to the
+  // native permission flow.
+  const [locationNudge, setLocationNudge] = useState(false);
+  const [nudgeError, setNudgeError] = useState<string | null>(null);
+  useEffect(() => {
+    if (initial.origin || initial.selectedId) return; // deep link wins
+    let active = true;
+    void geolocationGranted().then(async (granted) => {
+      if (!active) return;
+      if (granted) {
+        try {
+          const here = await locateMe();
+          if (active) pickOrigin(here);
+        } catch {
+          // Silent path stays silent: keep the persisted origin.
+        }
+      } else if (typeof navigator !== "undefined" && navigator.geolocation && !nudgeSnoozed()) {
+        setLocationNudge(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+    // Mount-only: this is a load-time refresh, not a tracker.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const locateFromNudge = async () => {
+    try {
+      setNudgeError(null);
+      const here = await locateMe(); // user-initiated → native prompt is fine
+      pickOrigin(here);
+      setLocationNudge(false);
+    } catch (err) {
+      setNudgeError((err as Error).message);
+    }
   };
 
   // Nationwide, region-free data (spec 30): fetch exactly the 1° cells the
@@ -303,6 +345,32 @@ export default function App() {
 
   const statsAndBanner = (
     <>
+      {locationNudge && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-trail-100 bg-trail-50 px-4 py-2 text-xs text-trail-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <span className="min-w-0 flex-1">
+            Seeing treks near <strong>{origin.name}</strong>
+            {nudgeError ? ` — ${nudgeError}` : "."}
+          </span>
+          <button
+            type="button"
+            onClick={() => void locateFromNudge()}
+            className="rounded-full bg-trail-600 px-3 py-1 font-medium text-white hover:bg-trail-700"
+          >
+            Use my location
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              snoozeNudge(); // a week of quiet — the header pin stays available
+              setLocationNudge(false);
+            }}
+            aria-label="Dismiss location suggestion"
+            className="rounded-full px-2 py-1 text-trail-500 hover:bg-trail-100 dark:text-slate-400 dark:hover:bg-slate-700"
+          >
+            Not now
+          </button>
+        </div>
+      )}
       {loadingCells && (
         // Reserve the stats card's slot so the rail doesn't jump when the
         // real card arrives (spec 33).

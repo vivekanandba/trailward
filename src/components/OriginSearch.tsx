@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Origin } from "../lib/trek";
 import { geocode, type GeocodeResult } from "../lib/geocode";
 import { LocateIcon } from "./icons";
+import { locateMe } from "../lib/locate";
 
 interface OriginSearchProps {
   origin: Origin;
@@ -82,27 +83,18 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
   // path (live discovery); handles denial/unsupported/timeout inline.
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
-  const useMyLocation = () => {
-    if (!navigator.geolocation) {
-      setGeoError("Location isn't available on this device.");
-      return;
-    }
+  const locateAndPick = async () => {
     setLocating(true);
     setGeoError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocating(false);
-        const { latitude: lat, longitude: lng } = pos.coords;
-        onPick({ id: `geo:${lat.toFixed(4)},${lng.toFixed(4)}`, name: "My location", lat, lng });
-        setQuery("");
-        setOpen(false);
-      },
-      () => {
-        setLocating(false);
-        setGeoError("Couldn't get your location.");
-      },
-      { timeout: 10000, maximumAge: 60000 },
-    );
+    try {
+      onPick(await locateMe());
+      setQuery("");
+      setOpen(false);
+    } catch (err) {
+      setGeoError((err as Error).message);
+    } finally {
+      setLocating(false);
+    }
   };
 
   const listboxId = "origin-listbox";
@@ -126,7 +118,7 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
       />
       <button
         type="button"
-        onClick={useMyLocation}
+        onClick={() => void locateAndPick()}
         disabled={locating}
         aria-label="Use my location"
         title="Use my location"
