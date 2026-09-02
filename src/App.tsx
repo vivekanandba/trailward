@@ -122,7 +122,7 @@ export default function App() {
     // Mount-only: this is a load-time refresh, not a tracker.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const useNudgeLocation = async () => {
+  const locateFromNudge = async () => {
     try {
       setNudgeError(null);
       const here = await locateMe(); // user-initiated → native prompt is fine
@@ -353,7 +353,7 @@ export default function App() {
           </span>
           <button
             type="button"
-            onClick={() => void useNudgeLocation()}
+            onClick={() => void locateFromNudge()}
             className="rounded-full bg-trail-600 px-3 py-1 font-medium text-white hover:bg-trail-700"
           >
             Use my location

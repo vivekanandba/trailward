@@ -83,7 +83,7 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
   // path (live discovery); handles denial/unsupported/timeout inline.
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
-  const useMyLocation = async () => {
+  const locateAndPick = async () => {
     setLocating(true);
     setGeoError(null);
     try {
@@ -118,7 +118,7 @@ export default function OriginSearch({ origin, onPick }: OriginSearchProps) {
       />
       <button
         type="button"
-        onClick={() => void useMyLocation()}
+        onClick={() => void locateAndPick()}
         disabled={locating}
         aria-label="Use my location"
         title="Use my location"
