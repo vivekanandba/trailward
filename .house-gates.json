@@ -1,0 +1,8 @@
+{
+  "secrets": true,
+  "message": true,
+  "max_bytes": 0,
+  "protected_branches": [],
+  "_note_max_bytes": "size gate off: this repo already tracks 20 file(s) over 512 KB (largest 47.2 MB). Set a byte limit to enable it.",
+  "_note_protected_branches": "empty means the branch gate is OFF. Set [\"main\"] to require a branch per change, as resumefit does."
+}
