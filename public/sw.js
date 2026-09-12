@@ -4,13 +4,18 @@
  *  - Navigations: network-first, falling back to the cached app shell, so a
  *    deploy propagates on the next online visit but the app still opens at a
  *    signal-less trailhead.
- *  - Same-origin assets (hashed *.js/*.css, icons, treks data baked into the
- *    bundle): cache-first — hashes make them immutable.
+ *  - Same-origin assets (hashed *.js/*.css, icons): cache-first — hashes make
+ *    them immutable.
+ *  - Trek data cells (/data/cells/*.json): stale-while-revalidate — the names
+ *    are STABLE, not hashed, and the weekly cron rewrites them in place, so
+ *    cache-first served first-visit data forever (spec 34 follow-up). The
+ *    cached cell answers instantly; a background refetch updates the cache for
+ *    the next load; offline still works from the cache.
  *  - Cross-origin (map tiles, Overpass, weather, geocoding): untouched; the
  *    app already degrades gracefully and tile caching would bloat storage.
  * Bump VERSION to invalidate everything after a breaking SW change.
  */
-const VERSION = "v1";
+const VERSION = "v2"; // v2: data cells switched from cache-first to SWR
 const CACHE = `trailward-${VERSION}`;
 const BASE = "/trailward/";
 
@@ -83,6 +88,29 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() => caches.match(BASE, { ignoreVary: true })),
+    );
+    return;
+  }
+
+  // Trek data cells: stale-while-revalidate. Stable filenames + weekly
+  // in-place rewrites mean cache-first would pin the first visit's dataset
+  // forever; always-network would break the offline trailhead case.
+  if (url.pathname.startsWith(BASE + "data/")) {
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const hit = await cache.match(req, { ignoreVary: true });
+        const refresh = fetch(req)
+          .then((res) => {
+            if (res.ok) cache.put(req, res.clone());
+            return res;
+          })
+          .catch(() => undefined);
+        if (hit) {
+          event.waitUntil(refresh); // keep the worker alive for the refetch
+          return hit;
+        }
+        return (await refresh) ?? Response.error();
+      }),
     );
     return;
   }
