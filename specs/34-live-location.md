@@ -1,4 +1,4 @@
-# 34 — Live-location origin & stale-origin honesty
+# 34 — Live-location origin & stale-persistence honesty
 
 ## Purpose
 
@@ -23,6 +23,16 @@ ambushing them with a permission prompt.
 - **Directions route from the device, not the search origin.** The Google Maps URL omits the
   origin parameter — Maps starts from the user's live position. Browsing Himachal from a
   Bengaluru search must not produce a 2,400 km route.
+
+## Stale data: the service worker (same complaint, other half)
+
+The SW cached `/data/cells/*.json` cache-first — but cell names are STABLE, not hashed, and
+the weekly cron rewrites them in place, so returning visitors kept their first visit's dataset
+forever. Cells now use **stale-while-revalidate**: the cached cell answers instantly (offline
+trailheads still work), a background refetch updates the cache, and the next load is fresh —
+data is at most one visit behind. SW `VERSION` bumped to v2 to flush the old cache.
+Verified live against a production build: mutate cell on disk → next load serves stale +
+revalidates → following load shows the new data.
 
 ## Interfaces
 
