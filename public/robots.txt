@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# The served cell files are the app's data plane: 367 JSON blobs with no reader
+# value, and a crawl-budget sink. The human-readable pages under /trailward/t/
+# carry the same facts (spec 35).
+Disallow: /trailward/data/
+
+Sitemap: https://vivekanandba.github.io/trailward/sitemap.xml
