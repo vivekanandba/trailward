@@ -94,3 +94,13 @@ describe("renderMarkdown — inline placeholders must not collide with prose", (
     expect(out).not.toContain("undefined");
   });
 });
+
+describe("renderMarkdown policy — document structure (spec 36)", () => {
+  it("throws on a second h1: page structure must fail the BUILD, not a later test", () => {
+    expect(() => renderMarkdown("# One\n\ntext\n\n# Two", "about.md")).toThrow(/about\.md.*h1/is);
+  });
+
+  it("allows one h1 with any number of lower headings", () => {
+    expect(() => renderMarkdown("# One\n\n## A\n\n### B\n\n## C", "about.md")).not.toThrow();
+  });
+});

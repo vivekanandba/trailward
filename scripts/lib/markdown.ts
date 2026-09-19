@@ -131,6 +131,7 @@ export function renderMarkdown(src: string, file: string): string {
   const out: string[] = [];
   const lines = src.split(/\r?\n/);
   let i = 0;
+  let h1s = 0;
 
   while (i < lines.length) {
     const line = lines[i];
@@ -143,6 +144,11 @@ export function renderMarkdown(src: string, file: string): string {
     const heading = /^(#{1,4})\s+(.*)$/.exec(line);
     if (heading) {
       const level = heading[1].length;
+      // One h1 per document: a page with two is a structural error, and it
+      // must fail the build rather than a later assertion (spec 36).
+      if (level === 1 && ++h1s > 1) {
+        throw new Error(`[content] ${file}: a second h1 ('${heading[2]}') — a page has one`);
+      }
       const text = inline(heading[2], file);
       out.push(`<h${level} id="${slugify(heading[2])}">${text}</h${level}>`);
       i++;
