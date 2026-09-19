@@ -66,6 +66,12 @@ Verification section whose claims exist as tests.
 | [30-nationwide](./30-nationwide.md)                             | Region-free records, cell-chunked serving, any-city      |
 | [31-extra-sources-and-volume](./31-extra-sources-and-volume.md) | OSM/Wikidata sweep, village rule, UI volume, drift guard |
 | [32-data-operations](./32-data-operations.md)                   | Rebake runbook: writer serialization, order, caches      |
+| [33-ui-overhaul](./33-ui-overhaul.md)                           | Primitives, map-first mobile, honest overlays, visual CI |
+| [34-live-location](./34-live-location.md)                       | Origin follows the user; live directions; SW freshness   |
+| [35-discoverability](./35-discoverability.md)                   | Canonical URLs, structured data, 3,886 static trek pages |
+| [36-content-pages](./36-content-pages.md)                       | Attribution, method and dataset-freshness pages          |
+| [37-accessibility-and-gates](./37-accessibility-and-gates.md)   | A11y audit, contrast, link check, coverage & spec gates  |
+| [38-palette-and-paths](./38-palette-and-paths.md)               | Command palette over every named summit; guided paths    |
 
 ## Glossary
 
