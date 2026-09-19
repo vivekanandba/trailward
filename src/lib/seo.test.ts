@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { SITE_URL, absoluteUrl, canonicalFor, appJsonLd, trekJsonLd, sitemapXml } from "./seo";
+import {
+  SITE_URL,
+  absoluteUrl,
+  canonicalFor,
+  appJsonLd,
+  trekJsonLd,
+  sitemapXml,
+  jsonLdScript,
+} from "./seo";
 import type { Trek } from "./trek";
 
 const trek: Trek = {
@@ -97,5 +105,17 @@ describe("sitemapXml", () => {
     expect(xml).toContain("t/a&amp;b/"); // raw & would be invalid XML
     expect(xml).not.toMatch(/<loc>(?!https:\/\/)/);
     expect(xml.trimEnd().endsWith("</urlset>")).toBe(true);
+  });
+});
+
+describe("jsonLdScript (spec 35 — untrusted names must not break out of <script>)", () => {
+  it("neutralises a name that closes the script element", () => {
+    const evil = trekJsonLd({ ...trek, name: "</script><img src=x onerror=alert(1)>" });
+    const out = jsonLdScript(evil);
+    expect(out).not.toContain("</script");
+    expect(out).not.toContain("<img");
+    expect(out).toContain("\\u003c");
+    // Still valid JSON carrying the original text.
+    expect((JSON.parse(out) as { name: string }).name).toContain("<img");
   });
 });

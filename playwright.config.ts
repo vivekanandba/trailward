@@ -27,12 +27,34 @@ export default defineConfig({
     contextOptions: { reducedMotion: "reduce" },
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    {
+      name: "chromium",
+      testIgnore: /static\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    { name: "mobile", testIgnore: /static\.spec\.ts/, use: { ...devices["Pixel 7"] } },
+    {
+      // The generated static surface (spec 35) does not exist on the dev
+      // server: it is produced by `npm run build`. Run it against `vite
+      // preview`, which serves the real dist/ under the real /trailward/ base
+      // path — so base-path and asset-resolution bugs surface in CI rather
+      // than in production.
+      name: "static",
+      testMatch: /static\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:4173/trailward/" },
+    },
   ],
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:5173/trailward/",
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: "npm run dev",
+      url: "http://localhost:5173/trailward/",
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "npm run build && npx vite preview --port 4173",
+      url: "http://localhost:4173/trailward/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000, // a full build: sitemap + vite + 3,886 trek pages
+    },
+  ],
 });

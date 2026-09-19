@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { appJsonLd } from "./src/lib/seo";
+import { appJsonLd, jsonLdScript } from "./src/lib/seo";
 
 /**
  * Inject the app-shell structured data at BUILD time (spec 35). JSON-LD added
@@ -25,7 +25,7 @@ function structuredData(): Plugin {
       } catch {
         return html; // no data yet (fresh clone): ship the shell unannotated
       }
-      const ld = `<script type="application/ld+json">${JSON.stringify(appJsonLd(total))}</script>`;
+      const ld = `<script type="application/ld+json">${jsonLdScript(appJsonLd(total))}</script>`;
       return html.replace("</head>", `    ${ld}\n  </head>`);
     },
   };

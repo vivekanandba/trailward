@@ -58,10 +58,38 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
-      # Both projects: desktop chromium AND the Pixel-7 mobile project.
-      - run: npm run e2e
+      # App projects only (desktop chromium + Pixel-7). The static-surface
+      # project needs a full production build and runs as its own job, so a
+      # smoke-test failure is never queued behind 3,886 generated pages.
+      - run: npm run e2e -- --project=chromium --project=mobile
       # Failing visual diffs (-actual/-diff/-expected PNGs) and traces are
       # useless if discarded — surface them on every run outcome (spec 33).
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results-${{ github.job }}
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  e2e-static:
+    # The generated crawl surface (spec 35): trek pages, robots, sitemap,
+    # served by `vite preview` from a real production build at the real base
+    # path. Separate job because it pays for that build.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e -- --project=static
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -85,3 +85,15 @@ export function slugMap(treks: Trek[]): Map<string, string> {
   }
   return out;
 }
+
+/**
+ * Guard the generator's recursive clean by construction, not by convention
+ * (CON-PROC-006). Throws unless `dir` is exactly <repoRoot>/dist/t — a moved
+ * script or a symlinked dist must fail loudly, never delete something else.
+ */
+export function assertCleanTarget(dir: string, repoRoot: string): void {
+  const expected = `${repoRoot.replace(/\/$/, "")}/dist/t`;
+  if (dir !== expected) {
+    throw new Error(`refusing to clean an unexpected path: ${dir} (expected ${expected})`);
+  }
+}

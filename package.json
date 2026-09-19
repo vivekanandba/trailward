@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:sitemap && tsc -b && vite build && npm run build:pages",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -35,7 +35,7 @@
     "validate:data": "tsx scripts/validate-data.ts",
     "e2e:update": "playwright test --update-snapshots",
     "build:sitemap": "tsx scripts/build-sitemap.ts",
-    "prebuild": "npm run build:sitemap"
+    "build:pages": "tsx scripts/build-pages.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
