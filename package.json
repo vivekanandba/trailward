@@ -33,7 +33,9 @@
     "build:chunks": "tsx scripts/chunk-data.ts",
     "apply:names": "tsx scripts/apply-name-issues.ts",
     "validate:data": "tsx scripts/validate-data.ts",
-    "e2e:update": "playwright test --update-snapshots"
+    "e2e:update": "playwright test --update-snapshots",
+    "build:sitemap": "tsx scripts/build-sitemap.ts",
+    "prebuild": "npm run build:sitemap"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
