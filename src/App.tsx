@@ -454,6 +454,14 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Skip link (spec 37): first in tab order, revealed on focus. On a map
+          app the alternative is tabbing through map controls forever. */}
+      <a
+        href="#results"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[1300] focus:rounded-lg focus:bg-trail-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+      >
+        Skip to results
+      </a>
       {/* Header */}
       <header
         ref={headerRef}

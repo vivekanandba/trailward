@@ -378,7 +378,10 @@ export default function FilterBar({
 
       {/* Count + reset */}
       <div className="flex items-center justify-between border-t border-trail-100 dark:border-slate-700 pt-3 text-sm">
-        <span className="text-trail-700 dark:text-slate-300">
+        {/* Polite live region (spec 37): changing a filter changes this count,
+            and without an announcement a screen-reader user has no signal that
+            their action did anything. */}
+        <span className="text-trail-700 dark:text-slate-300" aria-live="polite">
           <span className="font-semibold tabular-nums text-trail-900 dark:text-slate-100">
             {resultCount}
           </span>{" "}

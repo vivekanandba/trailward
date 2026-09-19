@@ -35,7 +35,8 @@
     "validate:data": "tsx scripts/validate-data.ts",
     "e2e:update": "playwright test --update-snapshots",
     "build:sitemap": "tsx scripts/build-sitemap.ts",
-    "build:pages": "tsx scripts/build-pages.ts"
+    "build:pages": "tsx scripts/build-pages.ts",
+    "check:links": "tsx scripts/check-links.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
