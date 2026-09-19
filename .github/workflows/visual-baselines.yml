@@ -1,0 +1,51 @@
+name: Update visual baselines
+
+# Screenshot baselines must be generated in the SAME environment that verifies
+# them. Font rasterization differs between a local container and the CI runner
+# — different freetype/fontconfig — so locally-generated baselines fail in CI
+# with a whole-page text diff that no tolerance can honestly absorb (spec 33).
+#
+# CI is the authority (CON-VER-004), so CI produces the baselines. Run this
+# manually after an intentional UI change, then re-run the PR checks.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to update baselines on
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  baselines:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.branch }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test visual.spec.ts --update-snapshots
+      - name: Commit refreshed baselines if changed
+        run: |
+          if [[ -n "$(git status --porcelain e2e/__screenshots__)" ]]; then
+            git config user.name "trailward-bot"
+            git config user.email "actions@github.com"
+            git add e2e/__screenshots__
+            git commit -m "chore(visual): refresh baselines from CI
+
+          Generated on the runner, which is the environment that verifies them —
+          local font rasterization differs and produces a whole-page text diff."
+            git push
+          else
+            echo "Baselines already match this environment."
+          fi
