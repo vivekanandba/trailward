@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { slugFor, qualifies, qualifyingTreks, slugMap } from "./pages";
+import { slugFor, qualifies, qualifyingTreks, slugMap, assertCleanTarget } from "./pages";
 import type { Trek } from "../../src/lib/trek";
 
 const mk = (over: Partial<Trek> & Pick<Trek, "id" | "name">): Trek => ({
@@ -114,5 +114,18 @@ describe("qualifyingTreks", () => {
     expect(qualifyingTreks(treks).map((t) => t.id)).toEqual(
       qualifyingTreks(treks).map((t) => t.id),
     );
+  });
+});
+
+describe("assertCleanTarget (spec 35 / CON-PROC-006)", () => {
+  it("permits exactly <repo>/dist/t", () => {
+    expect(() => assertCleanTarget("/repo/dist/t", "/repo")).not.toThrow();
+    expect(() => assertCleanTarget("/repo/dist/t", "/repo/")).not.toThrow();
+  });
+
+  it("refuses anything else — a moved script must fail, not delete", () => {
+    for (const bad of ["/repo/dist", "/repo", "/", "/repo/dist/t/..", "/elsewhere/dist/t"]) {
+      expect(() => assertCleanTarget(bad, "/repo"), bad).toThrow(/refusing to clean/);
+    }
   });
 });

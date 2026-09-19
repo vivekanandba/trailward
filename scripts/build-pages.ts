@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
-import { qualifyingTreks, slugMap } from "./lib/pages";
+import { assertCleanTarget, qualifyingTreks, slugMap } from "./lib/pages";
 import { renderTrekPage } from "./lib/trekPage";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -31,6 +31,7 @@ async function main(): Promise<void> {
     throw new Error("[pages] slug collision — refusing to write");
   }
 
+  assertCleanTarget(outDir, resolve(here, ".."));
   rmSync(outDir, { recursive: true, force: true });
   for (const trek of pages) {
     const slug = slugs.get(trek.id)!;
