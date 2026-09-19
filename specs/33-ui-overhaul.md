@@ -89,6 +89,16 @@ screenshot suite locks the finished UI against regression.
   Gate proven: a one-line cluster-colour change fails at 3% diff; two consecutive clean runs
   pass byte-identical.
 
+## Baselines are generated in CI, not locally
+
+Font rasterization differs between a local container and the GitHub runner
+(different freetype/fontconfig), which shows up as a ~2% whole-page text diff —
+too large to absorb with tolerance without blinding the gate, and not a real
+regression. Baselines are therefore produced by
+`.github/workflows/visual-baselines.yml` (`workflow_dispatch`) running on the
+same image that verifies them, and committed by the bot. `npm run e2e:update`
+remains useful locally for seeing what changed; it is not the source of truth.
+
 ## Out of scope
 
 Spiderfying clusters, marker/list virtualization, PWA/offline polish, any new runtime
