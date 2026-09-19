@@ -273,3 +273,39 @@ test("map is actually visible on a mobile viewport", async ({ page }) => {
   expect(box!.height).toBeGreaterThan((viewport?.height ?? 0) / 3);
   expect(box!.width).toBeGreaterThan(0);
 });
+
+test("the command palette finds a summit anywhere in India (spec 38)", async ({ page }) => {
+  await page.goto("/");
+  // Desktop shows a labelled control in the header; mobile shows an icon
+  // button in the results-sheet toolbar. Both open the same palette.
+  await page.getByRole("button", { name: "Search any summit in India" }).first().click();
+  const input = page.getByRole("combobox", { name: /Search summits by name/ });
+  await expect(input).toBeFocused();
+  // Savandurga is near Bengaluru; the point is that the palette searches the
+  // whole committed index, not just the rows currently loaded.
+  await input.fill("savandurga");
+  await expect(page.getByRole("option").first()).toBeVisible();
+  await input.press("Enter");
+  // The map travelled there: the origin changed and the trek is selected.
+  await expect(page).toHaveURL(/[?&]sel=/);
+  await expect(page.getByRole("dialog").filter({ hasText: "Savandurga" }).first()).toBeVisible();
+});
+
+test("a guided path narrows the results (spec 38)", async ({ page }) => {
+  await page.goto("/");
+  const count = async (): Promise<number> =>
+    Number(
+      (
+        await page
+          .getByText(/^\d+ treks?$/)
+          .first()
+          .innerText()
+      ).replace(/\D/g, ""),
+    );
+  // The count element is visible while cells are still loading and reads 0;
+  // wait for real data before sampling, or the comparison is against nothing.
+  await expect.poll(count).toBeGreaterThan(0);
+  const before = await count();
+  await page.getByRole("button", { name: "My first hill" }).click();
+  await expect.poll(count).toBeLessThan(before);
+});

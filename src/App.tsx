@@ -15,13 +15,16 @@ import { regionStats, type RegionStats } from "./lib/regionStats";
 import { feedbackUrl } from "./lib/github";
 import { loadTreksAround } from "./lib/cells";
 import { difficultyColor } from "./lib/difficulty";
-import { FilterIcon, MountainIcon } from "./components/icons";
+import { FilterIcon, MountainIcon, SearchIcon } from "./components/icons";
 import TrekList from "./components/TrekList";
 import { Sheet } from "./components/ui/Sheet";
 import { Scrim } from "./components/ui/Scrim";
 import { IconButton } from "./components/ui/Button";
 import { DESKTOP_QUERY, useMediaQuery } from "./lib/useMediaQuery";
 import { geolocationGranted, locateMe, nudgeSnoozed, snoozeNudge } from "./lib/locate";
+import CommandPalette from "./components/CommandPalette";
+import { GUIDED_PATHS, applyPath } from "./lib/paths";
+import type { IndexEntry } from "./lib/search";
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
@@ -274,6 +277,33 @@ export default function App() {
     setDetailSnap(0);
   }, [selectedId]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // ⌘K / Ctrl-K opens the palette (spec 38). Ignored while the user is typing
+  // in a field, so it never steals a keystroke from the filters.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "k" || !(e.metaKey || e.ctrlKey)) return;
+      const el = document.activeElement;
+      const typing =
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        (el as HTMLElement | null)?.isContentEditable;
+      if (typing && !paletteOpen) return;
+      e.preventDefault();
+      setPaletteOpen((o) => !o);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [paletteOpen]);
+
+  // Choosing a result moves the origin there AND selects it, so the map
+  // actually travels to the summit rather than filtering in place.
+  const choosePaletteResult = (e: IndexEntry) => {
+    pickOrigin({ id: `geo:${e.lat},${e.lng}`, name: e.name, lat: e.lat, lng: e.lng });
+    setSelectedId(e.id);
+    setPaletteOpen(false);
+  };
   const activeFilterCount = useMemo(() => {
     let n = 0;
     if (filters.difficulties.length) n++;
@@ -378,6 +408,33 @@ export default function App() {
       </a>
     </p>
   );
+
+  // Guided paths (spec 38): an answer to "where do I start", shown only when
+  // the user has not already expressed a preference.
+  const filtersAreDefault =
+    filters.difficulties.length === 0 &&
+    filters.types.length === 0 &&
+    !filters.nightOnly &&
+    !filters.hiddenGemsOnly &&
+    !filters.namedOnly &&
+    filters.minReliefM === undefined &&
+    filters.query.trim() === "";
+
+  const pathChips = filtersAreDefault ? (
+    <div className="flex flex-wrap gap-2 border-b border-trail-100 px-4 pb-3 dark:border-slate-700">
+      {GUIDED_PATHS.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          title={p.reason}
+          onClick={() => setFilters((f) => applyPath(f, p))}
+          className="rounded-full border border-trail-200 bg-white px-3 py-1 text-xs text-trail-700 transition hover:border-trail-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500"
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
 
   const statsAndBanner = (
     <>
@@ -488,8 +545,24 @@ export default function App() {
             Feedback
           </a>
         )}
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          aria-label="Search any summit in India"
+          className="hidden items-center gap-2 rounded-lg border border-trail-200 px-3 py-2 text-sm text-trail-600 hover:border-trail-400 sm:flex dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500"
+        >
+          Search summits
+          <kbd className="rounded border border-trail-200 px-1 text-[10px] dark:border-slate-600">
+            ⌘K
+          </kbd>
+        </button>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onChoose={choosePaletteResult}
+      />
 
       {isDesktop ? (
         /* Desktop: rail + map, detail as a non-modal slide-over with a visual scrim. */
@@ -500,6 +573,7 @@ export default function App() {
           >
             {presetChips}
             <div className="border-b border-trail-100 p-4 dark:border-slate-700">{filterBar}</div>
+            {pathChips}
             {statsAndBanner}
             {trekList}
             {siteLinks}
@@ -544,13 +618,20 @@ export default function App() {
             onSnapChange={setResultsSnap}
             labelledBy="results-sheet-title"
           >
-            <div className="flex items-center justify-between gap-2 border-b border-trail-100 px-4 pb-2 dark:border-slate-700">
+            <div className="flex items-center gap-2 border-b border-trail-100 px-4 pb-2 dark:border-slate-700">
               <h2
                 id="results-sheet-title"
-                className="text-sm font-semibold text-trail-800 dark:text-slate-100"
+                className="flex-1 text-sm font-semibold text-trail-800 dark:text-slate-100"
               >
                 {loadingCells ? `Searching near ${origin.name}…` : `${visible.length} treks`}
               </h2>
+              <IconButton
+                aria-label="Search any summit in India"
+                variant="secondary"
+                onClick={() => setPaletteOpen(true)}
+              >
+                <SearchIcon />
+              </IconButton>
               <IconButton
                 aria-label={`Filters${activeFilterCount ? ` (${activeFilterCount} active)` : ""}`}
                 variant="secondary"
@@ -566,6 +647,7 @@ export default function App() {
               </IconButton>
             </div>
             {presetChips}
+            {pathChips}
             {statsAndBanner}
             {trekList}
             {siteLinks}
