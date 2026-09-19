@@ -1,9 +1,9 @@
 User-agent: *
 Allow: /
 
-# The served cell files are the app's data plane: 367 JSON blobs with no reader
-# value, and a crawl-budget sink. The human-readable pages under /trailward/t/
-# carry the same facts (spec 35).
-Disallow: /trailward/data/
+# Deliberately NOT disallowing /trailward/data/: the app fetches its cells
+# from there, and a crawler rendering the page with those requests blocked
+# sees an empty map — a worse signal than any crawl budget it saves. The
+# sitemap steers crawl priority instead (spec 35).
 
 Sitemap: https://vivekanandba.github.io/trailward/sitemap.xml

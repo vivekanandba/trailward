@@ -24,9 +24,10 @@ of broken canonical/OG URLs on GitHub Pages. Rules:
 
 ## B. Crawl surface
 
-- **`public/robots.txt`** — allows everything, names the sitemap absolutely. The app's own
-  data directory (`/trailward/data/`) is disallowed: 367 JSON cell files are a crawl-budget
-  sink with no reader value.
+- **`public/robots.txt`** — allows everything and names the sitemap absolutely. It does NOT
+  disallow the served cell files, tempting as that is: the app fetches its data from there, and
+  a crawler that renders the page with those requests blocked sees an empty map — a worse
+  signal than the crawl budget it saves. Crawl priority is steered by the sitemap instead.
 - **`public/sitemap.xml`** — generated, never hand-edited (`npm run build:sitemap`, run in the
   same prebuild step as the chunks). Contains the app root plus, once section C lands, every
   static trek page. `lastmod` comes from the data, not from build time, so an unchanged page
