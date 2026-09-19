@@ -343,6 +343,42 @@ export default function App() {
     </div>
   );
 
+  // Attribution is a licence obligation (spec 36): the sources page must be
+  // reachable from the app, not only from a search result.
+  const siteLinks = (
+    <p className="border-t border-trail-100 p-4 text-center text-xs text-trail-500 dark:border-slate-700 dark:text-slate-400">
+      <a
+        href="/trailward/about/"
+        className="underline hover:text-trail-700 dark:hover:text-slate-200"
+      >
+        About
+      </a>
+      {" · "}
+      <a
+        href="/trailward/sources/"
+        className="underline hover:text-trail-700 dark:hover:text-slate-200"
+      >
+        Sources &amp; licences
+      </a>
+      {" · "}
+      <a
+        href="/trailward/data/"
+        className="underline hover:text-trail-700 dark:hover:text-slate-200"
+      >
+        Data
+      </a>
+      {" · "}
+      <a
+        href={feedbackUrl()}
+        target="_blank"
+        rel="noreferrer"
+        className="underline hover:text-trail-700 dark:hover:text-slate-200"
+      >
+        Feedback
+      </a>
+    </p>
+  );
+
   const statsAndBanner = (
     <>
       {locationNudge && (
@@ -458,6 +494,7 @@ export default function App() {
             <div className="border-b border-trail-100 p-4 dark:border-slate-700">{filterBar}</div>
             {statsAndBanner}
             {trekList}
+            {siteLinks}
           </aside>
 
           <main className="relative min-h-0 flex-1">
@@ -523,16 +560,7 @@ export default function App() {
             {presetChips}
             {statsAndBanner}
             {trekList}
-            <div className="border-t border-trail-100 p-4 text-center dark:border-slate-700">
-              <a
-                href={feedbackUrl()}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm font-medium text-trail-700 underline dark:text-slate-300"
-              >
-                Feedback
-              </a>
-            </div>
+            {siteLinks}
           </Sheet>
 
           {filtersOpen && (

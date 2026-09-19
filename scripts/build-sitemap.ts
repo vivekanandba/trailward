@@ -39,7 +39,11 @@ async function main(): Promise<void> {
 
   const pages = qualifyingTreks(treks);
   const slugs = slugMap(pages);
-  const entries: SitemapEntry[] = [{ path: "/", lastmod: dataDate }];
+  const entries: SitemapEntry[] = [
+    { path: "/", lastmod: dataDate },
+    // Content pages (spec 36) — authored markdown plus the generated /data/.
+    ...["about", "sources", "data"].map((slug) => ({ path: `${slug}/`, lastmod: dataDate })),
+  ];
   for (const t of pages) {
     entries.push({ path: `t/${slugs.get(t.id)!}/`, lastmod: dataDate });
   }

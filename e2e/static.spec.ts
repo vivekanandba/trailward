@@ -78,3 +78,51 @@ test("every sitemap trek URL resolves to a real page (no dead advertisements)", 
     expect(res.status(), `${path} should exist`).toBe(200);
   }
 });
+
+test("the content pages are served, single-h1, and canonically correct (spec 36)", async ({
+  page,
+}) => {
+  for (const [slug, heading] of [
+    ["about", /About Trailward/],
+    ["sources", /Data sources and licences/],
+    ["data", /The dataset/],
+  ] as const) {
+    const res = await page.goto(`${slug}/`);
+    expect(res?.status(), slug).toBe(200);
+    await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+    expect(await page.locator("h1").count(), slug).toBe(1);
+    const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
+    expect(canonical).toBe(`https://vivekanandba.github.io/trailward/${slug}/`);
+  }
+});
+
+test("the sources page discharges the attribution obligation (spec 36)", async ({ page }) => {
+  await page.goto("sources/");
+  const body = await page.locator("body").innerText();
+  // Every licence that REQUIRES attribution must name its source here.
+  for (const required of ["GeoNames", "OpenStreetMap", "ESA WorldCover", "Open-Meteo"]) {
+    expect(body, required).toContain(required);
+  }
+  for (const licence of ["CC-BY 4.0", "ODbL"]) {
+    expect(body, licence).toContain(licence);
+  }
+  // And the licences must be linked, not merely named.
+  await expect(page.getByRole("link", { name: /ODbL/ }).first()).toBeVisible();
+});
+
+test("the data page reports live counts, not prose (spec 36)", async ({ page }) => {
+  await page.goto("data/");
+  const body = await page.locator("body").innerText();
+  expect(body).toMatch(/Total summits\s+[\d,]{6,}/);
+  expect(body).toMatch(/Still unnamed\s+[\d,]{5,}/);
+});
+
+test("the app links to attribution — a licence obligation, not only an SEO page", async ({
+  page,
+}) => {
+  await page.goto("./");
+  const sources = page.getByRole("link", { name: /Sources & licences/ }).first();
+  await expect(sources).toBeVisible();
+  await sources.click();
+  await expect(page).toHaveURL(/\/sources\//);
+});

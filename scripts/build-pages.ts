@@ -12,11 +12,17 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
 import { assertCleanTarget, qualifyingTreks, slugMap } from "./lib/pages";
+import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
+import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
+import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
+import { readdirSync } from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const treksFile = resolve(here, "../src/data/treks.json");
 const outDir = resolve(here, "../dist/t");
+const contentDir = resolve(here, "../content");
+const distDir = resolve(here, "../dist");
 
 async function main(): Promise<void> {
   if (!existsSync(resolve(here, "../dist"))) {
@@ -40,6 +46,42 @@ async function main(): Promise<void> {
     writeFileSync(resolve(dir, "index.html"), renderTrekPage(trek, slug), "utf8");
   }
   console.log(`[pages] wrote ${pages.length} trek page(s) → ${outDir}`);
+
+  // Content pages (spec 36). Authored markdown, plus a generated /data/ page.
+  const written: string[] = [];
+  const emit = (slug: string, src: string, file: string): void => {
+    const { data, body } = parseFrontmatter(src, file);
+    const dir = resolve(distDir, slug);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "index.html"),
+      renderContentPage(data, renderMarkdown(body, file), slug),
+      "utf8",
+    );
+    written.push(slug);
+  };
+
+  for (const file of readdirSync(contentDir)
+    .filter((f) => f.endsWith(".md"))
+    .sort()) {
+    emit(file.replace(/\.md$/, ""), readFileSync(resolve(contentDir, file), "utf8"), file);
+  }
+
+  const stats = datasetStats(treks, pages.length);
+  const refreshed = lastCommitDate("src/data/treks.json", resolve(here, ".."));
+  emit(
+    "data",
+    [
+      "---",
+      "title: The dataset",
+      `description: ${stats.total.toLocaleString("en-IN")} summits — counts, freshness, and how the data stays honest.`,
+      "---",
+      "",
+      dataPageMarkdown(stats, refreshed),
+    ].join("\n"),
+    "data.md (generated)",
+  );
+  console.log(`[pages] wrote content page(s): ${written.join(", ")}`);
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
