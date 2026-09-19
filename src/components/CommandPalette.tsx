@@ -30,7 +30,14 @@ async function defaultLoad(): Promise<IndexEntry[]> {
   if (cached) return cached;
   const res = await fetch(`${base()}/data/search-index.json`);
   if (!res.ok) throw new Error(`index ${res.status}`);
-  cached = (await res.json()) as IndexEntry[];
+  const body: unknown = await res.json();
+  // Validate BEFORE caching: a truncated or unexpected response would
+  // otherwise be cached as a success for the rest of the session, and the
+  // retry path (remounting the palette) could never recover from it.
+  if (!Array.isArray(body) || body.length === 0 || typeof body[0]?.name !== "string") {
+    throw new Error("search index is malformed");
+  }
+  cached = body as IndexEntry[];
   return cached;
 }
 
