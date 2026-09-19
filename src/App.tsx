@@ -281,6 +281,8 @@ export default function App() {
   // ⌘K / Ctrl-K opens the palette (spec 38). Ignored while the user is typing
   // in a field, so it never steals a keystroke from the filters.
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const isMac =
+    typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform ?? "");
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== "k" || !(e.metaKey || e.ctrlKey)) return;
@@ -552,8 +554,13 @@ export default function App() {
           className="hidden items-center gap-2 rounded-lg border border-trail-200 px-3 py-2 text-sm text-trail-600 hover:border-trail-400 sm:flex dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500"
         >
           Search summits
+          {/* The Command glyph (U+2318) is outside the self-hosted Inter
+              subset, so it falls back to a system font whose width differs by
+              platform — which shifted this whole flex row and broke the visual
+              baseline between local and CI. Show it only where it is correct
+              (macOS); everywhere else ASCII, which is in the subset. */}
           <kbd className="rounded border border-trail-200 px-1 text-[10px] dark:border-slate-600">
-            ⌘K
+            {isMac ? "⌘K" : "Ctrl K"}
           </kbd>
         </button>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
