@@ -41,8 +41,11 @@ test("the trek page carries TouristAttraction structured data", async ({ page })
 test("the map link deep-links into the live app and opens that trek", async ({ page }) => {
   await page.goto("t/skandagiri/");
   await page.getByRole("link", { name: /Open on the map/ }).click();
-  // Lands on the app with the trek selected — the spec 30/33 deep-link contract.
-  await expect(page).toHaveURL(/\?sel=skandagiri/);
+  // Lands on the app with the trek selected — the spec 30/33 deep-link
+  // contract. The app then mirrors origin+filters into the URL, so `sel` may
+  // be the first param or a later one; matching only `?sel=` raced that
+  // rewrite and was flaky.
+  await expect(page).toHaveURL(/[?&]sel=skandagiri\b/);
   await expect(page.getByRole("heading", { name: "Skandagiri" }).first()).toBeVisible();
 });
 
