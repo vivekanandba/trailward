@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import App from "./App";
 
 // Leaflet needs a real browser layout engine; stub the map in jsdom so the
@@ -63,10 +63,24 @@ describe("App", () => {
 describe("App feedback surfaces (spec 29)", () => {
   it("the header Feedback control is a prefilled GitHub issue link", () => {
     render(<App />);
-    const link = screen.getByRole("link", { name: "Feedback" });
+    // Scoped to the header: the site-links footer (spec 36) also offers
+    // Feedback, so an unscoped role query is now ambiguous.
+    const link = within(screen.getByRole("banner")).getByRole("link", { name: "Feedback" });
     const u = new URL(link.getAttribute("href")!);
     expect(u.pathname.endsWith("/issues/new")).toBe(true);
     expect(u.searchParams.get("template")).toBe("feedback.yml");
+  });
+
+  it("links to the attribution pages — a licence obligation (spec 36)", () => {
+    render(<App />);
+    expect(screen.getByRole("link", { name: /Sources & licences/ })).toHaveAttribute(
+      "href",
+      "/trailward/sources/",
+    );
+    expect(screen.getByRole("link", { name: "About" })).toHaveAttribute(
+      "href",
+      "/trailward/about/",
+    );
   });
 });
 
