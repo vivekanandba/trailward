@@ -67,6 +67,22 @@ export function sitemapXml(entries: SitemapEntry[]): string {
   );
 }
 
+/**
+ * Serialise a JSON-LD graph for embedding in a <script> element.
+ *
+ * Plain JSON.stringify is NOT safe here: inside `<script>` the only thing the
+ * HTML parser still honours is `</script`, so a value containing it breaks out
+ * of the element and executes. Trek names are untrusted (they come from OSM,
+ * Wikidata and community suggestions), so escape the markup-significant
+ * characters as unicode escapes — valid JSON, inert HTML.
+ */
+export function jsonLdScript(graph: unknown): string {
+  return JSON.stringify(graph)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}
+
 /** Licence of the aggregate dataset (the most restrictive of its inputs). */
 export const DATA_LICENSE = "https://opendatacommons.org/licenses/odbl/1-0/";
 
