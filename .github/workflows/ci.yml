@@ -16,6 +16,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # A spec validator can only check the specs that EXIST — it structurally
+      # cannot see the one that is missing. /ship asks for a spec with every
+      # behaviour change, but that is honoured by the author; this enforces it
+      # for the files where a missing spec has actually cost us (spec 37).
+      - name: Spec discipline
+        run: bash scripts/check-spec-discipline.sh "origin/${{ github.base_ref || 'main' }}"
       - run: npm run lint
       - run: npm run format:check
 

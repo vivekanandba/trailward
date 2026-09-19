@@ -73,11 +73,23 @@ export default defineConfig({
       // GitHub-issue links (spec 29) — deleting tested code lowers the ratio
       // without any test getting worse. TrekMap stays e2e-only (Leaflet's SVG
       // renderer cannot run in jsdom).
+      // Global floors alone are diluted: the repo is dominated by data-heavy
+      // and e2e-only files, so a brand-new untested module in src/lib could
+      // land at 0% without moving the global number (spec 37). Per-directory
+      // floors close that. Each was MEASURED, then set a few points under, and
+      // each was proven to enforce by temporarily setting it to 100.
       thresholds: {
         lines: 68,
         branches: 72,
         functions: 60,
         statements: 68,
+        // measured 2026-09-19: 94.7 / 88.4 / 96.9
+        "src/lib/**": { statements: 92, lines: 92, branches: 85, functions: 94 },
+        // measured 62.3 / 82.4 / 72.7 — TrekMap is e2e-only (Leaflet needs a
+        // real layout engine), which caps what this directory can reach.
+        "src/components/**": { statements: 58, lines: 58, branches: 78, functions: 68 },
+        // measured 84.6 / 91.4 / 96.0
+        "scripts/lib/**": { statements: 80, lines: 80, branches: 88, functions: 90 },
       },
     },
   },

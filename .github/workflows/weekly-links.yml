@@ -1,0 +1,27 @@
+name: Weekly link check
+
+# Link rot is time-based, not PR-based: a source dies when somebody else's
+# site changes, long after the merge that added it. Nothing in the PR gates
+# can see that, so this runs on a schedule (spec 37). Advisory — it reports,
+# it never blocks.
+on:
+  schedule:
+    - cron: "0 3 * * 2" # Tuesdays 03:00 UTC, off the data-refresh day
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Writes its summary to the run summary, where a human will actually
+      # see it — an advisory step that merely goes green is useless.
+      - run: npm run check:links -- --all

@@ -29,7 +29,11 @@ export default function TrekList({
   onClearFilters,
 }: TrekListProps) {
   return (
-    <ul className="flex-1 divide-y divide-trail-50 dark:divide-slate-700">
+    <ul
+      id="results"
+      tabIndex={-1}
+      className="flex-1 divide-y divide-trail-50 dark:divide-slate-700 focus:outline-none"
+    >
       {loading && (
         <>
           <li className="sr-only" role="status">
