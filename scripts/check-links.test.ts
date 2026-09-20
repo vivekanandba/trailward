@@ -135,6 +135,26 @@ describe("check-links run (spec 37/41)", () => {
     expect(every.checked).toBe(30);
   });
 
+  it("calls probe with ONLY the url — map would otherwise pass the index", async () => {
+    // `.map(deps.probe)` hands (url, index, array) to a probe whose second
+    // parameter is the fetch implementation. Every call then throws inside
+    // probe's own try/catch and the run reports total link rot, exit 0.
+    const args: unknown[][] = [];
+    const io = seeded([trek({ id: "a", sources: ["https://a.example/x"] })]);
+    await runCheckLinks(
+      io,
+      ROOT,
+      {
+        probe: async (...rest: unknown[]) => {
+          args.push(rest);
+          return ok(rest[0] as string);
+        },
+      },
+      true,
+    );
+    expect(args[0]).toHaveLength(1);
+  });
+
   it("names a broken link in the report but stays ADVISORY (exit 0)", async () => {
     // Deliberate: link rot is upstream's doing, and a red build every time a
     // third party reorganises its site would train everyone to ignore it. The

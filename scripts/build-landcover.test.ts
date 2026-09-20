@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runBuildLandCover, landCoverPathsFor, MAX_DROP_FRACTION } from "./build-landcover";
+import { runBuildLandCover, landCoverPathsFor, MAX_LOSS_FRACTION } from "./build-landcover";
 import { memoryIO } from "./lib/buildIO";
 import type { Trek } from "../src/lib/trek";
 
@@ -62,15 +62,37 @@ describe("build-landcover run (spec 41)", () => {
   });
 
   it("drops a STALE value when the sample returns nothing, never keeps a wrong one", async () => {
-    const io = seeded([trek({ id: "a", lat: 13, lng: 77, landCover: "Forest" })]);
-    await runBuildLandCover(io, ROOT, { classesAt: async (p) => p.map(() => undefined) });
+    // One record loses its reading among many that keep theirs — within
+    // tolerance, so the write proceeds and the stale value is gone.
+    const recs = Array.from({ length: 100 }, (_, i) =>
+      trek({ id: `t${i}`, lat: 13 + i * 0.01, lng: 77, landCover: "Forest" }),
+    );
+    const io = seeded(recs);
+    await runBuildLandCover(io, ROOT, {
+      classesAt: async (pts) => pts.map(() => (pts[0].lat < 13.005 ? undefined : FOREST)),
+    });
     expect(read(io)[0].landCover).toBeUndefined();
+    expect(read(io)[1].landCover).toBe("Forest");
   });
 
-  it("REFUSES a run that would drop more than the tolerance (the WorldCover incident)", async () => {
-    // Every record a detected pin, every sample reading water: that is the
-    // source failing, not the terrain changing. A transient header error once
-    // cached null for a whole 3° tile and wiped ~113k records this way.
+  it("REFUSES the ACTUAL WorldCover incident: cover stripped, records kept", async () => {
+    // This is the failure that happened. A transient header error cached null
+    // for a whole 3° COG, so every sample read `undefined`. No record is
+    // removed — each keeps its place and silently loses `landCover`. A guard
+    // that counted removed records sat at zero throughout and wrote it out as
+    // a success. ~113k records lost their cover that way.
+    const many = Array.from({ length: 100 }, (_, i) =>
+      trek({ id: `t${i}`, lat: 13 + i * 0.01, lng: 77, landCover: "Forest" }),
+    );
+    const io = seeded(many);
+    const before = io.files.get(P.treks);
+    await expect(
+      runBuildLandCover(io, ROOT, { classesAt: async (p) => p.map(() => undefined) }),
+    ).rejects.toThrow(/refusing to write/);
+    expect(io.files.get(P.treks)).toBe(before);
+  });
+
+  it("REFUSES a run that would remove more than the tolerance", async () => {
     const many = Array.from({ length: 20 }, (_, i) =>
       trek({ id: `d${i}`, lat: 13 + i * 0.01, lng: 77, detected: { prominenceM: 50 } } as never),
     );
@@ -80,6 +102,40 @@ describe("build-landcover run (spec 41)", () => {
       runBuildLandCover(io, ROOT, { classesAt: async (p) => p.map(() => WATER) }),
     ).rejects.toThrow(/refusing to write/);
     expect(io.files.get(P.treks)).toBe(before);
+  });
+
+  it("pins the tolerance itself — 4% passes, 6% refuses", async () => {
+    // Without this the constant could be raised to 0.5 (permitting the silent
+    // deletion of 60,000 records) with every test still green.
+    const build = (losing: number) =>
+      Array.from({ length: 100 }, (_, i) =>
+        trek({ id: `t${i}`, lat: 13 + i * 0.01, lng: 77, landCover: "Forest" }),
+      ).map((t, i) => ({ ...t, __lose: i < losing }) as Trek & { __lose: boolean });
+
+    const run = async (losing: number) => {
+      const recs = build(losing);
+      const io = seeded(recs);
+      return runBuildLandCover(io, ROOT, {
+        classesAt: async (pts) => {
+          const idx = Math.round((pts[0].lat - 13) * 100);
+          return pts.map(() => (recs[idx]?.__lose ? undefined : FOREST));
+        },
+      });
+    };
+    await expect(run(4)).resolves.toMatchObject({ lost: 4 });
+    await expect(run(6)).rejects.toThrow(/refusing to write/);
+    expect(MAX_LOSS_FRACTION).toBe(0.05);
+  });
+
+  it("a FIRST bake loses nothing, so an empty starting dataset is not a failure", async () => {
+    // Nothing has cover yet; reading nothing back is not a loss.
+    const many = Array.from({ length: 50 }, (_, i) =>
+      trek({ id: `t${i}`, lat: 13 + i * 0.01, lng: 77 }),
+    );
+    const io = seeded(many);
+    await expect(
+      runBuildLandCover(io, ROOT, { classesAt: async (p) => p.map(() => undefined) }),
+    ).resolves.toMatchObject({ lost: 0 });
   });
 
   it("permits a drop within tolerance", async () => {
@@ -96,7 +152,6 @@ describe("build-landcover run (spec 41)", () => {
       classesAt: async (pts) => pts.map(() => (pts[0].lat < 13.005 ? WATER : FOREST)),
     });
     expect(out.dropped).toBe(1);
-    expect(1 / 100).toBeLessThanOrEqual(MAX_DROP_FRACTION);
   });
 
   it("preserves the dataset's ORIGINAL order despite sampling spatially", async () => {

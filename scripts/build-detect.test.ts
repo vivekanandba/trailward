@@ -124,6 +124,34 @@ describe("build-detect run (spec 27/41)", () => {
     expect(JSON.parse(io.files.get(P.out)!)).toEqual([expect.objectContaining({ id: "good" })]);
   });
 
+  it("REFUSES to replace a large committed set with a handful", async () => {
+    // filterUnknown compares candidates against every pin in treks.json, which
+    // already contains this tool's prior output — so a careless re-run filters
+    // almost everything out as "known". Refusing only at exactly zero is a
+    // coin flip: a residue of one would overwrite the whole committed tier.
+    const previous = Array.from({ length: 100 }, (_, i) => summit({ id: `p${i}` }));
+    const io = seeded([], previous);
+    const before = io.files.get(P.out);
+    await expect(
+      runBuildDetect(io, ROOT, deps({ score: async () => [summit({ id: "lonely" })] })),
+    ).rejects.toThrow(/refusing to write/);
+    expect(io.files.get(P.out)).toBe(before);
+  });
+
+  it("permits a normal run that keeps most of the committed set", async () => {
+    const previous = Array.from({ length: 100 }, (_, i) => summit({ id: `p${i}` }));
+    const io = seeded([], previous);
+    const out = await runBuildDetect(
+      io,
+      ROOT,
+      deps({
+        detect: async () => [peak({ lat: 13.4, lng: 77.7 })],
+        score: async () => Array.from({ length: 95 }, (_, i) => summit({ id: `n${i}` })),
+      }),
+    );
+    expect(out.written).toBe(95);
+  });
+
   it("REFUSES to write an empty set — that would erase a whole tier", async () => {
     const io = seeded([], [summit({ id: "previous" })]);
     const before = io.files.get(P.out);
@@ -145,6 +173,26 @@ describe("build-detect run (spec 27/41)", () => {
       ),
     ).rejects.toThrow(/refusing to write/);
     expect(io.files.get(P.out)).toBe(before);
+  });
+
+  it("passes --calibrate THROUGH to the detector, not just to the report", async () => {
+    // detectIndia lowers its relief floor to 60 m when calibrating. A mis-wire
+    // would scan at the 100 m production floor while printing a table headed
+    // "relief >= 60 m" — a wrong calibration with no error.
+    const seen: boolean[] = [];
+    const io = seeded([], [summit({ id: "previous" })]);
+    await runBuildDetect(
+      io,
+      ROOT,
+      deps({
+        detect: async (c) => {
+          seen.push(c);
+          return [peak({ lat: 13.4, lng: 77.7 })];
+        },
+      }),
+      true,
+    );
+    expect(seen).toEqual([true]);
   });
 
   it("--calibrate reports counts and writes NOTHING", async () => {

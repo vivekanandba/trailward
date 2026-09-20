@@ -39,10 +39,15 @@ caller's to name (CON-PROC-006, as spec 40 established).
 The five contracts from spec 40 §B still apply. These tools add four more, each drawn from
 something that has already gone wrong here:
 
-6. **A partial fetch never becomes a deletion.** When a source returns nothing for a record,
-   the tool must leave the previous value alone or drop only that record — never write an
-   absent value across the dataset. This is the WorldCover incident, and it is the single
-   most important property in this file.
+6. **A partial fetch never becomes a mass deletion.** Spec 26 requires dropping a stale value
+   rather than keeping a wrong one, so a single failed reading correctly clears that record's
+   field. What must not happen is that clearing across the dataset. The WorldCover incident is
+   exactly this shape — a transient header error cached `null` for a whole 3° COG, so every
+   point read `undefined`, **no record was removed**, and ~113k silently lost `landCover`
+   while the run reported success. A guard counting _removed records_ would have sat at zero
+   throughout. So the bound is on records that LOSE a value they had, plus records dropped,
+   as a fraction of those that had something to lose. This is the single most important
+   property in this file.
 7. **Resume is honest.** A tool that skips already-sampled work must skip it because the
    value is _present_, not because a previous run recorded an attempt. Re-running after a
    rate-limit window must make progress; re-running after a complete run must do nothing.
@@ -56,14 +61,14 @@ something that has already gone wrong here:
 
 Each tool declares the condition under which it writes nothing and exits non-zero:
 
-| Tool            | Refuses when                                                           |
-| --------------- | ---------------------------------------------------------------------- |
-| build-climate   | no rainfall returned **and** no previously sampled cells exist         |
-| build-landcover | the validated dataset would lose more than the drop tolerance          |
-| build-names     | the name source returns zero rows for a sweep it believes complete     |
-| build-detect    | the detected set is empty, or the plausibility gate rejects everything |
-| build-gazetteer | a sweep is incomplete (raw row count says there is another page)       |
-| build-geonames  | the dump parses to zero usable rows                                    |
+| Tool            | Refuses when                                                        |
+| --------------- | ------------------------------------------------------------------- |
+| build-climate   | no rainfall returned **and** no previously sampled cells exist      |
+| build-landcover | the validated dataset would lose more than the drop tolerance       |
+| build-names     | the name source returns zero rows for a sweep it believes complete  |
+| build-detect    | the set is empty, or would replace the committed set with far fewer |
+| build-gazetteer | zero entries parse from every volume it could read                  |
+| build-geonames  | the dump parses to zero usable rows                                 |
 
 Every one of these is asserted by a test that feeds the failing condition and checks **the
 previous artefact still exists**, not merely that a throw happened — spec 40 round 3 found
@@ -82,13 +87,13 @@ runs. Each floor sits just under its measured value so it can only ratchet up
 | `scripts/sources/**` | 91.6     | 88.0     | 91 / 87   | 76 / 86  |
 | `src/components/**`  | 84.9     | 85.0     | 84 / 84   | 84 / 84  |
 | `scripts/**`         | 76.9     | 89.4     | 76 / 89   | **none** |
-| **Global**           | **81.6** | **88.3** | 81 / 87   | 74 / 86  |
+| **Global**           | **81.7** | **88.3** | 81 / 87   | 74 / 86  |
 
 `scripts/**` had no floor at all before, which is exactly how that directory sat
 at 45% without anything noticing.
 
 **Where this falls short, stated plainly.** Section D of the first draft of this
-spec said global ≥90. It is **81.6**. That prediction was written before the
+spec said global ≥90. It is **81.7**. That prediction was written before the
 work and it was wrong; this table is the measurement, and the spec is corrected
 rather than the number massaged.
 

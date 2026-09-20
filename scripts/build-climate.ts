@@ -90,6 +90,14 @@ export async function runBuildClimate(
   const merged: Record<string, MonthlyRain> = { ...existing };
   for (const [k, v] of rain) merged[k] = v;
 
+  // Bank the rainfall NOW, before anything that can refuse. climate.json is a
+  // strictly additive observation cache: it is a superset of what was there, so
+  // writing it destroys nothing. Making it conditional on treks.json validating
+  // would throw away hours of rate-limited sampling because of an unrelated
+  // dataset problem, and the next run would re-fetch from zero.
+  io.writeFile(paths.climate, JSON.stringify(merged) + "\n");
+  io.log(`[climate] wrote ${Object.keys(merged).length} cells → ${paths.climate}`);
+
   // Bake bestSeason for discovery peaks. Curated treks keep their hand-written
   // guidance; auto-derived ones are always recomputed, so improving the climate
   // sample and re-running actually refreshes them (rather than sticking at
@@ -107,9 +115,7 @@ export async function runBuildClimate(
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[climate] dataset invalid: ${ds.error}`);
 
-  // ---- Everything above can refuse. Everything below only writes. ----
-  io.writeFile(paths.climate, JSON.stringify(merged) + "\n");
-  io.log(`[climate] wrote ${Object.keys(merged).length} cells → ${paths.climate}`);
+  // ---- Nothing below can refuse. ----
   io.writeFile(paths.treks, JSON.stringify(ds.treks) + "\n");
   io.log(`[climate] baked bestSeason onto ${baked} treks.`);
   return { cells: allCells.length, fetched: rain.size, baked };

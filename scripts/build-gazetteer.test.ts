@@ -133,16 +133,37 @@ describe("build-gazetteer run (spec 41)", () => {
     expect(asked).toContain("oldvol");
   });
 
-  it("counts a volume once even when two series discover it", async () => {
+  it("counts a volume ONCE even when two series discover it", async () => {
+    // Both series find the same volume ("Imperial provincial series Mysore"
+    // matches both queries). Without the dedupe its entries are pushed twice
+    // under two different source/year attributions, so a note can be dated to
+    // the wrong gazetteer — the attribution failure the guard exists for.
     const io = seeded([NANDI]);
     const out = await runBuildGazetteer(io, ROOT, {
       discover: () => ["shared"],
       volumeText: async () => VOLUME,
     });
-    const manifest = JSON.parse(io.files.get(P.manifest)!) as Record<string, string>;
-    // Recorded under its FIRST series only.
-    expect(manifest.shared).toBe(SERIES[0].key);
-    expect(out.entries).toBeGreaterThan(0);
+    const single = await runBuildGazetteer(seeded([NANDI]), ROOT, {
+      discover: (series) => (series.key === SERIES[0].key ? ["only"] : []),
+      volumeText: async () => VOLUME,
+    });
+    // Discovered by BOTH series, yet counted exactly as often as by one.
+    expect(out.entries).toBe(single.entries);
+    expect(JSON.parse(io.files.get(P.manifest)!).shared).toBe(SERIES[0].key);
+  });
+
+  it("records the manifest even when the run then REFUSES", async () => {
+    // volumeText caches each downloaded volume to disk outside the io seam, so
+    // a manifest that is not updated orphans those files: discoverVolumes
+    // returns [] on a curl failure, so they would never be re-parsed.
+    const io = seeded([NANDI]);
+    await expect(
+      runBuildGazetteer(io, ROOT, {
+        discover: () => ["downloaded"],
+        volumeText: async () => "nothing parseable",
+      }),
+    ).rejects.toThrow(/refusing to write/);
+    expect(JSON.parse(io.files.get(P.manifest)!).downloaded).toBe(SERIES[0].key);
   });
 
   it("survives a corrupt manifest rather than refusing to start", async () => {

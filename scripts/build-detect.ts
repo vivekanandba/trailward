@@ -46,6 +46,13 @@ export function detectPathsFor(root: string): { out: string; treks: string } {
  * peaks and the mask directly, which is what makes the dedupe, the mask
  * filter, the plausibility gate and the refusal reachable at all.
  */
+/**
+ * How much of the committed detected set one run may replace. A re-run filters
+ * its own prior output out as "already known", so the normal outcome of
+ * re-running without care is near-total loss (spec 41 §C).
+ */
+export const MAX_DETECT_LOSS_FRACTION = 0.2;
+
 export interface DetectDeps {
   detect: (calibrate: boolean) => Promise<DetectedPeak[]>;
   loadMask: () => Promise<Set<string>>;
@@ -315,11 +322,24 @@ export async function runBuildDetect(
   if (scored.length < allScored.length) {
     io.log(`[detect] plausibility gate dropped ${allScored.length - scored.length}.`);
   }
+  // Bound the LOSS against what is already committed, not merely refuse zero.
+  // filterUnknown compares candidates against every pin in treks.json — which
+  // now contains this tool's own prior output — so a re-run legitimately
+  // filters out almost everything. Refusing only at exactly 0 is a coin flip:
+  // a residue of 1 would happily overwrite 109k committed summits with one.
+  const previous = io.exists(paths.out)
+    ? (JSON.parse(io.readFile(paths.out)) as DetectedSummit[]).length
+    : 0;
   if (scored.length === 0) {
-    // An empty detection set means the tiles or the gate failed, not that
-    // India has no unnamed hills. Writing it would erase the committed set
-    // and the discovery pipeline would silently lose a whole tier.
     throw new Error("[detect] refusing to write: no plausible summits detected");
+  }
+  if (previous > 0 && scored.length < previous * (1 - MAX_DETECT_LOSS_FRACTION)) {
+    throw new Error(
+      `[detect] refusing to write: ${scored.length} summits would replace ${previous} ` +
+        `(a loss of more than ${MAX_DETECT_LOSS_FRACTION * 100}%). Re-running against a ` +
+        `treks.json that already contains these pins filters them out as "known" — ` +
+        `rescan from a dataset without the detected tier, or pass --calibrate.`,
+    );
   }
 
   // ---- Everything above can refuse. Everything below only writes. ----

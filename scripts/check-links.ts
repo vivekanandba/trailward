@@ -120,7 +120,9 @@ export async function runCheckLinks(
 
   const results: Result[] = [];
   for (let i = 0; i < targets.length; i += CONCURRENCY) {
-    results.push(...(await Promise.all(targets.slice(i, i + CONCURRENCY).map(deps.probe))));
+    results.push(
+      ...(await Promise.all(targets.slice(i, i + CONCURRENCY).map((u) => deps.probe(u)))),
+    );
   }
 
   const report = summarise(results);

@@ -231,6 +231,12 @@ export async function runBuildGazetteer(
     }
     io.log(`[gazetteer] ${series.key}: ${ok}/${ids.length} volumes, ${found} entries`);
   }
+  // Additive bookkeeping, written before anything that can refuse: volumeText
+  // caches each downloaded volume to disk outside the io seam, so a manifest
+  // that is not updated orphans those files — discoverVolumes returns [] on a
+  // curl failure, so they would never be re-parsed.
+  io.writeFile(paths.manifest, JSON.stringify(manifest, null, 2) + "\n");
+
   if (entries.length === 0) {
     // Parsing nothing means the volumes failed to download or the parser
     // broke — not that the gazetteers stopped mentioning these hills. Writing
@@ -268,8 +274,7 @@ export async function runBuildGazetteer(
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[gazetteer] dataset invalid: ${ds.error}`);
 
-  // ---- Everything above can refuse. Everything below only writes. ----
-  io.writeFile(paths.manifest, JSON.stringify(manifest, null, 2) + "\n");
+  // ---- Nothing below can refuse. ----
   io.writeFile(paths.treks, JSON.stringify(ds.treks) + "\n");
   io.log(`[gazetteer] baked historicalNote onto ${baked} treks.`);
   for (const t of ds.treks.filter((x) => x.historicalNote).slice(0, 14)) {

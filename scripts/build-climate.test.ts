@@ -116,6 +116,32 @@ describe("build-climate run (spec 41)", () => {
     ).resolves.toBeTruthy();
   });
 
+  it("BANKS the rainfall even when the dataset then fails validation", async () => {
+    // climate.json is an additive observation cache and cannot be invalidated
+    // by a treks.json problem. Making its write conditional would throw away
+    // hours of rate-limited sampling because of something unrelated, and the
+    // next run would re-fetch from zero.
+    const io = seeded([{ ...TREKS[0], lat: 999 } as Trek]);
+    await expect(
+      runBuildClimate(io, ROOT, {
+        fetchRain: async (c) => new Map(c.map((x) => [x.key, MONSOON])),
+      }),
+    ).rejects.toThrow(/invalid/);
+    expect(io.files.has(P.climate)).toBe(true);
+    expect(Object.keys(JSON.parse(io.files.get(P.climate)!)).length).toBeGreaterThan(0);
+  });
+
+  it("does not write treks.json when validation fails", async () => {
+    const io = seeded([{ ...TREKS[0], lat: 999 } as Trek]);
+    const before = io.files.get(P.treks);
+    await expect(
+      runBuildClimate(io, ROOT, {
+        fetchRain: async (c) => new Map(c.map((x) => [x.key, MONSOON])),
+      }),
+    ).rejects.toThrow(/invalid/);
+    expect(io.files.get(P.treks)).toBe(before);
+  });
+
   it("refuses a dataset the validator rejects rather than writing it", async () => {
     const io = seeded([{ ...TREKS[0], lat: 999 } as Trek]);
     await expect(

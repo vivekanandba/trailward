@@ -97,11 +97,11 @@ export default defineConfig({
       // ratchet up (CON-COV-002) and every one is at or above what main
       // enforced before the build-CLI seams landed (spec 41).
       thresholds: {
-        // global measured: 81.63 lines / 79.75 functions, identical run to run.
+        // global measured: 81.67 lines / 79.75 functions, identical run to run.
         // Branches drift slightly (88.27–88.33 observed), so that floor sits
         // below the lowest figure seen rather than below a single reading.
         //
-        // The target is 95 and this is 81.6. What remains is named in spec 41
+        // The target is 95 and this is 81.7. What remains is named in spec 41
         // rather than excluded: the DEM-walking functions (detectIndia, score,
         // scoreSummits, crossMatchWikidata) and the `import.meta.url === argv[1]`
         // CLI blocks, which cannot execute under vitest by construction.
@@ -121,8 +121,13 @@ export default defineConfig({
         // measured 91.57 / 88.01 / 88.61 — network adapters, now driven at the
         // http boundary with their failure shapes asserted (spec 41)
         "scripts/sources/**": { statements: 91, lines: 91, branches: 87, functions: 88 },
-        // measured 76.88 / 89.42 / 82.13 — the build CLIs. New floor: this
-        // directory had none before, which is how it sat at 45% unnoticed.
+        // The glob covers scripts/ AND its subtrees, so this number is a
+        // blend — lib (98%) and sources (92%) pull it up, and they have their
+        // own floors above. The top-level build CLIs it is really about read
+        // 62.0% on their own. Kept as a blended backstop because it is what
+        // the glob enforces; the CLIs' own progress is tracked in spec 41's
+        // table, not here. New floor either way: this tree had none before,
+        // which is how it sat at 45% unnoticed.
         "scripts/**": { statements: 76, lines: 76, branches: 89, functions: 82 },
       },
     },

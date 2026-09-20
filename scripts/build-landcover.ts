@@ -33,13 +33,20 @@ export interface LandCoverDeps {
 }
 
 /**
- * A run may legitimately drop pins (detected summits standing in open water),
- * but losing a large share of the dataset means the SOURCE failed, not that
- * India changed. A transient header error once cached null for a whole 3° tile
- * and wiped landCover from ~113k records while reporting success — so the
- * fraction that may disappear in one run is bounded here (spec 41 §B.6).
+ * The fraction of records that may LOSE their land cover in one run.
+ *
+ * This bounds the right quantity. The incident it exists for — a transient
+ * header error cached null for a whole 3° COG and wiped landCover from ~113k
+ * records — does NOT remove records: every point reads `undefined`, so the
+ * record is kept and only its `landCover` is deleted (spec 26 requires
+ * dropping a stale value rather than keeping a wrong one). A guard that
+ * counted removed records would have sat at zero through the whole incident
+ * and written it out as a success, which is exactly what happened.
+ *
+ * So both outcomes are counted: a record dropped, and a record that had cover
+ * and no longer does. The all-India bake legitimately lost ~1.5%.
  */
-export const MAX_DROP_FRACTION = 0.05;
+export const MAX_LOSS_FRACTION = 0.05;
 
 // Tight ring: 450 m (the DEM rosette) reaches the forested lower slopes and
 // mislabels a bare summit; 150 m describes what the top of the climb is like.
@@ -49,7 +56,7 @@ export async function runBuildLandCover(
   io: BuildIO,
   root: string,
   deps: LandCoverDeps,
-): Promise<{ baked: number; dropped: number; counts: Map<string, number> }> {
+): Promise<{ baked: number; dropped: number; lost: number; counts: Map<string, number> }> {
   const paths = landCoverPathsFor(root);
   const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
 
@@ -65,6 +72,7 @@ export async function runBuildLandCover(
     });
   let baked = 0;
   let dropped = 0;
+  let lost = 0; // had landCover before this run, does not now
   let done = 0;
   const next: (Trek | undefined)[] = new Array(treks.length);
   for (const i of order) {
@@ -84,16 +92,21 @@ export async function runBuildLandCover(
       const copy = { ...t };
       delete copy.landCover;
       next[i] = copy;
+      if (t.landCover) lost++;
     }
     done++;
     if (done % 5000 === 0) io.log(`[landcover]   ${done}/${treks.length} (${baked} covered)…`);
   }
 
   const kept = next.filter((t): t is Trek => t !== undefined);
-  if (treks.length > 0 && dropped / treks.length > MAX_DROP_FRACTION) {
+  const had = treks.filter((t) => t.landCover).length;
+  // Measured against what could actually be lost: on a first bake nothing has
+  // cover yet, so `had` is 0 and losing nothing is not a failure.
+  const exposure = Math.max(had, dropped > 0 ? treks.length : 0);
+  if (exposure > 0 && (lost + dropped) / exposure > MAX_LOSS_FRACTION) {
     throw new Error(
-      `[landcover] refusing to write: would drop ${dropped}/${treks.length} records ` +
-        `(> ${MAX_DROP_FRACTION * 100}%) — the source failed, India did not change`,
+      `[landcover] refusing to write: would lose cover on ${lost + dropped}/${exposure} records ` +
+        `(> ${MAX_LOSS_FRACTION * 100}%) — the source failed, India did not change`,
     );
   }
   const ds = validateDataset(kept);
@@ -106,11 +119,12 @@ export async function runBuildLandCover(
     if (t.landCover) counts.set(t.landCover, (counts.get(t.landCover) ?? 0) + 1);
   }
   if (dropped > 0) io.log(`[landcover] dropped ${dropped} detected pin(s) in open water.`);
+  if (lost > 0) io.log(`[landcover] ${lost} record(s) lost a previously-known cover.`);
   io.log(`[landcover] baked landCover onto ${baked}/${treks.length} treks:`);
   for (const [label, n] of [...counts].sort((a, b) => b[1] - a[1])) {
     io.log(`  ${label}: ${n}`);
   }
-  return { baked, dropped, counts };
+  return { baked, dropped, lost, counts };
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
