@@ -67,6 +67,14 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["src/**", "scripts/**"],
+      // Excluded ONLY with a stated reason (CON-COV-002), never to flatter
+      // the number:
+      //  - TrekMap: ~700 lines of Leaflet. jsdom has no layout engine, so it
+      //    cannot execute; testing it here would prove a mock works, not the
+      //    map. Covered by the e2e suite and 12 visual baselines instead.
+      //  - main.tsx: the bootstrap entry point, three lines and a service
+      //    worker registration that only runs in a production build.
+      exclude: ["src/components/TrekMap.tsx", "src/main.tsx"],
       // Ratchet: set just below current levels so the suite can't silently
       // regress; raise as coverage grows. Recalibrated 70 → 68 when the
       // in-app feedback form (≈600 covered lines) was REMOVED in favour of
@@ -79,17 +87,25 @@ export default defineConfig({
       // floors close that. Each was MEASURED, then set a few points under, and
       // each was proven to enforce by temporarily setting it to 100.
       thresholds: {
-        lines: 68,
-        branches: 72,
-        functions: 60,
-        statements: 68,
-        // measured 2026-09-19: 94.7 / 88.4 / 96.9
-        "src/lib/**": { statements: 92, lines: 92, branches: 85, functions: 94 },
-        // measured 62.3 / 82.4 / 72.7 — TrekMap is e2e-only (Leaflet needs a
-        // real layout engine), which caps what this directory can reach.
-        "src/components/**": { statements: 58, lines: 58, branches: 78, functions: 68 },
-        // measured 84.6 / 91.4 / 96.0
-        "scripts/lib/**": { statements: 80, lines: 80, branches: 88, functions: 90 },
+        // Measured 2026-09-20, each floor set just under, so they ratchet up
+        // and never down (CON-COV-002). Target is tiered: logic directories
+        // carry the high bar; the top-level scripts/ shells are network-heavy
+        // CLIs and are the next tranche to climb.
+        // global measured: 84.97 / 91.10 / 77.17
+        lines: 84,
+        branches: 90,
+        functions: 76,
+        statements: 84,
+        // measured 97.75 / 92.64 / 97.50 — pure application logic, no excuse
+        "src/lib/**": { statements: 96, lines: 96, branches: 91, functions: 96 },
+        // measured over the GLOB (which includes components/ui): 90.5 / 89.3
+        // / 73.11 — note the per-directory table row reads higher because it
+        // excludes the ui/ subtree.
+        "src/components/**": { statements: 88, lines: 88, branches: 87, functions: 72 },
+        // measured 98.55 / 94.89 / 86.44 — pure build logic
+        "scripts/lib/**": { statements: 96, lines: 96, branches: 93, functions: 84 },
+        // measured 87.39 / 91.20 / 76.66 — network adapters; parsers carry it
+        "scripts/sources/**": { statements: 85, lines: 85, branches: 89, functions: 74 },
       },
     },
   },

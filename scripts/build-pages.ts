@@ -7,7 +7,7 @@
  * (spec 33), and a page for a record that no longer exists would be advertised
  * by the sitemap and 404 for a reader.
  */
-import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
@@ -16,7 +16,6 @@ import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
-import { readdirSync } from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const treksFile = resolve(here, "../src/data/treks.json");
@@ -24,11 +23,21 @@ const outDir = resolve(here, "../dist/t");
 const contentDir = resolve(here, "../content");
 const distDir = resolve(here, "../dist");
 
-async function main(): Promise<void> {
-  if (!existsSync(resolve(here, "../dist"))) {
-    throw new Error("[pages] dist/ missing — run `npm run build` first");
-  }
-  const treks = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
+export interface PagePaths {
+  treks: string;
+  outDir: string;
+  distDir: string;
+  contentDir: string;
+  repoRoot: string;
+}
+
+export function runBuildPages(
+  io: BuildIO,
+  paths: PagePaths,
+  contentFiles: string[],
+  refreshed?: string,
+): { treks: number; content: string[] } {
+  const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
   const pages = qualifyingTreks(treks);
   const slugs = slugMap(pages);
 
@@ -37,38 +46,30 @@ async function main(): Promise<void> {
     throw new Error("[pages] slug collision — refusing to write");
   }
 
-  assertCleanTarget(outDir, resolve(here, ".."));
-  rmSync(outDir, { recursive: true, force: true });
+  assertCleanTarget(paths.outDir, paths.repoRoot);
+  io.removeDir(paths.outDir);
   for (const trek of pages) {
     const slug = slugs.get(trek.id)!;
-    const dir = resolve(outDir, slug);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(resolve(dir, "index.html"), renderTrekPage(trek, slug), "utf8");
+    io.writeFile(`${paths.outDir}/${slug}/index.html`, renderTrekPage(trek, slug));
   }
-  console.log(`[pages] wrote ${pages.length} trek page(s) → ${outDir}`);
+  io.log(`[pages] wrote ${pages.length} trek page(s) → ${paths.outDir}`);
 
   // Content pages (spec 36). Authored markdown, plus a generated /data/ page.
   const written: string[] = [];
   const emit = (slug: string, src: string, file: string): void => {
     const { data, body } = parseFrontmatter(src, file);
-    const dir = resolve(distDir, slug);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(
-      resolve(dir, "index.html"),
+    io.writeFile(
+      `${paths.distDir}/${slug}/index.html`,
       renderContentPage(data, renderMarkdown(body, file), slug),
-      "utf8",
     );
     written.push(slug);
   };
 
-  for (const file of readdirSync(contentDir)
-    .filter((f) => f.endsWith(".md"))
-    .sort()) {
-    emit(file.replace(/\.md$/, ""), readFileSync(resolve(contentDir, file), "utf8"), file);
+  for (const file of contentFiles.filter((f) => f.endsWith(".md")).sort()) {
+    emit(file.replace(/\.md$/, ""), io.readFile(`${paths.contentDir}/${file}`), file);
   }
 
   const stats = datasetStats(treks, pages.length);
-  const refreshed = lastCommitDate("src/data/treks.json", resolve(here, ".."));
   emit(
     "data",
     [
@@ -81,14 +82,25 @@ async function main(): Promise<void> {
     ].join("\n"),
     "data.md (generated)",
   );
-  console.log(`[pages] wrote content page(s): ${written.join(", ")}`);
+  io.log(`[pages] wrote content page(s): ${written.join(", ")}`);
+  return { treks: pages.length, content: written };
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
 // kick off a build, mirroring the guard in discover-precompute.ts.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((err) => {
+  try {
+    if (!nodeIO.exists(distDir)) {
+      throw new Error("[pages] dist/ missing — run `npm run build` first");
+    }
+    runBuildPages(
+      nodeIO,
+      { treks: treksFile, outDir, distDir, contentDir, repoRoot: resolve(here, "..") },
+      nodeIO.listDir(contentDir),
+      lastCommitDate("src/data/treks.json", resolve(here, "..")),
+    );
+  } catch (err) {
     console.error((err as Error).message);
     process.exit(1);
-  });
+  }
 }

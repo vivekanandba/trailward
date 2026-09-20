@@ -4,23 +4,38 @@
  *
  * Enforces the full data-model contract (specs/01-data-model.md) via the same
  * validateDataset the app and pipeline use: every record valid + unique ids.
+ * The work lives behind an I/O seam (spec 40) so the failure paths — missing
+ * file, unparseable JSON, an invalid record — are asserted, not assumed.
  */
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import { validateDataset } from "../src/lib/trek";
+import { nodeIO, type BuildIO } from "./lib/buildIO";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dataPath = resolve(here, "../src/data/treks.json");
 
-try {
-  const raw = readFileSync(dataPath, "utf8");
-  const result = validateDataset(JSON.parse(raw));
-  if (!result.ok) {
-    throw new Error(result.error);
+/** Returns the record count. Throws with a human reason on any failure. */
+export function runValidateData(io: BuildIO, dataPath: string): number {
+  if (!io.exists(dataPath)) {
+    throw new Error(`${dataPath} is missing — the app has no dataset to serve`);
   }
-  console.log(`[validate-data] ok — ${result.treks.length} trek record(s)`);
-} catch (err) {
-  console.error(`[validate-data] FAILED: ${(err as Error).message}`);
-  process.exit(1);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(io.readFile(dataPath));
+  } catch {
+    throw new Error(`${dataPath} is not valid JSON`);
+  }
+  const result = validateDataset(parsed);
+  if (!result.ok) throw new Error(result.error);
+  io.log(`[validate-data] ok — ${result.treks.length} trek record(s)`);
+  return result.treks.length;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    runValidateData(nodeIO, resolve(here, "../src/data/treks.json"));
+  } catch (err) {
+    console.error(`[validate-data] FAILED: ${(err as Error).message}`);
+    process.exit(1);
+  }
 }
