@@ -150,6 +150,9 @@ describe("build-detect run (spec 27/41)", () => {
         deps({ score: async () => Array.from({ length: n }, (_, i) => summit({ id: `n${i}` })) }),
       );
     await expect(run(81)).resolves.toMatchObject({ written: 81 });
+    // Exactly 80 is a loss of exactly 20%, which is allowed — the message says
+    // "more than 20%". Straddling leaves the boundary itself unstated.
+    await expect(run(80)).resolves.toMatchObject({ written: 80 });
     await expect(run(79)).rejects.toThrow(/refusing to write/);
     expect(MAX_DETECT_LOSS_FRACTION).toBe(0.2);
   });

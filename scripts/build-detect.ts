@@ -299,8 +299,11 @@ export async function runBuildDetect(
   // scan, so a corrupt file threw away the whole run to report a parse error
   // detectable in the first millisecond — and named neither the file nor the
   // tool while doing it (CON-VER-005).
+  // Skipped for --calibrate, which never uses `previous` and never writes:
+  // aborting there would lose the diagnostic path exactly when the committed
+  // file is the thing that is broken.
   let previous = 0;
-  if (io.exists(paths.out)) {
+  if (!calibrate && io.exists(paths.out)) {
     let parsed: unknown;
     try {
       parsed = JSON.parse(io.readFile(paths.out));

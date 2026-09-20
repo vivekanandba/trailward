@@ -92,15 +92,25 @@ describe("build-landcover run (spec 41)", () => {
     expect(io.files.get(P.treks)).toBe(before);
   });
 
-  it("REFUSES a run that would remove more than the tolerance", async () => {
-    const many = Array.from({ length: 20 }, (_, i) =>
-      trek({ id: `d${i}`, lat: 13 + i * 0.01, lng: 77, detected: { prominenceM: 50 } } as never),
-    );
-    const io = seeded(many);
+  it("REFUSES a run that would REMOVE more than the tolerance", async () => {
+    // Most records bake normally, so `baked > 0` and the zero-result refusal
+    // cannot fire — this must be the removal bound or nothing. The earlier
+    // version of this test dropped every record, so deleting the removal bound
+    // entirely left the suite green: the zero-result refusal threw instead and
+    // the loose /refusing to write/ matcher could not tell them apart.
+    const recs = [
+      ...Array.from({ length: 20 }, (_, i) =>
+        trek({ id: `d${i}`, lat: 20 + i * 0.01, lng: 77, detected: { prominenceM: 50 } } as never),
+      ),
+      ...Array.from({ length: 80 }, (_, i) => trek({ id: `k${i}`, lat: 13, lng: 77 })),
+    ];
+    const io = seeded(recs);
     const before = io.files.get(P.treks);
     await expect(
-      runBuildLandCover(io, ROOT, { classesAt: async (p) => p.map(() => WATER) }),
-    ).rejects.toThrow(/refusing to write/);
+      runBuildLandCover(io, ROOT, {
+        classesAt: async (pts) => pts.map(() => (pts[0].lat > 15 ? WATER : FOREST)),
+      }),
+    ).rejects.toThrow(/would remove 20\/100/);
     expect(io.files.get(P.treks)).toBe(before);
   });
 
@@ -143,12 +153,14 @@ describe("build-landcover run (spec 41)", () => {
       trek({ id: "ghost", lat: 20, lng: 78, detected: { prominenceM: 50 } } as never),
     ];
     const io = seeded(recs);
+    const before = io.files.get(P.treks);
     await expect(
       runBuildLandCover(io, ROOT, {
         classesAt: async (pts) =>
           pts.map(() => (pts[0].lat > 15 ? WATER : pts[0].lat < 13.04 ? undefined : FOREST)),
       }),
     ).rejects.toThrow(/refusing to write/);
+    expect(io.files.get(P.treks)).toBe(before);
   });
 
   it("REFUSES when not one record resolves a class — the source is down", async () => {
@@ -180,8 +192,18 @@ describe("build-landcover run (spec 41)", () => {
       });
     };
     await expect(run(4)).resolves.toMatchObject({ lost: 4 });
+    // Exactly at the tolerance is ALLOWED — "> 5%", not ">= 5%". Straddling
+    // the boundary leaves the boundary itself unstated.
+    await expect(run(5)).resolves.toMatchObject({ lost: 5 });
     await expect(run(6)).rejects.toThrow(/refusing to write/);
     expect(MAX_LOSS_FRACTION).toBe(0.05);
+  });
+
+  it("does nothing, and refuses nothing, for an empty dataset", async () => {
+    const io = seeded([]);
+    await expect(
+      runBuildLandCover(io, ROOT, { classesAt: async (p) => p.map(() => FOREST) }),
+    ).resolves.toMatchObject({ baked: 0, dropped: 0, lost: 0 });
   });
 
   it("a FIRST bake loses nothing — partial coverage is progress, not failure", async () => {
