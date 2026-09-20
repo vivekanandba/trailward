@@ -1,0 +1,7 @@
+{
+  "repo": "https://github.com/vivekanandba/constitution",
+  "ref": "main",
+  "commit": "76d7593f8e4d51f7a777e080fa8727f8166e13ca",
+  "sha256": "03ab3c86dc3032cadd24daa0b1e0da6e41cd956c9aaed3d1043e678d232bb821",
+  "_note": "Pinned from the REMOTE. Never edit .constitution/ by hand; run npm run sync:constitution."
+}

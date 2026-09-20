@@ -36,6 +36,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Constitution
+        run: npm run check:constitution
+        env:
+          CONSTITUTION_TOKEN: ${{ secrets.CONSTITUTION_TOKEN }}
       - run: npm run lint
       - run: npm run format:check
 

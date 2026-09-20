@@ -20,6 +20,16 @@ jobs:
       # cannot see the one that is missing. /ship asks for a spec with every
       # behaviour change, but that is honoured by the author; this enforces it
       # for the files where a missing spec has actually cost us (spec 37).
+      # The machine-wide rules live in a REMOTE repo (spec 39). This fails when
+      # anything here points at a working copy, cites a rule that does not
+      # exist, restates rule text, or when the pin no longer matches the
+      # remote. CONSTITUTION_TOKEN is optional today — without it the step
+      # verifies everything local and says plainly that the remote was not
+      # checked, rather than reporting a success it has not earned.
+      - name: Constitution
+        run: npm run check:constitution
+        env:
+          CONSTITUTION_TOKEN: ${{ secrets.CONSTITUTION_TOKEN }}
       - name: Spec discipline
         run: bash scripts/check-spec-discipline.sh "origin/${{ github.base_ref || 'main' }}"
       - run: npm run lint

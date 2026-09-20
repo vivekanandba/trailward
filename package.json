@@ -37,7 +37,9 @@
     "build:sitemap": "tsx scripts/build-sitemap.ts",
     "build:pages": "tsx scripts/build-pages.ts",
     "check:links": "tsx scripts/check-links.ts",
-    "build:search": "tsx scripts/build-search-index.ts"
+    "build:search": "tsx scripts/build-search-index.ts",
+    "check:constitution": "tsx scripts/check-constitution.ts",
+    "sync:constitution": "tsx scripts/check-constitution.ts --sync"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
