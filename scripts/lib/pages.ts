@@ -87,13 +87,38 @@ export function slugMap(treks: Trek[]): Map<string, string> {
 }
 
 /**
- * Guard the generator's recursive clean by construction, not by convention
- * (CON-PROC-006). Throws unless `dir` is exactly <repoRoot>/dist/t — a moved
- * script or a symlinked dist must fail loudly, never delete something else.
+ * The ONLY directory the page generator may recursively clean.
+ *
+ * This *derives* the path rather than checking one the caller supplied
+ * (CON-PROC-006 — guard destructive actions by construction, not by
+ * convention). An earlier version took `dir` and `repoRoot` as two separate
+ * arguments and compared them, which constrained nothing: the same caller
+ * chose both, so any pair that agreed passed. Now a caller can only choose the
+ * repo root, and the `/dist/t` suffix is not theirs to name.
+ *
+ * Symlinks are the other half of the guard and cannot be handled by string
+ * comparison at all — `nodeIO.removeDir` resolves the path and refuses when it
+ * lands elsewhere.
  */
-export function assertCleanTarget(dir: string, repoRoot: string): void {
-  const expected = `${repoRoot.replace(/\/$/, "")}/dist/t`;
-  if (dir !== expected) {
-    throw new Error(`refusing to clean an unexpected path: ${dir} (expected ${expected})`);
+export function cleanTargetFor(repoRoot: string): string {
+  const root = repoRoot.replace(/\/+$/, "");
+  if (!root.startsWith("/") || root.split("/").includes("..")) {
+    throw new Error(`refusing to clean: ${repoRoot} is not an absolute repo root`);
   }
+  return `${root}/dist/t`;
+}
+
+/**
+ * Content pages, derived from the `content/` listing plus the generated ones.
+ *
+ * Single source of truth on purpose: build-pages writes these and build-sitemap
+ * advertises them, and when the list was hardcoded in the sitemap the two could
+ * disagree silently — adding content/faq.md shipped a page no sitemap listed,
+ * and deleting content/about.md advertised a URL that 404s. Both stayed green.
+ */
+export const GENERATED_CONTENT_SLUGS = ["data"] as const;
+
+export function contentSlugs(contentFiles: string[]): string[] {
+  const authored = contentFiles.filter((f) => f.endsWith(".md")).map((f) => f.replace(/\.md$/, ""));
+  return [...new Set([...authored, ...GENERATED_CONTENT_SLUGS])].sort();
 }

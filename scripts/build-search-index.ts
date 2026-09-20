@@ -7,7 +7,7 @@
  * would drown every real result. The file is fetched lazily on first palette
  * open, never bundled.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
@@ -38,19 +38,32 @@ export function buildIndex(treks: Trek[]): IndexEntry[] {
   return out;
 }
 
-async function main(): Promise<void> {
-  const treks = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
+export function runBuildSearchIndex(
+  io: BuildIO,
+  paths: { treks: string; out: string },
+): IndexEntry[] {
+  const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
   const index = buildIndex(treks);
-  writeFileSync(outFile, JSON.stringify(index), "utf8");
-  const kb = Math.round(Buffer.byteLength(JSON.stringify(index)) / 1024);
-  console.log(`[search] wrote ${index.length} named entries (${kb} KB) → ${outFile}`);
+  if (index.length === 0) {
+    // Every named summit vanishing means the dataset or the filter broke;
+    // shipping an empty index silently disables the palette.
+    throw new Error("[search] refusing to write: no named summits in the dataset");
+  }
+  const body = JSON.stringify(index);
+  io.writeFile(paths.out, body);
+  io.log(
+    `[search] wrote ${index.length} named entries (${Math.round(Buffer.byteLength(body) / 1024)} KB) → ${paths.out}`,
+  );
+  return index;
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
 // kick off a build, mirroring the guard in discover-precompute.ts.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((err) => {
+  try {
+    runBuildSearchIndex(nodeIO, { treks: treksFile, out: outFile });
+  } catch (err) {
     console.error((err as Error).message);
     process.exit(1);
-  });
+  }
 }

@@ -26,7 +26,28 @@ img{max-width:100%;height:auto}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted)}
 `.trim();
 
-export function renderContentPage(data: Frontmatter, bodyHtml: string, slug: string): string {
+/** "about" -> "About", "night-sky" -> "Night sky". */
+function navLabel(slug: string): string {
+  const words = slug.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * `navSlugs` is derived from the content listing by the caller, never written
+ * out here. A hardcoded footer was the third copy of this list: deleting
+ * content/about.md left every remaining page linking to a URL that 404s, and
+ * adding one shipped a page the sitemap advertised but nothing linked to.
+ * check-links only probes https:// URLs, so neither would have been caught.
+ */
+export function renderContentPage(
+  data: Frontmatter,
+  bodyHtml: string,
+  slug: string,
+  // Required, no default: a default made dropping this argument type-clean,
+  // and the mutation that dropped it left every suite green while every
+  // shipped footer lost its links.
+  navSlugs: string[],
+): string {
   const canonical = absoluteUrl(`${slug}/`);
   return `<!doctype html>
 <html lang="en">
@@ -51,8 +72,8 @@ export function renderContentPage(data: Frontmatter, bodyHtml: string, slug: str
       ${bodyHtml}
       <footer>
         <p>
-          <a href="/trailward/">Map</a> · <a href="/trailward/about/">About</a> ·
-          <a href="/trailward/sources/">Sources</a> · <a href="/trailward/data/">Data</a>
+          <a href="/trailward/">Map</a> ·
+          ${navSlugs.map((s) => `<a href="${esc(new URL(absoluteUrl(`${s}/`)).pathname)}">${esc(navLabel(s))}</a>`).join(" · ")}
           ${data.updated ? `<br />Updated ${esc(data.updated)}.` : ""}
         </p>
       </footer>
@@ -91,7 +112,23 @@ export function datasetStats(
 
 const n = (v: number): string => v.toLocaleString("en-IN");
 
-export function dataPageMarkdown(stats: DatasetStats, refreshed?: string): string {
+/**
+ * `navSlugs` is threaded through so the closing link is not a FIFTH hardcoded
+ * copy of the content list. Deleting content/sources.md used to ship a /data/
+ * page linking to a 404: renderMarkdown waves /trailward/ links through
+ * unprobed and check-links only probes https://, so nothing would catch it.
+ */
+export function dataPageMarkdown(
+  stats: DatasetStats,
+  navSlugs: string[],
+  refreshed?: string,
+): string {
+  // The WHOLE clause is conditional, not just the link: splitting it after the
+  // semicolon shipped "offered under the ODbL;" as a sentence ending in a
+  // semicolon with nothing after it, on a public page.
+  const licence = navSlugs.includes("sources")
+    ? "The aggregate dataset is offered under the ODbL; see [sources](/trailward/sources/) for the\nfull list of inputs and their licences."
+    : "The aggregate dataset is offered under the ODbL.";
   return `# The dataset
 
 Trailward ships its data as static files, rebuilt and committed rather than queried live.
@@ -124,7 +161,6 @@ three separate points in the pipeline, so a corrupt elevation sample cannot reap
 
 ## Reuse
 
-The aggregate dataset is offered under the ODbL; see [sources](/trailward/sources/) for the
-full list of inputs and their licences.
+${licence}
 `;
 }
