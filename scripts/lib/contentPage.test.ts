@@ -39,14 +39,31 @@ describe("renderContentPage (spec 36/40)", () => {
   });
 
   it("links the other content pages so they are reachable from each other", () => {
+    const withNav = renderContentPage(fm, "<p>b</p>", "sources", ["about", "sources", "data"]);
     for (const href of [
       "/trailward/",
       "/trailward/about/",
       "/trailward/sources/",
       "/trailward/data/",
     ]) {
-      expect(html).toContain(`href="${href}"`);
+      expect(withNav).toContain(`href="${href}"`);
     }
+  });
+
+  it("DERIVES the nav from the slugs it is given, never a hardcoded list", () => {
+    // A hardcoded footer was the third copy of the content list: deleting
+    // content/about.md left every page linking to a URL that now 404s, and
+    // adding content/faq.md shipped a page nothing on the site linked to.
+    // check-links only probes https:// URLs, so neither would be caught.
+    const renamed = renderContentPage(fm, "<p>b</p>", "x", ["faq", "data"]);
+    expect(renamed).toContain('href="/trailward/faq/"');
+    expect(renamed).toContain(">Faq<");
+    expect(renamed).not.toContain('href="/trailward/about/"');
+    expect(renamed).not.toContain('href="/trailward/sources/"');
+  });
+
+  it("labels a hyphenated slug readably", () => {
+    expect(renderContentPage(fm, "<p>b</p>", "x", ["night-sky"])).toContain(">Night sky<");
   });
 });
 

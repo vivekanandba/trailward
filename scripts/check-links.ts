@@ -9,7 +9,7 @@
  *   npm run check:links            # sample the dataset's source URLs
  *   npm run check:links -- --all   # every distinct URL (slow)
  */
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
@@ -91,9 +91,15 @@ async function probe(url: string): Promise<Result> {
 async function main(): Promise<void> {
   const all = process.argv.includes("--all");
   const treks = JSON.parse(readFileSync(resolve(here, "../src/data/treks.json"), "utf8")) as Trek[];
-  const content = ["about.md", "sources.md"].map((f) =>
-    readFileSync(resolve(here, "../content", f), "utf8"),
-  );
+  // Derived, never a second hardcoded list: with ["about.md","sources.md"]
+  // written out here, deleting content/about.md made this die with ENOENT and
+  // adding content/faq.md meant its external links were never probed — which
+  // is exactly the link rot this job exists to catch.
+  const contentDir = resolve(here, "../content");
+  const content = readdirSync(contentDir)
+    .filter((f) => f.endsWith(".md"))
+    .sort()
+    .map((f) => readFileSync(resolve(contentDir, f), "utf8"));
 
   const urls = collectUrls(treks, content);
   const targets = all ? urls : sampleByHost(urls, 8);

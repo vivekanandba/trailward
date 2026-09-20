@@ -11,7 +11,13 @@ import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
-import { GENERATED_CONTENT_SLUGS, cleanTargetFor, qualifyingTreks, slugMap } from "./lib/pages";
+import {
+  GENERATED_CONTENT_SLUGS,
+  cleanTargetFor,
+  contentSlugs,
+  qualifyingTreks,
+  slugMap,
+} from "./lib/pages";
 import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
@@ -55,32 +61,24 @@ export function runBuildPages(
     throw new Error("[pages] slug collision — refusing to write");
   }
 
-  io.removeDir(paths.outDir);
-  for (const trek of pages) {
-    const slug = slugs.get(trek.id)!;
-    io.writeFile(`${paths.outDir}/${slug}/index.html`, renderTrekPage(trek, slug));
-  }
-  io.log(`[pages] wrote ${pages.length} trek page(s) → ${paths.outDir}`);
-
-  // Content pages (spec 36). Authored markdown, plus a generated /data/ page.
-  const written: string[] = [];
-  const emit = (slug: string, src: string, file: string): void => {
-    const { data, body } = parseFrontmatter(src, file);
-    io.writeFile(
-      `${paths.distDir}/${slug}/index.html`,
-      renderContentPage(data, renderMarkdown(body, file), slug),
-    );
-    written.push(slug);
-  };
-
+  // EVERYTHING that can refuse must run BEFORE the clean below. These checks
+  // used to sit after it, so a refused build had already wiped dist/t and
+  // rewritten the content pages — it exited 1 having half-rebuilt the tree,
+  // and anything serving dist/ (vite preview, a manual gh-pages push) would
+  // ship that. Refusing is only a safe outcome if nothing was destroyed yet.
   const authored = contentFiles.filter((f) => f.endsWith(".md")).sort();
 
-  // A generated slug is not available to an author: content/data.md would be
-  // rendered and then overwritten by the generated page below, so the authored
-  // words vanish while the build reports success and the slug is listed twice.
-  // Refuse instead — losing someone's writing silently is the worst outcome.
   for (const file of authored) {
     const slug = file.replace(/\.md$/, "");
+    // A slug is a directory name under dist/. An empty one (a file literally
+    // named ".md") resolves to dist//index.html, which POSIX collapses onto
+    // dist/index.html — silently replacing the SPA entry point, exit 0.
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      throw new Error(`[pages] ${file} is not a usable page name — use lower-case-words.md`);
+    }
+    // A generated slug is not available to an author: content/data.md would be
+    // rendered and then overwritten by the generated page below, so the
+    // authored words vanish while the build reports success.
     if ((GENERATED_CONTENT_SLUGS as readonly string[]).includes(slug)) {
       throw new Error(`[pages] ${file} collides with the generated /${slug}/ page — rename it`);
     }
@@ -90,10 +88,36 @@ export function runBuildPages(
     // build that still exits 0 while the sitemap advertises them.
     throw new Error("[pages] no content/*.md found — refusing to ship a build without them");
   }
+  // Parse every authored page up front too, so malformed frontmatter refuses
+  // before the clean rather than midway through rewriting dist/.
+  const parsed = authored.map((file) => ({
+    file,
+    slug: file.replace(/\.md$/, ""),
+    src: io.readFile(`${paths.contentDir}/${file}`),
+  }));
+  for (const { src, file } of parsed) parseFrontmatter(src, file);
 
-  for (const file of authored) {
-    emit(file.replace(/\.md$/, ""), io.readFile(`${paths.contentDir}/${file}`), file);
+  io.removeDir(paths.outDir, repoRoot);
+  for (const trek of pages) {
+    const slug = slugs.get(trek.id)!;
+    io.writeFile(`${paths.outDir}/${slug}/index.html`, renderTrekPage(trek, slug));
   }
+  io.log(`[pages] wrote ${pages.length} trek page(s) → ${paths.outDir}`);
+
+  // Content pages (spec 36). Authored markdown, plus a generated /data/ page.
+  const written: string[] = [];
+  // One derived list drives the pages, the sitemap AND the footer nav.
+  const nav = contentSlugs(contentFiles);
+  const emit = (slug: string, src: string, file: string): void => {
+    const { data, body } = parseFrontmatter(src, file);
+    io.writeFile(
+      `${paths.distDir}/${slug}/index.html`,
+      renderContentPage(data, renderMarkdown(body, file), slug, nav),
+    );
+    written.push(slug);
+  };
+
+  for (const { slug, src, file } of parsed) emit(slug, src, file);
 
   const stats = datasetStats(treks, pages.length);
   emit(

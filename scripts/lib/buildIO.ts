@@ -19,17 +19,17 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname } from "node:path";
 
 export interface BuildIO {
   readFile(path: string): string;
   writeFile(path: string, body: string): void;
   exists(path: string): boolean;
   /**
-   * Remove a directory tree. Implementations MUST refuse a path that resolves
-   * somewhere other than where it is written — see `nodeIO.removeDir`.
+   * Remove a directory tree, but only if it resolves to somewhere INSIDE
+   * `within`. Implementations must refuse otherwise — see `nodeIO.removeDir`.
    */
-  removeDir(path: string): void;
+  removeDir(path: string, within: string): void;
   /** Entries directly under `path`. Throws if it does not exist. */
   listDir(path: string): string[];
   log(line: string): void;
@@ -43,20 +43,29 @@ export const nodeIO: BuildIO = {
     writeFileSync(p, body, "utf8");
   },
   exists: (p) => existsSync(p),
-  removeDir(p) {
+  removeDir(p, within) {
     const st = lstatSync(p, { throwIfNoEntry: false });
     if (!st) return; // already absent — removing nothing is the intended state
-    // A string check on the path cannot see a symlink: `<repo>/dist -> /elsewhere`
-    // passes any spelling test while rm -rf destroys /elsewhere. Resolve the
-    // path and refuse when it lands somewhere other than where it is written,
-    // so the guard holds by construction rather than by the caller's care
-    // (CON-PROC-006).
-    if (st.isSymbolicLink()) {
-      throw new Error(`refusing to remove a symlink: ${p}`);
-    }
+
+    // A string check on the path cannot see a symlink: `<repo>/dist ->
+    // /elsewhere` passes any spelling test while rm -rf destroys /elsewhere.
+    // So resolve both sides and require CONTAINMENT (CON-PROC-006).
+    //
+    // Containment, not "the path is its own realpath": an earlier version
+    // compared realpathSync(p) with resolve(p), which also refused any
+    // perfectly ordinary checkout sitting under a symlinked parent — a
+    // symlinked ~/work, a container bind-mount, macOS /tmp -> /private/tmp.
+    // That fails a build for a problem the developer does not have, which is
+    // its own kind of wrong (CON-VER-005).
+    const realRoot = realpathSync(within);
     const real = realpathSync(p);
-    if (real !== resolve(p)) {
-      throw new Error(`refusing to remove ${p}: it resolves to ${real}`);
+    if (real !== realRoot && !real.startsWith(`${realRoot}/`)) {
+      throw new Error(`refusing to remove ${p}: it resolves to ${real}, outside ${realRoot}`);
+    }
+    if (st.isSymbolicLink()) {
+      // Inside the repo but still a link: remove the link, never walk through
+      // it, so `dist/t -> src` cannot delete the source tree.
+      throw new Error(`refusing to remove a symlink: ${p}`);
     }
     rmSync(p, { recursive: true, force: true });
   },
@@ -101,9 +110,20 @@ export function memoryIO(seed: Record<string, string> = {}): BuildIO & {
     // nodeIO.exists is true for a directory, so this must be too: a fake that
     // is stricter than the real thing makes a passing test meaningless.
     exists: (path) => files.has(path) || isDir(path),
-    removeDir(path) {
+    removeDir(path, within) {
+      // The fake enforces containment too — a memoryIO test must not pass on a
+      // path nodeIO would refuse, or the guard is only half-tested.
+      const root = within?.replace(/\/+$/, "");
+      if (root !== undefined && path !== root && !path.startsWith(`${root}/`)) {
+        throw new Error(`refusing to remove ${path}: outside ${root}`);
+      }
       for (const key of [...files.keys()]) {
         if (key.startsWith(`${path}/`)) files.delete(key);
+      }
+      // Clearing `dirs` matters: without it the fake reports a removed
+      // directory as still existing, which is the opposite of the disk.
+      for (const dir of [...dirs]) {
+        if (dir === path || dir.startsWith(`${path}/`)) dirs.delete(dir);
       }
     },
     listDir(path) {

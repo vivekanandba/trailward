@@ -97,6 +97,15 @@ describe("chunk-data run (spec 30/40)", () => {
     }
   });
 
+  it("says NOT AN ARRAY for a wrong-shaped dataset, not 'empty' (CON-VER-005)", () => {
+    // Only the "[]" case was exercised, so deleting the Array.isArray half of
+    // the guard kept the suite green — and when it did fire it blamed
+    // emptiness for what is actually a wrong shape.
+    const io = memoryIO({ [paths.treks]: '{"treks":[]}' });
+    expect(() => runChunkData(io, ROOT)).toThrow(/not an array/i);
+    expect(() => runChunkData(io, ROOT)).not.toThrow(/empty/i);
+  });
+
   it("refuses an empty dataset rather than erasing every served cell", () => {
     const io = memoryIO({
       [paths.treks]: "[]",

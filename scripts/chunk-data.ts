@@ -37,7 +37,12 @@ export function chunkPathsFor(repoRoot: string): ChunkPaths {
 export function runChunkData(io: BuildIO, repoRoot: string): void {
   const paths = chunkPathsFor(repoRoot);
   const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
-  if (!Array.isArray(treks) || treks.length === 0) {
+  // Two distinct failures, two distinct messages: reporting a wrong SHAPE as
+  // "empty" sends the reader after a problem they do not have (CON-VER-005).
+  if (!Array.isArray(treks)) {
+    throw new Error("[chunks] refusing to write: the dataset is not an array");
+  }
+  if (treks.length === 0) {
     // An empty bake would erase every served cell and take the app down while
     // reporting success. Leave the previous chunks alone and fail loudly.
     throw new Error("[chunks] refusing to write: the dataset is empty");
@@ -50,7 +55,7 @@ export function runChunkData(io: BuildIO, repoRoot: string): void {
   }
 
   // Clean rebuild so cells emptied by a scrub actually disappear.
-  io.removeDir(paths.out);
+  io.removeDir(paths.out, repoRoot);
 
   // Sorted so the committed artefacts diff cleanly between builds.
   const index: Record<string, number> = {};

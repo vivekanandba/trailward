@@ -26,7 +26,25 @@ img{max-width:100%;height:auto}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted)}
 `.trim();
 
-export function renderContentPage(data: Frontmatter, bodyHtml: string, slug: string): string {
+/** "about" -> "About", "night-sky" -> "Night sky". */
+function navLabel(slug: string): string {
+  const words = slug.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * `navSlugs` is derived from the content listing by the caller, never written
+ * out here. A hardcoded footer was the third copy of this list: deleting
+ * content/about.md left every remaining page linking to a URL that 404s, and
+ * adding one shipped a page the sitemap advertised but nothing linked to.
+ * check-links only probes https:// URLs, so neither would have been caught.
+ */
+export function renderContentPage(
+  data: Frontmatter,
+  bodyHtml: string,
+  slug: string,
+  navSlugs: string[] = [],
+): string {
   const canonical = absoluteUrl(`${slug}/`);
   return `<!doctype html>
 <html lang="en">
@@ -51,8 +69,8 @@ export function renderContentPage(data: Frontmatter, bodyHtml: string, slug: str
       ${bodyHtml}
       <footer>
         <p>
-          <a href="/trailward/">Map</a> · <a href="/trailward/about/">About</a> ·
-          <a href="/trailward/sources/">Sources</a> · <a href="/trailward/data/">Data</a>
+          <a href="/trailward/">Map</a> ·
+          ${navSlugs.map((s) => `<a href="${esc(new URL(absoluteUrl(`${s}/`)).pathname)}">${esc(navLabel(s))}</a>`).join(" · ")}
           ${data.updated ? `<br />Updated ${esc(data.updated)}.` : ""}
         </p>
       </footer>

@@ -120,10 +120,29 @@ describe("BuildIO conformance — memoryIO must not be kinder than the disk", ()
   });
 
   it("removes a directory tree and tolerates one that is already gone", () => {
-    for (const [name, io, path] of bothWith({ "junk/a.txt": "a", "junk/b/c.txt": "c" })) {
-      io.removeDir(path("junk"));
+    for (const [name, io, path] of bothWith({
+      "junk/a.txt": "a",
+      "junk/b/c.txt": "c",
+      "junk/empty/": "",
+    })) {
+      io.removeDir(path("junk"), path(""));
       expect(io.exists(path("junk/a.txt")), name).toBe(false);
-      expect(() => io.removeDir(path("junk")), name).not.toThrow();
+      // The empty subdirectory must go too. memoryIO tracked seeded empty
+      // directories separately and never cleared them, so it reported a
+      // removed directory as still existing — the opposite of the disk, in
+      // precisely the state the empty-directory seeding was added to express.
+      expect(io.exists(path("junk/empty")), name).toBe(false);
+      expect(() => io.listDir(path("junk/empty")), name).toThrow();
+      expect(() => io.removeDir(path("junk"), path("")), name).not.toThrow();
+    }
+  });
+
+  it("refuses to remove a path OUTSIDE the containment root", () => {
+    for (const [name, io, path] of bothWith({ "repo/dist/t/p.html": "x", "outside/x.txt": "y" })) {
+      expect(() => io.removeDir(path("outside"), path("repo")), name).toThrow(/refusing/);
+      expect(io.exists(path("outside/x.txt")), name).toBe(true);
+      io.removeDir(path("repo/dist/t"), path("repo"));
+      expect(io.exists(path("repo/dist/t/p.html")), name).toBe(false);
     }
   });
 });
@@ -135,7 +154,7 @@ describe("nodeIO.removeDir refuses to follow a link out of the repo (CON-PROC-00
     writeFileSync(join(victim, "precious.txt"), "do not delete", "utf8");
     symlinkSync(victim, join(root, "link"));
 
-    expect(() => nodeIO.removeDir(join(root, "link"))).toThrow(/refusing/);
+    expect(() => nodeIO.removeDir(join(root, "link"), root)).toThrow(/refusing/);
     expect(existsSync(join(victim, "precious.txt"))).toBe(true);
   });
 
@@ -148,14 +167,30 @@ describe("nodeIO.removeDir refuses to follow a link out of the repo (CON-PROC-00
     mkdirSync(join(root, "repo"), { recursive: true });
     symlinkSync(elsewhere, join(root, "repo", "dist"));
 
-    expect(() => nodeIO.removeDir(join(root, "repo", "dist", "t"))).toThrow(/refusing/);
+    expect(() => nodeIO.removeDir(join(root, "repo", "dist", "t"), join(root, "repo"))).toThrow(
+      /refusing/,
+    );
     expect(existsSync(join(elsewhere, "t", "precious.txt"))).toBe(true);
   });
 
   it("still removes an ordinary directory", () => {
     mkdirSync(join(root, "dist", "t"), { recursive: true });
     writeFileSync(join(root, "dist", "t", "page.html"), "x", "utf8");
-    nodeIO.removeDir(join(root, "dist", "t"));
+    nodeIO.removeDir(join(root, "dist", "t"), root);
     expect(existsSync(join(root, "dist", "t"))).toBe(false);
+  });
+
+  it("still removes when an ANCESTOR of the repo is a symlink", () => {
+    // The first version of this guard compared realpath(p) with resolve(p),
+    // which also refused a perfectly ordinary checkout under a symlinked
+    // parent — a symlinked ~/work, a container bind-mount, macOS /tmp. That
+    // fails a build for a problem the developer does not have (CON-VER-005).
+    mkdirSync(join(root, "real-repos", "trailward", "dist", "t"), { recursive: true });
+    writeFileSync(join(root, "real-repos", "trailward", "dist", "t", "p.html"), "x", "utf8");
+    symlinkSync(join(root, "real-repos"), join(root, "repos"));
+
+    const repo = join(root, "repos", "trailward");
+    expect(() => nodeIO.removeDir(join(repo, "dist", "t"), repo)).not.toThrow();
+    expect(existsSync(join(root, "real-repos", "trailward", "dist", "t"))).toBe(false);
   });
 });

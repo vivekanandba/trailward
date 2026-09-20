@@ -101,8 +101,10 @@ export default defineConfig({
       // Those were measured while the test files themselves were instrumented
       // and are not comparable — see the `exclude` note above.
       thresholds: {
-        // global measured: 74.76 lines / 87.24 branches / 74.05 functions,
-        // reproduced across two consecutive runs.
+        // global measured: 74.84 lines / 74.10 functions, identical across
+        // consecutive runs. Branches vary slightly run to run (87.27–87.34
+        // observed), so that floor sits below the lowest figure seen rather
+        // than below a single reading.
         // The target is 95 and this is not it. The gap is almost entirely the
         // top-level scripts/ (45%) and scripts/geonames/ (43%) network CLIs,
         // named as the next tranche in spec 40 rather than excluded here.

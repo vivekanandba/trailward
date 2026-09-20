@@ -134,6 +134,42 @@ describe("build-pages run (spec 35/36/40)", () => {
     expect(() => runBuildPages(io, ROOT, [], "2026-09-19")).toThrow(/no content/);
   });
 
+  it("a REFUSAL destroys nothing — the previous build survives intact", () => {
+    // The refusals used to run after io.removeDir, so `git mv content/about.md
+    // content/data.md && npm run build:pages` exited 1 having already wiped
+    // dist/t and rewritten the content pages. Anything then serving dist/
+    // (vite preview, a manual gh-pages push) shipped the half-built tree.
+    const cases: Array<[string, string[]]> = [
+      ["collision", ["about.md", "data.md"]],
+      ["bad name", ["about.md", ".md"]],
+      ["malformed", ["about.md", "broken.md"]],
+    ];
+    for (const [label, listing] of cases) {
+      const io = seeded();
+      io.writeFile(`${P.contentDir}/data.md`, ABOUT);
+      io.writeFile(`${P.contentDir}/.md`, ABOUT);
+      io.writeFile(`${P.contentDir}/broken.md`, "no frontmatter here");
+      io.writeFile(`${P.outDir}/skandagiri/index.html`, "GOOD PREVIOUS BUILD");
+      io.writeFile(`${P.distDir}/about/index.html`, "GOOD PREVIOUS ABOUT");
+
+      expect(() => runBuildPages(io, ROOT, listing, "2026-09-19"), label).toThrow();
+      expect(io.files.get(`${P.outDir}/skandagiri/index.html`), label).toBe("GOOD PREVIOUS BUILD");
+      expect(io.files.get(`${P.distDir}/about/index.html`), label).toBe("GOOD PREVIOUS ABOUT");
+    }
+  });
+
+  it("refuses a file named .md instead of overwriting the SPA entry point", () => {
+    // ".md".endsWith(".md") is true and the slug is "", so this wrote
+    // dist//index.html — which POSIX collapses onto dist/index.html, silently
+    // replacing the app itself, exit 0.
+    const io = seeded();
+    io.writeFile(`${P.contentDir}/.md`, ABOUT);
+    expect(() => runBuildPages(io, ROOT, ["about.md", ".md"], "2026-09-19")).toThrow(
+      /not a usable page name/,
+    );
+    expect(io.files.has(`${P.distDir}/index.html`)).toBe(false);
+  });
+
   it("emits content pages in a stable order regardless of listing order", () => {
     // readdir order is not guaranteed, and these artefacts are committed.
     const forward = seeded();
