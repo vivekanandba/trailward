@@ -101,7 +101,7 @@ export default defineConfig({
       // Those were measured while the test files themselves were instrumented
       // and are not comparable — see the `exclude` note above.
       thresholds: {
-        // global measured: 74.89 lines / 74.10 functions, identical across
+        // global measured: 74.90 lines / 74.10 functions, identical across
         // consecutive runs. Branches vary slightly run to run (87.27–87.41
         // observed), so that floor sits below the lowest figure seen rather
         // than below a single reading.

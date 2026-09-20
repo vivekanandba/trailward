@@ -123,9 +123,12 @@ export function dataPageMarkdown(
   navSlugs: string[],
   refreshed?: string,
 ): string {
-  const sourcesLink = navSlugs.includes("sources")
-    ? " see [sources](/trailward/sources/) for the full list of inputs and their licences."
-    : "";
+  // The WHOLE clause is conditional, not just the link: splitting it after the
+  // semicolon shipped "offered under the ODbL;" as a sentence ending in a
+  // semicolon with nothing after it, on a public page.
+  const licence = navSlugs.includes("sources")
+    ? "The aggregate dataset is offered under the ODbL; see [sources](/trailward/sources/) for the\nfull list of inputs and their licences."
+    : "The aggregate dataset is offered under the ODbL.";
   return `# The dataset
 
 Trailward ships its data as static files, rebuilt and committed rather than queried live.
@@ -158,6 +161,6 @@ three separate points in the pipeline, so a corrupt elevation sample cannot reap
 
 ## Reuse
 
-The aggregate dataset is offered under the ODbL;${sourcesLink}
+${licence}
 `;
 }

@@ -79,9 +79,13 @@ export function runBuildPages(
     // A generated slug is not available to an author: content/data.md would be
     // rendered and then overwritten by the generated page below, so the
     // authored words vanish while the build reports success.
-    if ((GENERATED_CONTENT_SLUGS as readonly string[]).includes(slug) || slug === "t") {
-      // "t" is the trek-page directory: content/t.md would write
-      // dist/t/index.html inside that tree and the sitemap would advertise it.
+    // "t" is the trek-page directory, not a generated content page — so it
+    // gets its own message rather than one that tells the author something
+    // untrue about where the collision is.
+    if (slug === "t") {
+      throw new Error(`[pages] ${file} collides with the /t/ trek pages — rename it`);
+    }
+    if ((GENERATED_CONTENT_SLUGS as readonly string[]).includes(slug)) {
       throw new Error(`[pages] ${file} collides with the generated /${slug}/ page — rename it`);
     }
   }
@@ -102,19 +106,15 @@ export function runBuildPages(
     return { file, slug, html: renderContentPage(data, renderMarkdown(body, file), slug, nav) };
   });
 
-  io.removeDir(paths.outDir, repoRoot);
-  for (const trek of pages) {
+  // The trek pages and the generated /data/ page render up front too, for the
+  // same reason. renderTrekPage reaches trek.lat.toFixed(4) unguarded, and
+  // `npm run build` never runs validateDataset (validate:data is a separate CI
+  // job) — so one hand-edited record used to half-wipe dist/t and exit with a
+  // raw TypeError. After this point NOTHING renders: the loop below only writes.
+  const trekPages = pages.map((trek) => {
     const slug = slugs.get(trek.id)!;
-    io.writeFile(`${paths.outDir}/${slug}/index.html`, renderTrekPage(trek, slug));
-  }
-  io.log(`[pages] wrote ${pages.length} trek page(s) → ${paths.outDir}`);
-
-  // Content pages (spec 36). Authored markdown, plus a generated /data/ page.
-  const written: string[] = [];
-  for (const { slug, html } of parsed) {
-    io.writeFile(`${paths.distDir}/${slug}/index.html`, html);
-    written.push(slug);
-  }
+    return { path: `${paths.outDir}/${slug}/index.html`, html: renderTrekPage(trek, slug) };
+  });
 
   const stats = datasetStats(treks, pages.length);
   const generatedSrc = [
@@ -126,15 +126,25 @@ export function runBuildPages(
     dataPageMarkdown(stats, nav, refreshed),
   ].join("\n");
   const generated = parseFrontmatter(generatedSrc, "data.md (generated)");
-  io.writeFile(
-    `${paths.distDir}/data/index.html`,
-    renderContentPage(
-      generated.data,
-      renderMarkdown(generated.body, "data.md (generated)"),
-      "data",
-      nav,
-    ),
+  const generatedHtml = renderContentPage(
+    generated.data,
+    renderMarkdown(generated.body, "data.md (generated)"),
+    "data",
+    nav,
   );
+
+  // ---- Everything above can refuse. Everything below only writes. ----
+  io.removeDir(paths.outDir, repoRoot);
+  for (const { path, html } of trekPages) io.writeFile(path, html);
+  io.log(`[pages] wrote ${pages.length} trek page(s) → ${paths.outDir}`);
+
+  // Content pages (spec 36). Authored markdown, plus a generated /data/ page.
+  const written: string[] = [];
+  for (const { slug, html } of parsed) {
+    io.writeFile(`${paths.distDir}/${slug}/index.html`, html);
+    written.push(slug);
+  }
+  io.writeFile(`${paths.distDir}/data/index.html`, generatedHtml);
   written.push("data");
   io.log(`[pages] wrote content page(s): ${written.join(", ")}`);
   return { treks: pages.length, content: written };

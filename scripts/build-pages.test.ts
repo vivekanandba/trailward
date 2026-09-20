@@ -176,8 +176,27 @@ describe("build-pages run (spec 35/36/40)", () => {
     const html = io.files.get(`${P.distDir}/faq/index.html`)!;
     expect(html).toContain('href="/trailward/faq/"');
     expect(html).not.toContain('href="/trailward/about/"');
-    // The generated /data/ page must not link to a sources page that is gone.
-    expect(io.files.get(`${P.distDir}/data/index.html`)!).not.toContain("/trailward/sources/");
+    // The generated /data/ page must not link to a sources page that is gone
+    // — and must still read as a sentence. Asserting only the link's absence
+    // pinned "offered under the ODbL;" with nothing after the semicolon.
+    const data = io.files.get(`${P.distDir}/data/index.html`)!;
+    expect(data).not.toContain("/trailward/sources/");
+    expect(data).toContain("offered under the ODbL.");
+    expect(data).not.toMatch(/ODbL;\s*(<|$)/);
+  });
+
+  it("a malformed RECORD cannot half-wipe dist/t either", () => {
+    // renderTrekPage reaches trek.lat.toFixed(4) unguarded, and `npm run
+    // build` never runs validateDataset — validate:data is a separate CI job.
+    // So one hand-edited record threw a raw TypeError after the clean.
+    const broken = [...TREKS, { ...TREKS[0], id: "broken", name: "Broken", lat: null }];
+    const io = memoryIO({
+      [P.treks]: JSON.stringify(broken),
+      [`${P.contentDir}/about.md`]: ABOUT,
+    });
+    io.writeFile(`${P.outDir}/skandagiri/index.html`, "GOOD PREVIOUS BUILD");
+    expect(() => runBuildPages(io, ROOT, ["about.md"], "2026-09-19")).toThrow();
+    expect(io.files.get(`${P.outDir}/skandagiri/index.html`)).toBe("GOOD PREVIOUS BUILD");
   });
 
   it("a REFUSAL destroys nothing — the previous build survives intact", () => {

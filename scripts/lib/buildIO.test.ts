@@ -139,9 +139,12 @@ describe("BuildIO conformance — memoryIO must not be kinder than the disk", ()
 
   it("refuses a path that CLIMBS out, and a prefix sibling", () => {
     for (const [name, io, path] of bothWith({ "repo/a.txt": "a", "repo-evil/x.txt": "b" })) {
-      // A literal prefix test would let "/x/repo/../repo-evil" through, and
-      // would also accept "repo-evil" as being inside "repo".
-      expect(() => io.removeDir(path("repo/../repo-evil"), path("repo")), name).toThrow(/refusing/);
+      // path.join() normalises, so the nodeIO leg has to be handed the ".."
+      // unnormalised or it silently becomes the prefix-sibling case and the
+      // "assert from both sides" claim holds for only one side.
+      expect(() => io.removeDir(`${path("repo")}/../repo-evil`, path("repo")), name).toThrow(
+        /refusing/,
+      );
       expect(() => io.removeDir(path("repo-evil"), path("repo")), name).toThrow(/refusing/);
       expect(io.exists(path("repo-evil/x.txt")), name).toBe(true);
     }
