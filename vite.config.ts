@@ -1,6 +1,6 @@
-/// <reference types="vitest/config" />
 import { readFileSync } from "node:fs";
 import { defineConfig, type Plugin } from "vite";
+import { coverageConfigDefaults } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { appJsonLd, jsonLdScript } from "./src/lib/seo";
 
@@ -74,7 +74,13 @@ export default defineConfig({
       //    map. Covered by the e2e suite and 12 visual baselines instead.
       //  - main.tsx: the bootstrap entry point, three lines and a service
       //    worker registration that only runs in a production build.
-      exclude: ["src/components/TrekMap.tsx", "src/main.tsx"],
+      //
+      // coverageConfigDefaults.exclude is spread in deliberately: vitest
+      // REPLACES this array rather than merging it, so setting it bare drops
+      // the default `**/*.test.ts` exclusion and instruments the test files
+      // themselves. They are ~100% covered by construction, which inflated
+      // every number here by about ten points until it was caught in review.
+      exclude: [...coverageConfigDefaults.exclude, "src/components/TrekMap.tsx", "src/main.tsx"],
       // Ratchet: set just below current levels so the suite can't silently
       // regress; raise as coverage grows. Recalibrated 70 → 68 when the
       // in-app feedback form (≈600 covered lines) was REMOVED in favour of
@@ -86,26 +92,34 @@ export default defineConfig({
       // land at 0% without moving the global number (spec 37). Per-directory
       // floors close that. Each was MEASURED, then set a few points under, and
       // each was proven to enforce by temporarily setting it to 100.
+      // Measured 2026-09-20 with the default exclusions intact, each floor set
+      // just under, so they ratchet up and never down (CON-COV-002). Every one
+      // of these is ABOVE what main enforced (global 68 → 74, scripts/lib
+      // 80 → 97): nothing here is a floor being lowered to make a build pass.
+      //
+      // An earlier revision of this block quoted numbers ~10 points higher.
+      // Those were measured while the test files themselves were instrumented
+      // and are not comparable — see the `exclude` note above.
       thresholds: {
-        // Measured 2026-09-20, each floor set just under, so they ratchet up
-        // and never down (CON-COV-002). Target is tiered: logic directories
-        // carry the high bar; the top-level scripts/ shells are network-heavy
-        // CLIs and are the next tranche to climb.
-        // global measured: 84.97 / 91.10 / 77.17
-        lines: 84,
-        branches: 90,
-        functions: 76,
-        statements: 84,
-        // measured 97.75 / 92.64 / 97.50 — pure application logic, no excuse
-        "src/lib/**": { statements: 96, lines: 96, branches: 91, functions: 96 },
-        // measured over the GLOB (which includes components/ui): 90.5 / 89.3
-        // / 73.11 — note the per-directory table row reads higher because it
-        // excludes the ui/ subtree.
-        "src/components/**": { statements: 88, lines: 88, branches: 87, functions: 72 },
-        // measured 98.55 / 94.89 / 86.44 — pure build logic
-        "scripts/lib/**": { statements: 96, lines: 96, branches: 93, functions: 84 },
-        // measured 87.39 / 91.20 / 76.66 — network adapters; parsers carry it
-        "scripts/sources/**": { statements: 85, lines: 85, branches: 89, functions: 74 },
+        // global measured: 74.67 lines / 87.13 branches / 74.05 functions.
+        // The target is 95 and this is not it. The gap is almost entirely the
+        // top-level scripts/ (45%) and scripts/geonames/ (43%) network CLIs,
+        // named as the next tranche in spec 40 rather than excluded here.
+        lines: 74,
+        branches: 86,
+        functions: 73,
+        statements: 74,
+        // measured 94.93 / 88.98 / 97.00 — pure application logic, no excuse
+        "src/lib/**": { statements: 94, lines: 94, branches: 88, functions: 96 },
+        // measured over the GLOB (which includes components/ui at 75%): 84.88
+        // / 84.96 / 70.00. The per-directory table row reads higher because it
+        // excludes the ui/ subtree; the floor follows the glob, because the
+        // glob is what enforces.
+        "src/components/**": { statements: 84, lines: 84, branches: 84, functions: 69 },
+        // measured 98.12 / 94.61 / 96.22 — pure build logic
+        "scripts/lib/**": { statements: 97, lines: 97, branches: 94, functions: 95 },
+        // measured 76.79 / 86.78 / 72.35 — network adapters; parsers carry it
+        "scripts/sources/**": { statements: 76, lines: 76, branches: 86, functions: 72 },
       },
     },
   },

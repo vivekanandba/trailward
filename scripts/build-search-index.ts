@@ -52,7 +52,7 @@ export function runBuildSearchIndex(
   const body = JSON.stringify(index);
   io.writeFile(paths.out, body);
   io.log(
-    `[search] wrote ${index.length} named entries (${Math.round(body.length / 1024)} KB) → ${paths.out}`,
+    `[search] wrote ${index.length} named entries (${Math.round(Buffer.byteLength(body) / 1024)} KB) → ${paths.out}`,
   );
   return index;
 }

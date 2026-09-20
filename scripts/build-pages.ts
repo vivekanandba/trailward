@@ -11,32 +11,41 @@ import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
-import { assertCleanTarget, qualifyingTreks, slugMap } from "./lib/pages";
+import { cleanTargetFor, qualifyingTreks, slugMap } from "./lib/pages";
 import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const treksFile = resolve(here, "../src/data/treks.json");
-const outDir = resolve(here, "../dist/t");
-const contentDir = resolve(here, "../content");
-const distDir = resolve(here, "../dist");
+const repoRoot = resolve(here, "..");
 
-export interface PagePaths {
+/**
+ * Every path this tool touches is derived from the repo root, so no caller can
+ * point its recursive clean at a directory of their choosing (CON-PROC-006).
+ */
+export function pagePathsFor(repoRoot: string): {
   treks: string;
   outDir: string;
   distDir: string;
   contentDir: string;
-  repoRoot: string;
+} {
+  const root = repoRoot.replace(/\/+$/, "");
+  return {
+    treks: `${root}/src/data/treks.json`,
+    outDir: cleanTargetFor(root),
+    distDir: `${root}/dist`,
+    contentDir: `${root}/content`,
+  };
 }
 
 export function runBuildPages(
   io: BuildIO,
-  paths: PagePaths,
+  repoRoot: string,
   contentFiles: string[],
   refreshed?: string,
 ): { treks: number; content: string[] } {
+  const paths = pagePathsFor(repoRoot);
   const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
   const pages = qualifyingTreks(treks);
   const slugs = slugMap(pages);
@@ -46,7 +55,6 @@ export function runBuildPages(
     throw new Error("[pages] slug collision — refusing to write");
   }
 
-  assertCleanTarget(paths.outDir, paths.repoRoot);
   io.removeDir(paths.outDir);
   for (const trek of pages) {
     const slug = slugs.get(trek.id)!;
@@ -90,14 +98,18 @@ export function runBuildPages(
 // kick off a build, mirroring the guard in discover-precompute.ts.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    if (!nodeIO.exists(distDir)) {
+    const paths = pagePathsFor(repoRoot);
+    if (!nodeIO.exists(paths.distDir)) {
       throw new Error("[pages] dist/ missing — run `npm run build` first");
     }
     runBuildPages(
       nodeIO,
-      { treks: treksFile, outDir, distDir, contentDir, repoRoot: resolve(here, "..") },
-      nodeIO.listDir(contentDir),
-      lastCommitDate("src/data/treks.json", resolve(here, "..")),
+      repoRoot,
+      // listDir throws when content/ is absent, which is the point: a missing
+      // content directory used to yield [] and ship a build with no /about/ or
+      // /sources/ while the sitemap still advertised them.
+      nodeIO.listDir(paths.contentDir),
+      lastCommitDate("src/data/treks.json", repoRoot),
     );
   } catch (err) {
     console.error((err as Error).message);

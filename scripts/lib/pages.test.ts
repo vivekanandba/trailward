@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { slugFor, qualifies, qualifyingTreks, slugMap, assertCleanTarget } from "./pages";
+import {
+  slugFor,
+  qualifies,
+  qualifyingTreks,
+  slugMap,
+  cleanTargetFor,
+  contentSlugs,
+} from "./pages";
 import type { Trek } from "../../src/lib/trek";
 
 const mk = (over: Partial<Trek> & Pick<Trek, "id" | "name">): Trek => ({
@@ -117,15 +124,30 @@ describe("qualifyingTreks", () => {
   });
 });
 
-describe("assertCleanTarget (spec 35 / CON-PROC-006)", () => {
-  it("permits exactly <repo>/dist/t", () => {
-    expect(() => assertCleanTarget("/repo/dist/t", "/repo")).not.toThrow();
-    expect(() => assertCleanTarget("/repo/dist/t", "/repo/")).not.toThrow();
+describe("cleanTargetFor (spec 35 / CON-PROC-006)", () => {
+  it("DERIVES the target, so the suffix is not the caller's to name", () => {
+    expect(cleanTargetFor("/repo")).toBe("/repo/dist/t");
+    expect(cleanTargetFor("/repo/")).toBe("/repo/dist/t");
+    expect(cleanTargetFor("/a/b/c")).toBe("/a/b/c/dist/t");
   });
 
-  it("refuses anything else — a moved script must fail, not delete", () => {
-    for (const bad of ["/repo/dist", "/repo", "/", "/repo/dist/t/..", "/elsewhere/dist/t"]) {
-      expect(() => assertCleanTarget(bad, "/repo"), bad).toThrow(/refusing to clean/);
+  it("refuses a root that is relative or climbs — those cannot be a repo root", () => {
+    for (const bad of ["relative/repo", "", "..", "/repo/../etc", "./"]) {
+      expect(() => cleanTargetFor(bad), JSON.stringify(bad)).toThrow(/refusing to clean/);
     }
+  });
+});
+
+describe("contentSlugs (spec 36 — one list, two consumers)", () => {
+  it("turns the content listing into slugs and always includes the generated ones", () => {
+    expect(contentSlugs(["about.md", "sources.md"])).toEqual(["about", "data", "sources"]);
+  });
+
+  it("ignores non-markdown and never duplicates a generated slug", () => {
+    expect(contentSlugs(["about.md", "notes.txt", "data.md"])).toEqual(["about", "data"]);
+  });
+
+  it("still lists the generated pages when content/ holds nothing", () => {
+    expect(contentSlugs([])).toEqual(["data"]);
   });
 });

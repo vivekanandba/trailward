@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { runBuildSitemap } from "./build-sitemap";
 import { runBuildSearchIndex } from "./build-search-index";
+import { runBuildPages } from "./build-pages";
 import { memoryIO } from "./lib/buildIO";
 import type { Trek } from "../src/lib/trek";
 
@@ -26,11 +27,48 @@ const TREKS: Trek[] = [
 ];
 
 const P = { treks: "/repo/src/data/treks.json", out: "/repo/public/sitemap.xml" };
+const CONTENT = ["about.md", "sources.md"];
+
+describe("sitemap ↔ pages agreement (CON-COV-003 — assert it from BOTH sides)", () => {
+  // The sitemap advertises content URLs and build-pages writes them. While the
+  // sitemap held its own hardcoded list the two could disagree in silence:
+  // adding content/faq.md shipped a page nothing listed, and deleting
+  // content/about.md advertised a URL that 404s. Both stayed green.
+  const listings = [
+    ["about.md", "sources.md"],
+    ["about.md", "sources.md", "faq.md"], // a page added
+    ["about.md"], // a page deleted
+    ["about.md", "sources.md", "notes.txt"], // a non-markdown file ignored
+  ];
+
+  for (const listing of listings) {
+    it(`agrees for [${listing.join(", ")}]`, () => {
+      const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
+      runBuildSitemap(io, P, listing, "2026-09-19");
+      const xml = io.files.get(P.out)!;
+
+      const pages = memoryIO({
+        ["/repo/src/data/treks.json"]: JSON.stringify(TREKS),
+        ...Object.fromEntries(
+          listing
+            .filter((f) => f.endsWith(".md"))
+            .map((f) => [`/repo/content/${f}`, "---\ntitle: T\ndescription: D\n---\n\nBody."]),
+        ),
+      });
+      const written = runBuildPages(pages, "/repo", listing, "2026-09-19").content;
+
+      const advertised = [...xml.matchAll(/<loc>[^<]*\/trailward\/([a-z-]+)\/<\/loc>/g)].map(
+        (m) => m[1],
+      );
+      expect([...advertised].sort()).toEqual([...written].sort());
+    });
+  }
+});
 
 describe("build-sitemap run (spec 35/40)", () => {
   it("lists the app root, the content pages and every qualifying trek", () => {
     const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
-    const n = runBuildSitemap(io, P, "2026-09-19");
+    const n = runBuildSitemap(io, P, CONTENT, "2026-09-19");
     const xml = io.files.get(P.out)!;
 
     expect(xml).toContain("<loc>https://vivekanandba.github.io/trailward/</loc>");
@@ -44,13 +82,13 @@ describe("build-sitemap run (spec 35/40)", () => {
 
   it("never advertises an Unnamed pin — nothing there to rank for", () => {
     const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
-    runBuildSitemap(io, P, "2026-09-19");
+    runBuildSitemap(io, P, CONTENT, "2026-09-19");
     expect(io.files.get(P.out)!).not.toContain("unnamed");
   });
 
   it("emits only absolute https locations", () => {
     const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
-    runBuildSitemap(io, P, "2026-09-19");
+    runBuildSitemap(io, P, CONTENT, "2026-09-19");
     const locs = [...io.files.get(P.out)!.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
     expect(locs.length).toBeGreaterThan(0);
     for (const loc of locs) expect(loc.startsWith("https://")).toBe(true);
@@ -59,13 +97,13 @@ describe("build-sitemap run (spec 35/40)", () => {
   it("is byte-stable for the same input and date", () => {
     const a = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
     const b = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
-    runBuildSitemap(a, P, "2026-09-19");
-    runBuildSitemap(b, P, "2026-09-19");
+    runBuildSitemap(a, P, CONTENT, "2026-09-19");
+    runBuildSitemap(b, P, CONTENT, "2026-09-19");
     expect(b.files.get(P.out)).toBe(a.files.get(P.out));
   });
 
   it("fails when the dataset is missing rather than writing an empty sitemap", () => {
-    expect(() => runBuildSitemap(memoryIO(), P, undefined)).toThrow(/missing/);
+    expect(() => runBuildSitemap(memoryIO(), P, CONTENT, undefined)).toThrow(/missing/);
   });
 });
 

@@ -17,12 +17,13 @@ const TREKS: Trek[] = [
   trek({ id: "c", lat: 18.5, lng: 73.9 }), // cell 18_73
 ];
 
+const ROOT = "/repo";
 const paths = { treks: "/repo/src/data/treks.json", out: "/repo/public/data/cells" };
 
 describe("chunk-data run (spec 30/40)", () => {
   it("writes one file per non-empty cell plus an index, and says what it wrote", () => {
     const io = memoryIO({ [paths.treks]: JSON.stringify(TREKS) });
-    runChunkData(io, paths);
+    runChunkData(io, ROOT);
 
     expect(io.files.has(`${paths.out}/12_77.json`)).toBe(true);
     expect(io.files.has(`${paths.out}/18_73.json`)).toBe(true);
@@ -39,7 +40,7 @@ describe("chunk-data run (spec 30/40)", () => {
 
   it("every record lands in exactly one cell — none lost, none duplicated", () => {
     const io = memoryIO({ [paths.treks]: JSON.stringify(TREKS) });
-    runChunkData(io, paths);
+    runChunkData(io, ROOT);
     const ids = [...io.files.entries()]
       .filter(([k]) => k.startsWith(paths.out) && !k.endsWith("index.json"))
       .flatMap(([, body]) => (JSON.parse(body) as Trek[]).map((t) => t.id));
@@ -51,15 +52,34 @@ describe("chunk-data run (spec 30/40)", () => {
       [paths.treks]: JSON.stringify(TREKS),
       [`${paths.out}/99_99.json`]: "[]", // stale cell from a previous dataset
     });
-    runChunkData(io, paths);
+    runChunkData(io, ROOT);
     expect(io.files.has(`${paths.out}/99_99.json`)).toBe(false);
+  });
+
+  it("orders cell keys by NAME, not by the order records happen to appear", () => {
+    // Running the same input twice is byte-stable with or without the sort, so
+    // that test cannot see this. Feeding the records in a different order can:
+    // without `.sort()` the index key order follows insertion and index.json
+    // churns on every rebake for no reason.
+    const keysFor = (treks: Trek[]): string[] => {
+      const io = memoryIO({ [paths.treks]: JSON.stringify(treks) });
+      runChunkData(io, ROOT);
+      return Object.keys(
+        (JSON.parse(io.files.get(`${paths.out}/index.json`)!) as { cells: Record<string, number> })
+          .cells,
+      );
+    };
+    const forward = keysFor(TREKS);
+    const reversed = keysFor([...TREKS].reverse());
+    expect(reversed).toEqual(forward);
+    expect(forward).toEqual([...forward].sort());
   });
 
   it("is byte-stable across runs — these artefacts are committed", () => {
     const once = memoryIO({ [paths.treks]: JSON.stringify(TREKS) });
-    runChunkData(once, paths);
+    runChunkData(once, ROOT);
     const twice = memoryIO({ [paths.treks]: JSON.stringify(TREKS) });
-    runChunkData(twice, paths);
+    runChunkData(twice, ROOT);
     expect([...twice.files.entries()].sort()).toEqual([...once.files.entries()].sort());
   });
 
@@ -68,7 +88,7 @@ describe("chunk-data run (spec 30/40)", () => {
       [paths.treks]: "[]",
       [`${paths.out}/12_77.json`]: "[...]",
     });
-    expect(() => runChunkData(io, paths)).toThrow(/empty/i);
+    expect(() => runChunkData(io, ROOT)).toThrow(/empty/i);
     // The previous chunks survive: an empty bake must not take the app down.
     expect(io.files.has(`${paths.out}/12_77.json`)).toBe(true);
   });

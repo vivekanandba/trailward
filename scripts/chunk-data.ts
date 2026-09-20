@@ -22,7 +22,20 @@ export interface ChunkPaths {
   out: string;
 }
 
-export function runChunkData(io: BuildIO, paths: ChunkPaths): void {
+/**
+ * Derived from the repo root so the recursive clean below cannot be aimed at a
+ * directory of the caller's choosing (CON-PROC-006).
+ */
+export function chunkPathsFor(repoRoot: string): ChunkPaths {
+  const root = repoRoot.replace(/\/+$/, "");
+  if (!root.startsWith("/") || root.split("/").includes("..")) {
+    throw new Error(`refusing to chunk: ${repoRoot} is not an absolute repo root`);
+  }
+  return { treks: `${root}/src/data/treks.json`, out: `${root}/public/data/cells` };
+}
+
+export function runChunkData(io: BuildIO, repoRoot: string): void {
+  const paths = chunkPathsFor(repoRoot);
   const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
   if (!Array.isArray(treks) || treks.length === 0) {
     // An empty bake would erase every served cell and take the app down while
@@ -52,10 +65,7 @@ export function runChunkData(io: BuildIO, paths: ChunkPaths): void {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    runChunkData(nodeIO, {
-      treks: resolve(here, "../src/data/treks.json"),
-      out: resolve(here, "../public/data/cells"),
-    });
+    runChunkData(nodeIO, resolve(here, ".."));
   } catch (err) {
     console.error((err as Error).message);
     process.exit(1);
