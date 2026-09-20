@@ -75,6 +75,20 @@ describe("chunk-data run (spec 30/40)", () => {
     expect(forward).toEqual([...forward].sort());
   });
 
+  it("passes the REPO ROOT as the containment root, not something permissive", () => {
+    const io = memoryIO({ [paths.treks]: JSON.stringify(TREKS) });
+    const calls: Array<[string, string]> = [];
+    const spy = {
+      ...io,
+      removeDir: (path: string, within: string) => {
+        calls.push([path, within]);
+        io.removeDir(path, within);
+      },
+    };
+    runChunkData(spy, ROOT);
+    expect(calls).toEqual([["/repo/public/data/cells", "/repo"]]);
+  });
+
   it("is byte-stable across runs — these artefacts are committed", () => {
     const once = memoryIO({ [paths.treks]: JSON.stringify(TREKS) });
     runChunkData(once, ROOT);

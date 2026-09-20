@@ -137,6 +137,16 @@ describe("BuildIO conformance — memoryIO must not be kinder than the disk", ()
     }
   });
 
+  it("refuses a path that CLIMBS out, and a prefix sibling", () => {
+    for (const [name, io, path] of bothWith({ "repo/a.txt": "a", "repo-evil/x.txt": "b" })) {
+      // A literal prefix test would let "/x/repo/../repo-evil" through, and
+      // would also accept "repo-evil" as being inside "repo".
+      expect(() => io.removeDir(path("repo/../repo-evil"), path("repo")), name).toThrow(/refusing/);
+      expect(() => io.removeDir(path("repo-evil"), path("repo")), name).toThrow(/refusing/);
+      expect(io.exists(path("repo-evil/x.txt")), name).toBe(true);
+    }
+  });
+
   it("refuses to remove a path OUTSIDE the containment root", () => {
     for (const [name, io, path] of bothWith({ "repo/dist/t/p.html": "x", "outside/x.txt": "y" })) {
       expect(() => io.removeDir(path("outside"), path("repo")), name).toThrow(/refusing/);
@@ -178,6 +188,16 @@ describe("nodeIO.removeDir refuses to follow a link out of the repo (CON-PROC-00
     writeFileSync(join(root, "dist", "t", "page.html"), "x", "utf8");
     nodeIO.removeDir(join(root, "dist", "t"), root);
     expect(existsSync(join(root, "dist", "t"))).toBe(false);
+  });
+
+  it("names a DANGLING symlink as a symlink, not as a missing file", () => {
+    // realpathSync throws on a broken link, so checking containment first
+    // turned a clear refusal into a raw ENOENT on a path that `ls -l` shows.
+    mkdirSync(join(root, "repo", "dist"), { recursive: true });
+    symlinkSync(join(root, "nonexistent"), join(root, "repo", "dist", "t"));
+    expect(() => nodeIO.removeDir(join(root, "repo", "dist", "t"), join(root, "repo"))).toThrow(
+      /refusing to remove a symlink/,
+    );
   });
 
   it("still removes when an ANCESTOR of the repo is a symlink", () => {

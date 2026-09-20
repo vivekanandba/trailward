@@ -43,7 +43,10 @@ export function renderContentPage(
   data: Frontmatter,
   bodyHtml: string,
   slug: string,
-  navSlugs: string[] = [],
+  // Required, no default: a default made dropping this argument type-clean,
+  // and the mutation that dropped it left every suite green while every
+  // shipped footer lost its links.
+  navSlugs: string[],
 ): string {
   const canonical = absoluteUrl(`${slug}/`);
   return `<!doctype html>
@@ -109,7 +112,20 @@ export function datasetStats(
 
 const n = (v: number): string => v.toLocaleString("en-IN");
 
-export function dataPageMarkdown(stats: DatasetStats, refreshed?: string): string {
+/**
+ * `navSlugs` is threaded through so the closing link is not a FIFTH hardcoded
+ * copy of the content list. Deleting content/sources.md used to ship a /data/
+ * page linking to a 404: renderMarkdown waves /trailward/ links through
+ * unprobed and check-links only probes https://, so nothing would catch it.
+ */
+export function dataPageMarkdown(
+  stats: DatasetStats,
+  navSlugs: string[],
+  refreshed?: string,
+): string {
+  const sourcesLink = navSlugs.includes("sources")
+    ? " see [sources](/trailward/sources/) for the full list of inputs and their licences."
+    : "";
   return `# The dataset
 
 Trailward ships its data as static files, rebuilt and committed rather than queried live.
@@ -142,7 +158,6 @@ three separate points in the pipeline, so a corrupt elevation sample cannot reap
 
 ## Reuse
 
-The aggregate dataset is offered under the ODbL; see [sources](/trailward/sources/) for the
-full list of inputs and their licences.
+The aggregate dataset is offered under the ODbL;${sourcesLink}
 `;
 }

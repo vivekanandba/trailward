@@ -95,6 +95,24 @@ describe("build-pages run (spec 35/36/40)", () => {
     }
   });
 
+  it("passes the REPO ROOT as the containment root, not something permissive", () => {
+    // Asserting the guard directly does not pin this: /repo/dist/t is inside
+    // "/" as well, so changing the argument to "/" — which disables
+    // containment for every other path — is invisible unless the argument
+    // itself is captured.
+    const io = seeded();
+    const calls: Array<[string, string]> = [];
+    const spy = {
+      ...io,
+      removeDir: (path: string, within: string) => {
+        calls.push([path, within]);
+        io.removeDir(path, within);
+      },
+    };
+    runBuildPages(spy, ROOT, ["about.md"], "2026-09-19");
+    expect(calls).toEqual([["/repo/dist/t", "/repo"]]);
+  });
+
   it("writes to the LITERAL expected locations, not wherever pagePathsFor says", () => {
     // Every other expectation here derives its paths from pagePathsFor, so
     // changing distDir to "/repo/dist-oops" left the whole suite green while
@@ -134,6 +152,34 @@ describe("build-pages run (spec 35/36/40)", () => {
     expect(() => runBuildPages(io, ROOT, [], "2026-09-19")).toThrow(/no content/);
   });
 
+  it("wires the DERIVED nav into every page it writes", () => {
+    // The renderer's own tests cover the nav, but nothing covered the seam
+    // from contentSlugs into it: dropping the argument left every suite green
+    // while every shipped footer lost its links.
+    const io = seeded();
+    io.writeFile(`${P.contentDir}/sources.md`, ABOUT);
+    runBuildPages(io, ROOT, ["about.md", "sources.md"], "2026-09-19");
+    for (const page of ["about", "sources", "data"]) {
+      const html = io.files.get(`${P.distDir}/${page}/index.html`)!;
+      expect(html, page).toContain('href="/trailward/about/"');
+      expect(html, page).toContain('href="/trailward/sources/"');
+      expect(html, page).toContain('href="/trailward/data/"');
+    }
+  });
+
+  it("the nav FOLLOWS the listing — a renamed page renames the links", () => {
+    const io = memoryIO({
+      [P.treks]: JSON.stringify(TREKS),
+      [`${P.contentDir}/faq.md`]: ABOUT,
+    });
+    runBuildPages(io, ROOT, ["faq.md"], "2026-09-19");
+    const html = io.files.get(`${P.distDir}/faq/index.html`)!;
+    expect(html).toContain('href="/trailward/faq/"');
+    expect(html).not.toContain('href="/trailward/about/"');
+    // The generated /data/ page must not link to a sources page that is gone.
+    expect(io.files.get(`${P.distDir}/data/index.html`)!).not.toContain("/trailward/sources/");
+  });
+
   it("a REFUSAL destroys nothing — the previous build survives intact", () => {
     // The refusals used to run after io.removeDir, so `git mv content/about.md
     // content/data.md && npm run build:pages` exited 1 having already wiped
@@ -141,14 +187,24 @@ describe("build-pages run (spec 35/36/40)", () => {
     // (vite preview, a manual gh-pages push) shipped the half-built tree.
     const cases: Array<[string, string[]]> = [
       ["collision", ["about.md", "data.md"]],
+      ["reserved t", ["about.md", "t.md"]],
       ["bad name", ["about.md", ".md"]],
-      ["malformed", ["about.md", "broken.md"]],
+      ["malformed frontmatter", ["about.md", "broken.md"]],
+      ["bad markdown body", ["about.md", "zbadbody.md"]],
     ];
     for (const [label, listing] of cases) {
       const io = seeded();
       io.writeFile(`${P.contentDir}/data.md`, ABOUT);
+      io.writeFile(`${P.contentDir}/t.md`, ABOUT);
       io.writeFile(`${P.contentDir}/.md`, ABOUT);
       io.writeFile(`${P.contentDir}/broken.md`, "no frontmatter here");
+      // renderMarkdown throws by design on an http:// link. Parsing early but
+      // RENDERING late still wiped dist/ before this could refuse — and prose
+      // is edited constantly while filenames rarely are.
+      io.writeFile(
+        `${P.contentDir}/zbadbody.md`,
+        ["---", "title: Bad", "description: d", "---", "", "[x](http://example.com)"].join("\n"),
+      );
       io.writeFile(`${P.outDir}/skandagiri/index.html`, "GOOD PREVIOUS BUILD");
       io.writeFile(`${P.distDir}/about/index.html`, "GOOD PREVIOUS ABOUT");
 

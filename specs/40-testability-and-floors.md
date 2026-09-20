@@ -66,7 +66,7 @@ build pass.
 | `scripts/lib/**`           | 98.1     | 94.7     | 97 / 94   | 80 / 88      |
 | `src/components/**` (glob) | 84.9     | 85.0     | 84 / 84   | 58 / 78      |
 | `scripts/sources/**`       | 76.8     | 86.8     | 76 / 86   | none         |
-| **Global**                 | **74.8** | **87.3** | 74 / 86   | 68 / 72      |
+| **Global**                 | **74.9** | **87.3** | 74 / 86   | 68 / 72      |
 
 `src/components` jumps because TrekMap is now excluded with a reason, not
 because its tests improved.
@@ -75,11 +75,11 @@ Every figure above was reproduced across consecutive runs before being written
 down — an earlier draft recorded numbers that did not reproduce, which is a
 fabricated measurement however small the drift (CON-DATA-001). Line and
 function coverage are identical run to run; **branch coverage is not** (87.27
-to 87.34 observed across runs), so its floors sit below the lowest figure seen
+to 87.41 observed across runs), so its floors sit below the lowest figure seen
 rather than below a single reading. That instability is itself worth chasing
 in the next tranche — a gate whose input moves can fail on an innocent diff.
 
-**Where this falls short, stated plainly.** The goal is 95% global. It is 74.8%.
+**Where this falls short, stated plainly.** The goal is 95% global. It is 74.9%.
 The gap is concentrated in code this tranche did not reach: top-level `scripts/`
 at 46% and `scripts/geonames/` at 43% — the network-heavy CLIs (`build-climate`,
 `build-landcover`, `build-detect`, `build-gazetteer`, `build-names`). The same

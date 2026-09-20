@@ -2,9 +2,10 @@ import { describe, it, expect } from "vitest";
 import { renderContentPage, datasetStats, dataPageMarkdown } from "./contentPage";
 
 const fm = { title: "Data sources", description: "Where every fact comes from." };
+const NAV = ["about", "sources", "data"];
 
 describe("renderContentPage (spec 36/40)", () => {
-  const html = renderContentPage(fm, "<h1>Data sources</h1><p>Body.</p>", "sources");
+  const html = renderContentPage(fm, "<h1>Data sources</h1><p>Body.</p>", "sources", NAV);
 
   it("renders a complete document with the body inlined", () => {
     expect(html.startsWith("<!doctype html>")).toBe(true);
@@ -26,16 +27,17 @@ describe("renderContentPage (spec 36/40)", () => {
       { title: 'X <img src=x onerror="alert(1)">', description: "d" },
       "<p>b</p>",
       "x",
+      NAV,
     );
     expect(evil).not.toContain("<img src=x");
     expect(evil).toContain("&lt;img");
   });
 
   it("shows the updated date only when the frontmatter carries one", () => {
-    expect(renderContentPage({ ...fm, updated: "2026-09-19" }, "<p>b</p>", "s")).toContain(
+    expect(renderContentPage({ ...fm, updated: "2026-09-19" }, "<p>b</p>", "s", NAV)).toContain(
       "Updated 2026-09-19",
     );
-    expect(renderContentPage(fm, "<p>b</p>", "s")).not.toContain("Updated");
+    expect(renderContentPage(fm, "<p>b</p>", "s", NAV)).not.toContain("Updated");
   });
 
   it("links the other content pages so they are reachable from each other", () => {
@@ -102,6 +104,7 @@ describe("dataPageMarkdown (spec 36)", () => {
   it("reports the computed counts, grouped for an Indian audience", () => {
     const md = dataPageMarkdown(
       { ...stats, total: 120441, named: 19351, unnamed: 101090 },
+      NAV,
       "2026-09-19",
     );
     expect(md).toContain("1,20,441");
@@ -111,7 +114,7 @@ describe("dataPageMarkdown (spec 36)", () => {
   });
 
   it("omits the rebuild date when it is unknown rather than inventing one", () => {
-    const md = dataPageMarkdown(stats);
+    const md = dataPageMarkdown(stats, NAV);
     expect(md).not.toMatch(/last rebuilt on \*\*\s*\*\*/);
     expect(md).not.toContain("undefined");
   });

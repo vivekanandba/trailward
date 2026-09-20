@@ -57,15 +57,18 @@ export const nodeIO: BuildIO = {
     // symlinked ~/work, a container bind-mount, macOS /tmp -> /private/tmp.
     // That fails a build for a problem the developer does not have, which is
     // its own kind of wrong (CON-VER-005).
+    // This check comes FIRST because realpathSync throws on a dangling link,
+    // which turned a clear "refusing to remove a symlink" into a raw ENOENT on
+    // a path that visibly exists — a misdiagnosis (CON-VER-005). A link is
+    // never walked through either way, so `dist/t -> src` cannot delete the
+    // source tree.
+    if (st.isSymbolicLink()) {
+      throw new Error(`refusing to remove a symlink: ${p}`);
+    }
     const realRoot = realpathSync(within);
     const real = realpathSync(p);
     if (real !== realRoot && !real.startsWith(`${realRoot}/`)) {
       throw new Error(`refusing to remove ${p}: it resolves to ${real}, outside ${realRoot}`);
-    }
-    if (st.isSymbolicLink()) {
-      // Inside the repo but still a link: remove the link, never walk through
-      // it, so `dist/t -> src` cannot delete the source tree.
-      throw new Error(`refusing to remove a symlink: ${p}`);
     }
     rmSync(p, { recursive: true, force: true });
   },
@@ -113,9 +116,22 @@ export function memoryIO(seed: Record<string, string> = {}): BuildIO & {
     removeDir(path, within) {
       // The fake enforces containment too — a memoryIO test must not pass on a
       // path nodeIO would refuse, or the guard is only half-tested.
-      const root = within?.replace(/\/+$/, "");
-      if (root !== undefined && path !== root && !path.startsWith(`${root}/`)) {
-        throw new Error(`refusing to remove ${path}: outside ${root}`);
+      // Normalised, not a literal prefix test: `/repo/../../etc` passes
+      // startsWith("/repo") but nodeIO resolves it and refuses. A fake that is
+      // kinder than the disk makes the guard only half-tested.
+      const norm = (v: string): string => {
+        const out: string[] = [];
+        for (const part of v.split("/")) {
+          if (part === "" || part === ".") continue;
+          if (part === "..") out.pop();
+          else out.push(part);
+        }
+        return `/${out.join("/")}`;
+      };
+      const root = norm(within);
+      const target = norm(path);
+      if (target !== root && !target.startsWith(root === "/" ? "/" : `${root}/`)) {
+        throw new Error(`refusing to remove ${path}: outside ${within}`);
       }
       for (const key of [...files.keys()]) {
         if (key.startsWith(`${path}/`)) files.delete(key);
