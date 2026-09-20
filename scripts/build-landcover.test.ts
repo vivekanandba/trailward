@@ -104,6 +104,63 @@ describe("build-landcover run (spec 41)", () => {
     expect(io.files.get(P.treks)).toBe(before);
   });
 
+  it("measures loss against records that HAD cover, not against the dataset", async () => {
+    // The distinction is the whole guard. 40 of 1000 records carry cover and
+    // all 40 lose it: that is 100% of what could be lost and must refuse, even
+    // though it is only 4% of the dataset. Measuring against treks.length —
+    // or letting one unrelated dropped record switch the denominator to it —
+    // turned this exact case into a silent write.
+    const recs = Array.from({ length: 1000 }, (_, i) =>
+      trek({
+        id: `t${i}`,
+        lat: 13 + i * 0.001,
+        lng: 77,
+        ...(i < 40 ? { landCover: "Forest" } : {}),
+      }),
+    );
+    const io = seeded(recs);
+    const before = io.files.get(P.treks);
+    await expect(
+      runBuildLandCover(io, ROOT, {
+        classesAt: async (pts) => pts.map(() => (pts[0].lat < 13.04 ? undefined : FOREST)),
+      }),
+    ).rejects.toThrow(/refusing to write/);
+    expect(io.files.get(P.treks)).toBe(before);
+  });
+
+  it("an unrelated DROPPED record cannot loosen the cover-loss bound", async () => {
+    // Same 40/40 loss, plus one detected pin in water. Sharing a denominator
+    // made the second failure mode excuse the first.
+    const recs = [
+      ...Array.from({ length: 1000 }, (_, i) =>
+        trek({
+          id: `t${i}`,
+          lat: 13 + i * 0.001,
+          lng: 77,
+          ...(i < 40 ? { landCover: "Forest" } : {}),
+        }),
+      ),
+      trek({ id: "ghost", lat: 20, lng: 78, detected: { prominenceM: 50 } } as never),
+    ];
+    const io = seeded(recs);
+    await expect(
+      runBuildLandCover(io, ROOT, {
+        classesAt: async (pts) =>
+          pts.map(() => (pts[0].lat > 15 ? WATER : pts[0].lat < 13.04 ? undefined : FOREST)),
+      }),
+    ).rejects.toThrow(/refusing to write/);
+  });
+
+  it("REFUSES when not one record resolves a class — the source is down", async () => {
+    const recs = Array.from({ length: 50 }, (_, i) => trek({ id: `t${i}`, lat: 13, lng: 77 }));
+    const io = seeded(recs);
+    const before = io.files.get(P.treks);
+    await expect(
+      runBuildLandCover(io, ROOT, { classesAt: async (p) => p.map(() => undefined) }),
+    ).rejects.toThrow(/not one record resolved/);
+    expect(io.files.get(P.treks)).toBe(before);
+  });
+
   it("pins the tolerance itself — 4% passes, 6% refuses", async () => {
     // Without this the constant could be raised to 0.5 (permitting the silent
     // deletion of 60,000 records) with every test still green.
@@ -127,14 +184,17 @@ describe("build-landcover run (spec 41)", () => {
     expect(MAX_LOSS_FRACTION).toBe(0.05);
   });
 
-  it("a FIRST bake loses nothing, so an empty starting dataset is not a failure", async () => {
-    // Nothing has cover yet; reading nothing back is not a loss.
-    const many = Array.from({ length: 50 }, (_, i) =>
+  it("a FIRST bake loses nothing — partial coverage is progress, not failure", async () => {
+    // Nothing has cover yet, and most points resolve: that is a successful
+    // first bake even though some records come back unresolved.
+    const many = Array.from({ length: 100 }, (_, i) =>
       trek({ id: `t${i}`, lat: 13 + i * 0.01, lng: 77 }),
     );
     const io = seeded(many);
     await expect(
-      runBuildLandCover(io, ROOT, { classesAt: async (p) => p.map(() => undefined) }),
+      runBuildLandCover(io, ROOT, {
+        classesAt: async (pts) => pts.map(() => (pts[0].lat < 13.5 ? FOREST : undefined)),
+      }),
     ).resolves.toMatchObject({ lost: 0 });
   });
 

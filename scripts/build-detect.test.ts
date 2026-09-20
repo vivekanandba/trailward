@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   runBuildDetect,
   detectPathsFor,
+  MAX_DETECT_LOSS_FRACTION,
   buildIndiaMask,
   inIndia,
   type DetectedSummit,
@@ -136,6 +137,54 @@ describe("build-detect run (spec 27/41)", () => {
       runBuildDetect(io, ROOT, deps({ score: async () => [summit({ id: "lonely" })] })),
     ).rejects.toThrow(/refusing to write/);
     expect(io.files.get(P.out)).toBe(before);
+  });
+
+  it("pins the loss tolerance itself — 19% passes, 21% refuses", async () => {
+    // Without this the constant could be raised to 0.95, letting six summits
+    // replace 109,518, with every test still green.
+    const previous = Array.from({ length: 100 }, (_, i) => summit({ id: `p${i}` }));
+    const run = (n: number) =>
+      runBuildDetect(
+        seeded([], previous),
+        ROOT,
+        deps({ score: async () => Array.from({ length: n }, (_, i) => summit({ id: `n${i}` })) }),
+      );
+    await expect(run(81)).resolves.toMatchObject({ written: 81 });
+    await expect(run(79)).rejects.toThrow(/refusing to write/);
+    expect(MAX_DETECT_LOSS_FRACTION).toBe(0.2);
+  });
+
+  it("refuses a corrupt committed set BEFORE spending the scan", async () => {
+    // This read used to happen after the ~126k-tile scan, so a parse error
+    // detectable immediately threw away the whole run.
+    const io = memoryIO({
+      [P.treks]: JSON.stringify([]),
+      [P.out]: '[{"id":"truncated"',
+    });
+    let scanned = 0;
+    await expect(
+      runBuildDetect(
+        io,
+        ROOT,
+        deps({
+          detect: async () => {
+            scanned++;
+            return [peak({ lat: 13.4, lng: 77.7 })];
+          },
+        }),
+      ),
+    ).rejects.toThrow(/not valid JSON/);
+    expect(scanned).toBe(0);
+  });
+
+  it("refuses a committed set that is not an array, rather than skipping the guard", async () => {
+    // `(x as DetectedSummit[]).length` on an object is undefined and
+    // `undefined > 0` is false, which silently disabled the loss bound.
+    const io = memoryIO({
+      [P.treks]: JSON.stringify([]),
+      [P.out]: JSON.stringify({ summits: [] }),
+    });
+    await expect(runBuildDetect(io, ROOT, deps())).rejects.toThrow(/not an array/);
   });
 
   it("permits a normal run that keeps most of the committed set", async () => {

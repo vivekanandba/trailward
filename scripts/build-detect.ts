@@ -295,6 +295,26 @@ export async function runBuildDetect(
   const paths = detectPathsFor(root);
   const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
 
+  // Read the committed set FIRST. This used to happen after the ~126k-tile
+  // scan, so a corrupt file threw away the whole run to report a parse error
+  // detectable in the first millisecond — and named neither the file nor the
+  // tool while doing it (CON-VER-005).
+  let previous = 0;
+  if (io.exists(paths.out)) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(io.readFile(paths.out));
+    } catch (err) {
+      throw new Error(`[detect] ${paths.out} is not valid JSON: ${(err as Error).message}`);
+    }
+    if (!Array.isArray(parsed)) {
+      // `(x as DetectedSummit[]).length` on an object is undefined, and
+      // `undefined > 0` is false — which silently disabled the guard below.
+      throw new Error(`[detect] ${paths.out} is not an array of summits`);
+    }
+    previous = parsed.length;
+  }
+
   // All-India scan (spec 30): one pass over the whole bbox with Himalaya
   // banding — above 2,500 m the relief floor rises to 300 m and NMS widens to
   // ~1.5 km, or every ridge crest in the high mountains becomes a "summit".
@@ -322,23 +342,24 @@ export async function runBuildDetect(
   if (scored.length < allScored.length) {
     io.log(`[detect] plausibility gate dropped ${allScored.length - scored.length}.`);
   }
-  // Bound the LOSS against what is already committed, not merely refuse zero.
-  // filterUnknown compares candidates against every pin in treks.json — which
-  // now contains this tool's own prior output — so a re-run legitimately
-  // filters out almost everything. Refusing only at exactly 0 is a coin flip:
-  // a residue of 1 would happily overwrite 109k committed summits with one.
-  const previous = io.exists(paths.out)
-    ? (JSON.parse(io.readFile(paths.out)) as DetectedSummit[]).length
-    : 0;
   if (scored.length === 0) {
     throw new Error("[detect] refusing to write: no plausible summits detected");
   }
+  // Bound the loss against what is already committed, not merely refuse zero.
+  // filterUnknown compares candidates against every pin in treks.json — which
+  // now contains this tool's own prior output — so a re-run filters out almost
+  // everything. Refusing only at exactly 0 is a coin flip: a residue of 1 would
+  // overwrite 109k committed summits with one.
   if (previous > 0 && scored.length < previous * (1 - MAX_DETECT_LOSS_FRACTION)) {
+    // Several causes produce this shortfall — a re-run against a treks.json
+    // that already holds these pins, a tile-store outage, a too-strict gate.
+    // The message lists them rather than asserting one (CON-VER-005).
     throw new Error(
       `[detect] refusing to write: ${scored.length} summits would replace ${previous} ` +
-        `(a loss of more than ${MAX_DETECT_LOSS_FRACTION * 100}%). Re-running against a ` +
-        `treks.json that already contains these pins filters them out as "known" — ` +
-        `rescan from a dataset without the detected tier, or pass --calibrate.`,
+        `(a loss of more than ${MAX_DETECT_LOSS_FRACTION * 100}%). Likely causes: the DEM ` +
+        `tile store is unavailable; the plausibility gate rejected too much; or this is a ` +
+        `re-run against a treks.json that already contains the detected tier, which ` +
+        `filters them out as "known". Check the counts above before overriding.`,
     );
   }
 

@@ -45,9 +45,12 @@ something that has already gone wrong here:
    exactly this shape — a transient header error cached `null` for a whole 3° COG, so every
    point read `undefined`, **no record was removed**, and ~113k silently lost `landCover`
    while the run reported success. A guard counting _removed records_ would have sat at zero
-   throughout. So the bound is on records that LOSE a value they had, plus records dropped,
-   as a fraction of those that had something to lose. This is the single most important
-   property in this file.
+   throughout. So there are TWO bounds, each against its own population: records that lose a
+   value they had, over records that had one; and records removed, over the dataset. They must
+   not share a denominator — with one combined ratio, a single unrelated dropped record
+   switched the denominator from "records with cover" to "the whole dataset" and turned a
+   refusal into a silent write. Plus a zero-result refusal: a run that resolves no class
+   anywhere is the source being down. This is the single most important property in this file.
 7. **Resume is honest.** A tool that skips already-sampled work must skip it because the
    value is _present_, not because a previous run recorded an attempt. Re-running after a
    rate-limit window must make progress; re-running after a complete run must do nothing.
@@ -80,14 +83,15 @@ Measured 2026-09-20 after this spec's work, reproduced across two consecutive
 runs. Each floor sits just under its measured value so it can only ratchet up
 (CON-COV-002).
 
-| Scope                | Lines    | Branches | Floor set | Before   |
-| -------------------- | -------- | -------- | --------- | -------- |
-| `scripts/lib/**`     | 98.3     | 94.9     | 98 / 94   | 97 / 94  |
-| `src/lib/**`         | 95.1     | 89.1     | 95 / 89   | 94 / 88  |
-| `scripts/sources/**` | 91.6     | 88.0     | 91 / 87   | 76 / 86  |
-| `src/components/**`  | 84.9     | 85.0     | 84 / 84   | 84 / 84  |
-| `scripts/**`         | 76.9     | 89.4     | 76 / 89   | **none** |
-| **Global**           | **81.7** | **88.3** | 81 / 87   | 74 / 86  |
+| Scope                 | Lines    | Branches | Floor set            | Before   |
+| --------------------- | -------- | -------- | -------------------- | -------- |
+| `scripts/lib/**`      | 98.3     | 94.9     | 98 / 94              | 97 / 94  |
+| `src/lib/**`          | 95.1     | 89.1     | 95 / 89              | 94 / 88  |
+| `scripts/sources/**`  | 91.6     | 88.0     | 91 / 87              | 76 / 86  |
+| `src/components/**`   | 84.9     | 85.0     | 84 / 84              | 84 / 84  |
+| `scripts/**` (blend)  | 76.9     | 89.4     | 76 / 89              | **none** |
+| ⤷ top-level CLIs only | 62.0     | 88.7     | — (inside the blend) | 45       |
+| **Global**            | **81.7** | **88.3** | 81 / 87              | 74 / 86  |
 
 `scripts/**` had no floor at all before, which is exactly how that directory sat
 at 45% without anything noticing.

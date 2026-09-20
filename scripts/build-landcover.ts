@@ -100,14 +100,29 @@ export async function runBuildLandCover(
 
   const kept = next.filter((t): t is Trek => t !== undefined);
   const had = treks.filter((t) => t.landCover).length;
-  // Measured against what could actually be lost: on a first bake nothing has
-  // cover yet, so `had` is 0 and losing nothing is not a failure.
-  const exposure = Math.max(had, dropped > 0 ? treks.length : 0);
-  if (exposure > 0 && (lost + dropped) / exposure > MAX_LOSS_FRACTION) {
+
+  // TWO independent bounds, each against its own population. Combining them
+  // into one ratio was wrong in a way that inverted the guard: with a shared
+  // denominator, a single unrelated water-drop switched it from "records that
+  // had cover" to "the whole dataset", so adding a second failure mode turned
+  // a refusal into a silent write. Measured: 40/40 records losing cover
+  // refused on its own, and passed once one extra pin was dropped.
+  if (had > 0 && lost / had > MAX_LOSS_FRACTION) {
     throw new Error(
-      `[landcover] refusing to write: would lose cover on ${lost + dropped}/${exposure} records ` +
+      `[landcover] refusing to write: ${lost}/${had} records that had cover would lose it ` +
         `(> ${MAX_LOSS_FRACTION * 100}%) — the source failed, India did not change`,
     );
+  }
+  if (treks.length > 0 && dropped / treks.length > MAX_LOSS_FRACTION) {
+    throw new Error(
+      `[landcover] refusing to write: would remove ${dropped}/${treks.length} records ` +
+        `(> ${MAX_LOSS_FRACTION * 100}%) — the source failed, India did not change`,
+    );
+  }
+  // A run that reads nothing anywhere is the source being down, not terrain.
+  // Every other tool in spec 41 §C refuses a zero result; this one did not.
+  if (treks.length > 0 && baked === 0) {
+    throw new Error("[landcover] refusing to write: not one record resolved a land cover class");
   }
   const ds = validateDataset(kept);
   if (!ds.ok) throw new Error(`[landcover] dataset invalid: ${ds.error}`);
