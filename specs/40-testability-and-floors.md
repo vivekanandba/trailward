@@ -63,17 +63,21 @@ build pass.
 | Scope                      | Lines    | Branches | Floor set | main's floor |
 | -------------------------- | -------- | -------- | --------- | ------------ |
 | `src/lib/**`               | 94.9     | 89.0     | 94 / 88   | 92 / 85      |
-| `scripts/lib/**`           | 98.1     | 94.6     | 97 / 94   | 80 / 88      |
+| `scripts/lib/**`           | 98.1     | 94.7     | 97 / 94   | 80 / 88      |
 | `src/components/**` (glob) | 84.9     | 85.0     | 84 / 84   | 58 / 78      |
 | `scripts/sources/**`       | 76.8     | 86.8     | 76 / 86   | none         |
-| **Global**                 | **74.7** | **87.1** | 74 / 86   | 68 / 72      |
+| **Global**                 | **74.8** | **87.2** | 74 / 86   | 68 / 72      |
 
 `src/components` jumps because TrekMap is now excluded with a reason, not
 because its tests improved.
 
-**Where this falls short, stated plainly.** The goal is 95% global. It is 74.7%.
+Every figure above was reproduced across two consecutive runs before being
+written down — an earlier draft recorded numbers that did not reproduce, which
+is a fabricated measurement however small the drift (CON-DATA-001).
+
+**Where this falls short, stated plainly.** The goal is 95% global. It is 74.8%.
 The gap is concentrated in code this tranche did not reach: top-level `scripts/`
-at 45% and `scripts/geonames/` at 43% — the network-heavy CLIs (`build-climate`,
+at 46% and `scripts/geonames/` at 43% — the network-heavy CLIs (`build-climate`,
 `build-landcover`, `build-detect`, `build-gazetteer`, `build-names`). The same
 `run(io)` seam applies to each and they are the next tranche. The floors above
 make that a one-way ratchet in the meantime. Nothing was excluded to close the

@@ -24,10 +24,18 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-/** Build the same starting state in each implementation. */
+/**
+ * Build the same starting state in each implementation. A key ending in "/"
+ * means an EMPTY directory in both — the case that cannot be expressed with
+ * files alone, and the one that differs from a missing directory.
+ */
 function bothWith(files: Record<string, string>): Array<[string, BuildIO, (p: string) => string]> {
   for (const [rel, body] of Object.entries(files)) {
     const abs = join(root, rel);
+    if (rel.endsWith("/")) {
+      mkdirSync(abs, { recursive: true });
+      continue;
+    }
     mkdirSync(join(abs, ".."), { recursive: true });
     writeFileSync(abs, body, "utf8");
   }
@@ -79,6 +87,28 @@ describe("BuildIO conformance — memoryIO must not be kinder than the disk", ()
     // /about/ or /sources/ while the sitemap still advertised them.
     for (const [name, io, path] of bothWith({ "content/about.md": "a" })) {
       expect(() => io.listDir(path("absent")), name).toThrow();
+    }
+  });
+
+  it("distinguishes an EMPTY directory from a missing one", () => {
+    // `rm content/*.md` leaves the directory in place: listDir returns [] and
+    // the build writes no /about/ or /sources/ while the sitemap advertises
+    // them. The fake has to be able to reach that state, or the tool-level
+    // guard against it can never be tested.
+    for (const [name, io, path] of bothWith({ "content/": "", "other/a.md": "a" })) {
+      expect(io.exists(path("content")), name).toBe(true);
+      expect(io.listDir(path("content")), name).toEqual([]);
+      expect(() => io.listDir(path("gone")), name).toThrow();
+    }
+  });
+
+  it("does not mistake a name PREFIX for a directory", () => {
+    // Without the trailing slash in the prefix test, `/a/foo` reads as a
+    // directory because `/a/foobar/x` starts with `/a/foo`.
+    for (const [name, io, path] of bothWith({ "a/foobar/x.txt": "x" })) {
+      expect(io.exists(path("a/foo")), name).toBe(false);
+      expect(() => io.listDir(path("a/foo")), name).toThrow();
+      expect(io.exists(path("a/foobar")), name).toBe(true);
     }
   });
 

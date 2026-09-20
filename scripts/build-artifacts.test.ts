@@ -41,6 +41,18 @@ describe("sitemap ↔ pages agreement (CON-COV-003 — assert it from BOTH sides
     ["about.md", "sources.md", "notes.txt"], // a non-markdown file ignored
   ];
 
+  it("refuses a listing where an authored page collides with a generated one", () => {
+    // The two tools disagree by construction here — contentSlugs dedupes to
+    // [about, data] while build-pages would write "data" twice — so the only
+    // correct behaviour is to refuse, and this pins that.
+    const pages = memoryIO({
+      ["/repo/src/data/treks.json"]: JSON.stringify(TREKS),
+      ["/repo/content/about.md"]: "---\ntitle: T\ndescription: D\n---\n\nBody.",
+      ["/repo/content/data.md"]: "---\ntitle: T\ndescription: D\n---\n\nBody.",
+    });
+    expect(() => runBuildPages(pages, "/repo", ["about.md", "data.md"])).toThrow(/collides/);
+  });
+
   for (const listing of listings) {
     it(`agrees for [${listing.join(", ")}]`, () => {
       const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
@@ -120,7 +132,10 @@ describe("build-search-index run (spec 38/40)", () => {
   it("is sorted by id, so the committed artefact diffs cleanly", () => {
     const io = memoryIO({ [S.treks]: JSON.stringify(TREKS) });
     const ids = runBuildSearchIndex(io, S).map((e) => e.id);
-    expect(ids).toEqual([...ids].sort());
+    // Must match the comparator the code uses. `[...ids].sort()` is UTF-16
+    // order, which disagrees with localeCompare the moment an id starts with a
+    // capital ("Skandagiri" vs "gn-1") — inert on today's data, wrong later.
+    expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
   });
 
   it("refuses to write an empty index — that silently disables the palette", () => {

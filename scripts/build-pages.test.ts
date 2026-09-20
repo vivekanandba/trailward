@@ -95,6 +95,45 @@ describe("build-pages run (spec 35/36/40)", () => {
     }
   });
 
+  it("writes to the LITERAL expected locations, not wherever pagePathsFor says", () => {
+    // Every other expectation here derives its paths from pagePathsFor, so
+    // changing distDir to "/repo/dist-oops" left the whole suite green while
+    // /about/, /sources/ and /data/ shipped outside dist/ and 404'd in
+    // production. These literals are the only thing pinning the contract.
+    const p = pagePathsFor("/repo");
+    expect(p).toEqual({
+      treks: "/repo/src/data/treks.json",
+      outDir: "/repo/dist/t",
+      distDir: "/repo/dist",
+      contentDir: "/repo/content",
+    });
+
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-09-19");
+    expect(io.files.has("/repo/dist/t/skandagiri/index.html")).toBe(true);
+    expect(io.files.has("/repo/dist/about/index.html")).toBe(true);
+    expect(io.files.has("/repo/dist/data/index.html")).toBe(true);
+  });
+
+  it("refuses an authored page that collides with a generated slug", () => {
+    // content/data.md used to be rendered and then overwritten by the
+    // generated /data/ page: the author's words vanished, the build reported
+    // success, and the slug appeared twice in the summary.
+    const io = seeded();
+    io.writeFile("/repo/content/data.md", ABOUT);
+    expect(() => runBuildPages(io, ROOT, ["about.md", "data.md"], "2026-09-19")).toThrow(
+      /collides with the generated \/data\//,
+    );
+  });
+
+  it("refuses to ship when content/ exists but holds no markdown", () => {
+    // listDir returns [] for an empty directory, so the missing-directory
+    // guard does not fire. Without this the build exits 0 having written only
+    // /data/ while the sitemap still advertises /about/ and /sources/.
+    const io = memoryIO({ [P.treks]: JSON.stringify(TREKS), "/repo/content/": "" });
+    expect(() => runBuildPages(io, ROOT, [], "2026-09-19")).toThrow(/no content/);
+  });
+
   it("emits content pages in a stable order regardless of listing order", () => {
     // readdir order is not guaranteed, and these artefacts are committed.
     const forward = seeded();

@@ -11,7 +11,7 @@ import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
-import { cleanTargetFor, qualifyingTreks, slugMap } from "./lib/pages";
+import { GENERATED_CONTENT_SLUGS, cleanTargetFor, qualifyingTreks, slugMap } from "./lib/pages";
 import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
@@ -73,7 +73,25 @@ export function runBuildPages(
     written.push(slug);
   };
 
-  for (const file of contentFiles.filter((f) => f.endsWith(".md")).sort()) {
+  const authored = contentFiles.filter((f) => f.endsWith(".md")).sort();
+
+  // A generated slug is not available to an author: content/data.md would be
+  // rendered and then overwritten by the generated page below, so the authored
+  // words vanish while the build reports success and the slug is listed twice.
+  // Refuse instead — losing someone's writing silently is the worst outcome.
+  for (const file of authored) {
+    const slug = file.replace(/\.md$/, "");
+    if ((GENERATED_CONTENT_SLUGS as readonly string[]).includes(slug)) {
+      throw new Error(`[pages] ${file} collides with the generated /${slug}/ page — rename it`);
+    }
+  }
+  if (authored.length === 0) {
+    // An empty content/ means /about/ and /sources/ silently disappear from a
+    // build that still exits 0 while the sitemap advertises them.
+    throw new Error("[pages] no content/*.md found — refusing to ship a build without them");
+  }
+
+  for (const file of authored) {
     emit(file.replace(/\.md$/, ""), io.readFile(`${paths.contentDir}/${file}`), file);
   }
 

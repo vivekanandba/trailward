@@ -72,12 +72,21 @@ export function memoryIO(seed: Record<string, string> = {}): BuildIO & {
   files: Map<string, string>;
   logs: string[];
 } {
-  const files = new Map(Object.entries(seed));
+  // A seed key ending in "/" is an EMPTY directory. Without this the fake
+  // cannot represent `content/` existing but holding nothing — a real state on
+  // disk (`rm content/*.md`) whose behaviour differs from a missing directory:
+  // nodeIO.listDir returns [] rather than throwing.
+  const dirs = new Set(
+    Object.keys(seed)
+      .filter((k) => k.endsWith("/"))
+      .map((k) => k.replace(/\/+$/, "")),
+  );
+  const files = new Map(Object.entries(seed).filter(([k]) => !k.endsWith("/")));
   const logs: string[] = [];
-  // A directory exists here exactly when a file lives under it — the same
-  // condition the real filesystem reports. Kept as a helper rather than a
-  // separate set so the two can never drift apart.
-  const isDir = (path: string): boolean => [...files.keys()].some((k) => k.startsWith(`${path}/`));
+  // The trailing slash matters: without it `/a/foo` would report as a directory
+  // merely because `/a/foobar/x` starts with `/a/foo`.
+  const isDir = (path: string): boolean =>
+    dirs.has(path) || [...files.keys()].some((k) => k.startsWith(`${path}/`));
   return {
     files,
     logs,

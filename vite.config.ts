@@ -101,7 +101,8 @@ export default defineConfig({
       // Those were measured while the test files themselves were instrumented
       // and are not comparable — see the `exclude` note above.
       thresholds: {
-        // global measured: 74.67 lines / 87.13 branches / 74.05 functions.
+        // global measured: 74.76 lines / 87.24 branches / 74.05 functions,
+        // reproduced across two consecutive runs.
         // The target is 95 and this is not it. The gap is almost entirely the
         // top-level scripts/ (45%) and scripts/geonames/ (43%) network CLIs,
         // named as the next tranche in spec 40 rather than excluded here.
@@ -116,7 +117,7 @@ export default defineConfig({
         // excludes the ui/ subtree; the floor follows the glob, because the
         // glob is what enforces.
         "src/components/**": { statements: 84, lines: 84, branches: 84, functions: 69 },
-        // measured 98.12 / 94.61 / 96.22 — pure build logic
+        // measured 98.14 / 94.71 / 96.22 — pure build logic
         "scripts/lib/**": { statements: 97, lines: 97, branches: 94, functions: 95 },
         // measured 76.79 / 86.78 / 72.35 — network adapters; parsers carry it
         "scripts/sources/**": { statements: 76, lines: 76, branches: 86, functions: 72 },

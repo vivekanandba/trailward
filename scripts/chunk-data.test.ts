@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runChunkData } from "./chunk-data";
+import { runChunkData, chunkPathsFor } from "./chunk-data";
 import { memoryIO } from "./lib/buildIO";
 import type { Trek } from "../src/lib/trek";
 
@@ -81,6 +81,20 @@ describe("chunk-data run (spec 30/40)", () => {
     const twice = memoryIO({ [paths.treks]: JSON.stringify(TREKS) });
     runChunkData(twice, ROOT);
     expect([...twice.files.entries()].sort()).toEqual([...once.files.entries()].sort());
+  });
+
+  it("derives its output path and REFUSES a root that is not absolute", () => {
+    // CON-PROC-006 says test the refusal, not just the success. Without this,
+    // deleting the guard entirely left the whole suite green — and
+    // chunkPathsFor("../..") would then rm -rf ../../public/data/cells, which
+    // nodeIO.removeDir cannot catch because a relative non-symlink path
+    // resolves to itself.
+    expect(chunkPathsFor("/repo").out).toBe("/repo/public/data/cells");
+    expect(chunkPathsFor("/repo/").out).toBe("/repo/public/data/cells");
+    for (const bad of ["../..", "relative", "", "/repo/../etc", "."]) {
+      expect(() => chunkPathsFor(bad), JSON.stringify(bad)).toThrow(/refusing to chunk/);
+      expect(() => runChunkData(memoryIO(), bad), JSON.stringify(bad)).toThrow(/refusing to chunk/);
+    }
   });
 
   it("refuses an empty dataset rather than erasing every served cell", () => {

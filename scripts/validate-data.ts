@@ -19,9 +19,19 @@ export function runValidateData(io: BuildIO, dataPath: string): number {
   if (!io.exists(dataPath)) {
     throw new Error(`${dataPath} is missing — the app has no dataset to serve`);
   }
+  // Read and parse are separated on purpose. With the read inside the try, an
+  // EISDIR or EACCES was reported as "is not valid JSON" — a check that
+  // misdiagnoses is worse than no check (CON-VER-005), because it sends whoever
+  // reads the CI log after a problem that does not exist.
+  let raw: string;
+  try {
+    raw = io.readFile(dataPath);
+  } catch (err) {
+    throw new Error(`${dataPath} could not be read: ${(err as Error).message}`);
+  }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(io.readFile(dataPath));
+    parsed = JSON.parse(raw);
   } catch {
     throw new Error(`${dataPath} is not valid JSON`);
   }

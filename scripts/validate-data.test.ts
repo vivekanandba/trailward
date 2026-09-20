@@ -30,6 +30,15 @@ describe("validate-data run (spec 01/40 — the deploy gate)", () => {
     expect(() => runValidateData(memoryIO({ [P]: "{oops" }), P)).toThrow(/not valid JSON/i);
   });
 
+  it("says a read FAILED rather than blaming the JSON (CON-VER-005)", () => {
+    // A path that exists but cannot be read — a directory, or EACCES. With the
+    // read inside the JSON try/catch this reported "is not valid JSON", which
+    // sends whoever reads the CI log after a problem that does not exist.
+    const io = memoryIO({ "/repo/data/treks.json": "[]" });
+    expect(() => runValidateData(io, "/repo/data")).toThrow(/could not be read/i);
+    expect(() => runValidateData(io, "/repo/data")).not.toThrow(/not valid JSON/i);
+  });
+
   it("fails on an invalid record, surfacing the validator's reason", () => {
     const bad = [{ ...valid[0], lat: 999 }];
     expect(() => runValidateData(memoryIO({ [P]: JSON.stringify(bad) }), P)).toThrow(/lat/);
