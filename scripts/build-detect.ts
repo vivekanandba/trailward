@@ -8,7 +8,6 @@
  *   npm run build:detect            # detect + score + write
  *   npm run build:detect -- --calibrate   # per-threshold counts only
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import { type Trek } from "../src/lib/trek";
@@ -23,10 +22,35 @@ import {
   type DetectedPeak,
 } from "./sources/peakdetect";
 
+import { nodeIO, type BuildIO } from "./lib/buildIO";
+
 const here = dirname(fileURLToPath(import.meta.url));
-const outFile = resolve(here, "detected/india-detected.json");
-const treksFile = resolve(here, "../src/data/treks.json");
+const repoRoot = resolve(here, "..");
 const cacheDir = resolve(here, ".cache/demtiles12");
+
+/** Paths derived from the repo root, never named by the caller (CON-PROC-006). */
+export function detectPathsFor(root: string): { out: string; treks: string } {
+  const r = root.replace(/\/+$/, "");
+  if (!r.startsWith("/") || r.split("/").includes("..")) {
+    throw new Error(`refusing to build detect: ${root} is not an absolute repo root`);
+  }
+  return {
+    out: `${r}/scripts/detected/india-detected.json`,
+    treks: `${r}/src/data/treks.json`,
+  };
+}
+
+/**
+ * The DEM and the gazetteer dump, injected (spec 41 §A). The real
+ * implementations read ~126k tiles and a 400 MB dump; a test supplies the
+ * peaks and the mask directly, which is what makes the dedupe, the mask
+ * filter, the plausibility gate and the refusal reachable at all.
+ */
+export interface DetectDeps {
+  detect: (calibrate: boolean) => Promise<DetectedPeak[]>;
+  loadMask: () => Promise<Set<string>>;
+  score: (peaks: DetectedPeak[]) => Promise<DetectedSummit[]>;
+}
 
 const TILE = 256;
 // A detected summit this close to ANY existing pin is that pin — the point of
@@ -131,10 +155,11 @@ export function inIndia(p: { lat: number; lng: number }, mask: Set<string>): boo
   return false;
 }
 
-export async function loadIndiaMask(): Promise<Set<string>> {
+export async function loadIndiaMask(
+  dump = resolve(here, "geonames/.cache/IN.txt"),
+): Promise<Set<string>> {
   const { createReadStream, existsSync } = await import("node:fs");
   const { createInterface } = await import("node:readline");
-  const dump = resolve(here, "geonames/.cache/IN.txt");
   if (!existsSync(dump)) {
     throw new Error(`India mask needs ${dump} — run \`npm run build:geonames\` first.`);
   }
@@ -149,7 +174,7 @@ export async function loadIndiaMask(): Promise<Set<string>> {
   return buildIndiaMask(coords);
 }
 
-async function detectIndia(calibrate: boolean): Promise<DetectedPeak[]> {
+export async function detectIndia(calibrate: boolean): Promise<DetectedPeak[]> {
   const midLat = 20;
   const mpp = metresPerPixel(midLat);
   const params = {
@@ -203,7 +228,7 @@ async function detectIndia(calibrate: boolean): Promise<DetectedPeak[]> {
 }
 
 /** Offline terrain scoring from the same z12 grid (no API calls). */
-async function score(peaks: DetectedPeak[]): Promise<DetectedSummit[]> {
+export async function score(peaks: DetectedPeak[]): Promise<DetectedSummit[]> {
   const { grid, prefetch } = createTileGrid({ cacheDir });
   const out: DetectedSummit[] = [];
   for (const p of peaks) {
@@ -254,52 +279,72 @@ async function score(peaks: DetectedPeak[]): Promise<DetectedSummit[]> {
   return out;
 }
 
-async function main(): Promise<void> {
-  const calibrate = process.argv.includes("--calibrate");
-  mkdirSync(dirname(outFile), { recursive: true });
-  const treks = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
+export async function runBuildDetect(
+  io: BuildIO,
+  root: string,
+  deps: DetectDeps,
+  calibrate = false,
+): Promise<{ candidates: number; inCountry: number; fresh: number; written: number }> {
+  const paths = detectPathsFor(root);
+  const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
 
   // All-India scan (spec 30): one pass over the whole bbox with Himalaya
   // banding — above 2,500 m the relief floor rises to 300 m and NMS widens to
   // ~1.5 km, or every ridge crest in the high mountains becomes a "summit".
   const all = new Map<string, DetectedPeak>();
-  {
-    const peaks = await detectIndia(calibrate);
-    for (const p of peaks) {
-      const { gx, gy } = globalPixel(p.lat, p.lng);
-      all.set(`${Math.floor(gx)}/${Math.floor(gy)}`, p);
-    }
+  for (const p of await deps.detect(calibrate)) {
+    const { gx, gy } = globalPixel(p.lat, p.lng);
+    all.set(`${Math.floor(gx)}/${Math.floor(gy)}`, p);
   }
 
-  const mask = await loadIndiaMask();
+  const mask = await deps.loadMask();
   const inCountry = [...all.values()].filter((p) => inIndia(p, mask));
-  console.log(`[detect] India mask: ${all.size} → ${inCountry.length} candidates.`);
+  io.log(`[detect] India mask: ${all.size} → ${inCountry.length} candidates.`);
   const fresh = filterUnknown(inCountry, treks);
-  console.log(`[detect] ${all.size} distinct candidates → ${fresh.length} not in any database.`);
+  io.log(`[detect] ${all.size} distinct candidates → ${fresh.length} not in any database.`);
 
   if (calibrate) {
     for (const th of [60, 80, 100, 150, 200, 300]) {
-      console.log(`  relief ≥ ${th} m: ${fresh.filter((p) => p.reliefM >= th).length}`);
+      io.log(`  relief ≥ ${th} m: ${fresh.filter((p) => p.reliefM >= th).length}`);
     }
-    return;
+    return { candidates: all.size, inCountry: inCountry.length, fresh: fresh.length, written: 0 };
   }
 
-  const allScored = await score(fresh);
+  const allScored = await deps.score(fresh);
   const scored = allScored.filter(isPlausibleSummit);
   if (scored.length < allScored.length) {
-    console.log(`[detect] plausibility gate dropped ${allScored.length - scored.length}.`);
+    io.log(`[detect] plausibility gate dropped ${allScored.length - scored.length}.`);
   }
-  writeFileSync(outFile, JSON.stringify(scored) + "\n", "utf8");
+  if (scored.length === 0) {
+    // An empty detection set means the tiles or the gate failed, not that
+    // India has no unnamed hills. Writing it would erase the committed set
+    // and the discovery pipeline would silently lose a whole tier.
+    throw new Error("[detect] refusing to write: no plausible summits detected");
+  }
+
+  // ---- Everything above can refuse. Everything below only writes. ----
+  io.writeFile(paths.out, JSON.stringify(scored) + "\n");
   const peaks = scored.filter((s) => s.name.includes("peak")).length;
-  console.log(
-    `[detect] wrote ${scored.length} detected summits (${peaks} peaks, ${scored.length - peaks} hills) → ${outFile}`,
+  io.log(
+    `[detect] wrote ${scored.length} detected summits (${peaks} peaks, ${scored.length - peaks} hills) → ${paths.out}`,
   );
+  return {
+    candidates: all.size,
+    inCountry: inCountry.length,
+    fresh: fresh.length,
+    written: scored.length,
+  };
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
 // kick off a build, mirroring the guard in discover-precompute.ts.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((err) => {
+  runBuildDetect(
+    nodeIO,
+    repoRoot,
+    { detect: detectIndia, loadMask: () => loadIndiaMask(), score },
+    process.argv.includes("--calibrate"),
+  ).catch((err) => {
     console.error((err as Error).message);
     process.exit(1);
   });

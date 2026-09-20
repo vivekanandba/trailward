@@ -88,7 +88,7 @@ export async function buildDataset(
 
 // ---- CLI shell: wire the real network enrichers and write the file. ---------
 
-function liveEnrichers(): Enrichers {
+export function liveEnrichers(): Enrichers {
   return {
     // Only fall back to the DEM when the curated seed has no elevation.
     elevation: async (seed) => {

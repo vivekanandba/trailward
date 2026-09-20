@@ -6,7 +6,9 @@
  * re-run this by hand to refresh:  npm run build:geonames
  */
 import { execSync } from "node:child_process";
-import { createReadStream, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { nodeIO, type BuildIO } from "../lib/buildIO";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -59,11 +61,74 @@ const OUT = resolve(here, "india-summits.json");
 
 // Nationwide (spec 30): every summit in the dump, bounded only by a sanity
 // bbox for India + its Himalayan margins.
+/** Parse one GeoNames dump line into a summit, or null when unusable. */
+export function summitFrom(line: string): GeonamesSummit | null {
+  const c = line.split("\t");
+  if (c.length < 17 || c[6] !== "T" || !SUMMIT_CODES.has(c[7])) return null;
+  // Number("") is 0, not NaN — a blank coordinate must be skipped, never read
+  // as 0°N/0°E (CON-DATA-001: a missing value must not become a real one).
+  if (!c[4]?.trim() || !c[5]?.trim()) return null;
+  const lat = Number(c[4]);
+  const lng = Number(c[5]);
+  if (Number.isNaN(lat) || Number.isNaN(lng) || !inReach(lat, lng)) return null;
+  const elevRaw = Number(c[15]) || Number(c[16]); // elevation, else SRTM dem
+  const elevationM =
+    Number.isFinite(elevRaw) && elevRaw > 0 && elevRaw <= 9000 ? Math.round(elevRaw) : undefined;
+  const altNames = pickAltNames(c[1], c[3] ?? "");
+  return {
+    id: c[0],
+    name: c[1],
+    lat,
+    lng,
+    elevationM,
+    ...(altNames.length > 0 ? { altNames } : {}),
+  };
+}
+
+/**
+ * The dump, the DEM and Wikidata, injected (spec 41 §A). The real
+ * implementations download a 400 MB archive and walk ~126k tiles; a test
+ * supplies the parsed lines and leaves scoring to its own suite.
+ */
+export interface GeonamesDeps {
+  lines: () => AsyncIterable<string>;
+  score: (summits: GeonamesSummit[]) => Promise<void>;
+  crossMatch: (summits: GeonamesSummit[]) => Promise<void>;
+}
+
 function inReach(lat: number, lng: number): boolean {
   return lat >= 6 && lat <= 37 && lng >= 67 && lng <= 98;
 }
 
-async function main(): Promise<void> {
+export async function runBuildGeonames(
+  io: BuildIO,
+  outFile: string,
+  deps: GeonamesDeps,
+): Promise<{ summits: number; scored: number }> {
+  const summits: GeonamesSummit[] = [];
+  for await (const line of deps.lines()) {
+    const s = summitFrom(line);
+    if (s) summits.push(s);
+  }
+  if (summits.length === 0) {
+    // Zero usable rows means the download or the parse failed, not that India
+    // has no summits. Writing it would erase the committed gazetteer tier.
+    throw new Error("[geonames] refusing to write: the dump parsed to zero summits");
+  }
+  io.log(`[geonames] filtered ${summits.length} summits; DEM-scoring via tiles…`);
+
+  await deps.score(summits);
+  await deps.crossMatch(summits);
+
+  // ---- Everything above can refuse. Everything below only writes. ----
+  io.writeFile(outFile, JSON.stringify(summits) + "\n");
+  const scored = summits.filter((s) => s.discoveryScore !== undefined).length;
+  io.log(`[geonames] wrote ${summits.length} summits (${scored} DEM-scored, CC-BY) → ${outFile}`);
+  return { summits: summits.length, scored };
+}
+
+/** Download the dump if absent, then stream its lines. */
+async function* dumpLines(): AsyncIterable<string> {
   const tmp = resolve(here, ".cache");
   mkdirSync(tmp, { recursive: true });
   const txt = resolve(tmp, "IN.txt");
@@ -74,36 +139,8 @@ async function main(): Promise<void> {
     );
     execSync(`unzip -o "${tmp}/IN.zip" IN.txt -d "${tmp}"`, { stdio: "ignore" });
   }
-
-  const summits: GeonamesSummit[] = [];
   const rl = createInterface({ input: createReadStream(txt, "utf8"), crlfDelay: Infinity });
-  for await (const line of rl) {
-    const c = line.split("\t");
-    if (c.length < 17 || c[6] !== "T" || !SUMMIT_CODES.has(c[7])) continue;
-    const lat = Number(c[4]);
-    const lng = Number(c[5]);
-    if (Number.isNaN(lat) || Number.isNaN(lng) || !inReach(lat, lng)) continue;
-    const elevRaw = Number(c[15]) || Number(c[16]); // elevation, else SRTM dem
-    const elevationM =
-      Number.isFinite(elevRaw) && elevRaw > 0 && elevRaw <= 9000 ? Math.round(elevRaw) : undefined;
-    const altNames = pickAltNames(c[1], c[3] ?? "");
-    summits.push({
-      id: c[0],
-      name: c[1],
-      lat,
-      lng,
-      elevationM,
-      ...(altNames.length > 0 ? { altNames } : {}),
-    });
-  }
-  console.log(`[geonames] filtered ${summits.length} summits; DEM-scoring via tiles…`);
-
-  await scoreSummits(summits, resolve(tmp, "demtiles"));
-  await crossMatchWikidata(summits);
-
-  writeFileSync(OUT, JSON.stringify(summits) + "\n", "utf8");
-  const scored = summits.filter((s) => s.discoveryScore !== undefined).length;
-  console.log(`[geonames] wrote ${summits.length} summits (${scored} DEM-scored, CC-BY) → ${OUT}`);
+  for await (const line of rl) yield line;
 }
 
 const OBSCURE: ObscuritySignals = {
@@ -208,7 +245,16 @@ async function scoreSummits(summits: GeonamesSummit[], cacheDir: string): Promis
   }
 }
 
-main().catch((err) => {
-  console.error((err as Error).message);
-  process.exit(1);
-});
+// Only run when invoked as a CLI. This guard was MISSING: importing the module
+// used to kick off a real build, downloading a 400 MB archive as a side effect
+// of a test collecting it (spec 40/41).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runBuildGeonames(nodeIO, OUT, {
+    lines: dumpLines,
+    score: (s) => scoreSummits(s, resolve(here, ".cache/demtiles")),
+    crossMatch: crossMatchWikidata,
+  }).catch((err) => {
+    console.error((err as Error).message);
+    process.exit(1);
+  });
+}

@@ -12,7 +12,8 @@
  *   npm run build:gazetteer
  */
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
@@ -20,9 +21,29 @@ import { validateDataset } from "../src/lib/trek";
 import { parseGazetteerEntries, matchEntries, type GazetteerEntry } from "./sources/gazetteer";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const treksFile = resolve(here, "../src/data/treks.json");
+const repoRoot = resolve(here, "..");
+
+/** Paths derived from the repo root, never named by the caller (CON-PROC-006). */
+export function gazetteerPathsFor(root: string): { treks: string; manifest: string } {
+  const r = root.replace(/\/+$/, "");
+  if (!r.startsWith("/") || r.split("/").includes("..")) {
+    throw new Error(`refusing to build gazetteer: ${root} is not an absolute repo root`);
+  }
+  return {
+    treks: `${r}/src/data/treks.json`,
+    manifest: `${r}/scripts/.cache/gazetteer/manifest.json`,
+  };
+}
+
+/**
+ * archive.org, injected (spec 41 §A). The real implementations search and
+ * download whole public-domain volumes; a test supplies the ids and the text.
+ */
+export interface GazetteerDeps {
+  discover: (series: Series) => string[];
+  volumeText: (id: string) => Promise<string | null | undefined>;
+}
 const cacheDir = resolve(here, ".cache/gazetteer");
-const manifestFile = resolve(cacheDir, "manifest.json");
 
 /** A public-domain gazetteer series we mine. Years are the series' era. */
 export interface Series {
@@ -128,28 +149,6 @@ function discoverVolumes(series: Series): string[] {
 // across runs (legacy cache entries predate the manifest → imperial).
 type Manifest = Record<string, string>;
 
-function loadManifest(): Manifest {
-  let manifest: Manifest = {};
-  try {
-    manifest = JSON.parse(readFileSync(manifestFile, "utf8")) as Manifest;
-  } catch {
-    manifest = {};
-  }
-  // Cached volumes that predate the manifest were all fetched by the original
-  // Imperial-only build — seed them so they keep contributing (and keep their
-  // correct attribution) instead of being orphaned.
-  try {
-    for (const f of readdirSync(cacheDir)) {
-      if (!f.endsWith(".txt")) continue;
-      const id = f.replace(/\.txt$/, "");
-      manifest[id] = manifest[id] ?? "imperial";
-    }
-  } catch {
-    // cache dir may not exist yet
-  }
-  return manifest;
-}
-
 interface ArchiveMeta {
   server?: string;
   dir?: string;
@@ -191,10 +190,21 @@ async function volumeText(id: string): Promise<string | null> {
 
 type SourcedEntry = GazetteerEntry & { source: string; year: number };
 
-async function main(): Promise<void> {
-  mkdirSync(cacheDir, { recursive: true });
-  const treks = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
-  const manifest = loadManifest();
+export async function runBuildGazetteer(
+  io: BuildIO,
+  root: string,
+  deps: GazetteerDeps,
+): Promise<{ entries: number; matches: number; baked: number }> {
+  const paths = gazetteerPathsFor(root);
+  const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
+  let manifest: Manifest = {};
+  if (io.exists(paths.manifest)) {
+    try {
+      manifest = JSON.parse(io.readFile(paths.manifest)) as Manifest;
+    } catch {
+      manifest = {};
+    }
+  }
 
   // Per series: every volume we've ever cached for it, plus newly discovered
   // ones — parsing is free once the text is local, so matches accumulate
@@ -204,11 +214,11 @@ async function main(): Promise<void> {
     const cachedIds = Object.entries(manifest)
       .filter(([, key]) => key === series.key)
       .map(([id]) => id);
-    const ids = [...new Set([...cachedIds, ...discoverVolumes(series)])];
+    const ids = [...new Set([...cachedIds, ...deps.discover(series)])];
     let found = 0;
     let ok = 0;
     for (const id of ids) {
-      const text = await volumeText(id);
+      const text = await deps.volumeText(id);
       if (!text) continue;
       manifest[id] = manifest[id] ?? series.key;
       // A volume can be discovered by two queries (Imperial "provincial series
@@ -219,13 +229,17 @@ async function main(): Promise<void> {
       found += parsed.length;
       ok++;
     }
-    console.log(`[gazetteer] ${series.key}: ${ok}/${ids.length} volumes, ${found} entries`);
+    io.log(`[gazetteer] ${series.key}: ${ok}/${ids.length} volumes, ${found} entries`);
   }
-  writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + "\n", "utf8");
-  if (entries.length === 0) throw new Error("no gazetteer entries parsed; refusing to write");
+  if (entries.length === 0) {
+    // Parsing nothing means the volumes failed to download or the parser
+    // broke — not that the gazetteers stopped mentioning these hills. Writing
+    // now would strip every historical note in the dataset.
+    throw new Error("no gazetteer entries parsed; refusing to write");
+  }
 
   const matches = matchEntries(entries, treks);
-  console.log(
+  io.log(
     `[gazetteer] ${entries.length} entries → ${matches.size} coordinate-verified trek matches`,
   );
 
@@ -253,19 +267,22 @@ async function main(): Promise<void> {
 
   const ds = validateDataset(next);
   if (!ds.ok) throw new Error(`[gazetteer] dataset invalid: ${ds.error}`);
-  writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
-  console.log(`[gazetteer] baked historicalNote onto ${baked} treks.`);
+
+  // ---- Everything above can refuse. Everything below only writes. ----
+  io.writeFile(paths.manifest, JSON.stringify(manifest, null, 2) + "\n");
+  io.writeFile(paths.treks, JSON.stringify(ds.treks) + "\n");
+  io.log(`[gazetteer] baked historicalNote onto ${baked} treks.`);
   for (const t of ds.treks.filter((x) => x.historicalNote).slice(0, 14)) {
-    console.log(
-      `  · ${t.name} [${t.historicalNote!.year}]: ${t.historicalNote!.text.slice(0, 80)}…`,
-    );
+    io.log(`  · ${t.name} [${t.historicalNote!.year}]: ${t.historicalNote!.text.slice(0, 80)}…`);
   }
+  return { entries: entries.length, matches: matches.size, baked };
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
 // kick off a build, mirroring the guard in discover-precompute.ts.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((err) => {
+  mkdirSync(cacheDir, { recursive: true });
+  runBuildGazetteer(nodeIO, repoRoot, { discover: discoverVolumes, volumeText }).catch((err) => {
     console.error((err as Error).message);
     process.exit(1);
   });

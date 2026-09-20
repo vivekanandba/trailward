@@ -9,7 +9,8 @@
  *   npm run check:links            # sample the dataset's source URLs
  *   npm run check:links -- --all   # every distinct URL (slow)
  */
-import { appendFileSync, readFileSync, readdirSync } from "node:fs";
+import { appendFileSync } from "node:fs";
+import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
@@ -56,11 +57,11 @@ export function sampleByHost(urls: string[], perHost: number): string[] {
   return out;
 }
 
-async function probe(url: string): Promise<Result> {
+export async function probe(url: string, doFetch: typeof fetch = fetch): Promise<Result> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    let res = await fetch(url, {
+    let res = await doFetch(url, {
       method: "HEAD",
       redirect: "follow",
       signal: controller.signal,
@@ -68,7 +69,7 @@ async function probe(url: string): Promise<Result> {
     });
     // Plenty of hosts don't implement HEAD properly; fall back to GET.
     if (res.status === 405 || res.status === 501) {
-      res = await fetch(url, {
+      res = await doFetch(url, {
         method: "GET",
         redirect: "follow",
         signal: controller.signal,
@@ -88,46 +89,75 @@ async function probe(url: string): Promise<Result> {
   }
 }
 
-async function main(): Promise<void> {
-  const all = process.argv.includes("--all");
-  const treks = JSON.parse(readFileSync(resolve(here, "../src/data/treks.json"), "utf8")) as Trek[];
+export interface LinkCheckDeps {
+  probe: (url: string) => Promise<Result>;
+  /** Appends the run's report to the CI step summary, when there is one. */
+  writeSummary?: (text: string) => void;
+}
+
+export async function runCheckLinks(
+  io: BuildIO,
+  root: string,
+  deps: LinkCheckDeps,
+  all = false,
+): Promise<{ urls: number; checked: number; exitCode: number; text: string }> {
+  const r = root.replace(/\/+$/, "");
+  const treks = JSON.parse(io.readFile(`${r}/src/data/treks.json`)) as Trek[];
   // Derived, never a second hardcoded list: with ["about.md","sources.md"]
-  // written out here, deleting content/about.md made this die with ENOENT and
-  // adding content/faq.md meant its external links were never probed — which
-  // is exactly the link rot this job exists to catch.
-  const contentDir = resolve(here, "../content");
-  const content = readdirSync(contentDir)
+  // written out here, deleting content/about.md broke this and adding
+  // content/faq.md meant its external links were never probed — which is
+  // exactly the link rot this job exists to catch.
+  const contentDir = `${r}/content`;
+  const content = io
+    .listDir(contentDir)
     .filter((f) => f.endsWith(".md"))
     .sort()
-    .map((f) => readFileSync(resolve(contentDir, f), "utf8"));
+    .map((f) => io.readFile(`${contentDir}/${f}`));
 
   const urls = collectUrls(treks, content);
   const targets = all ? urls : sampleByHost(urls, 8);
-  console.log(`[links] ${urls.length} distinct URL(s); checking ${targets.length}…`);
+  io.log(`[links] ${urls.length} distinct URL(s); checking ${targets.length}…`);
 
   const results: Result[] = [];
   for (let i = 0; i < targets.length; i += CONCURRENCY) {
-    results.push(...(await Promise.all(targets.slice(i, i + CONCURRENCY).map(probe))));
+    results.push(...(await Promise.all(targets.slice(i, i + CONCURRENCY).map(deps.probe))));
   }
 
   const report = summarise(results);
-  console.log(report.text);
-  const summaryFile = process.env.GITHUB_STEP_SUMMARY;
-  if (summaryFile) {
-    appendFileSync(
-      summaryFile,
-      `### External link check\n\n\`\`\`\n${report.text}\n\`\`\`\n`,
-      "utf8",
-    );
-  }
-  process.exit(report.exitCode);
+  io.log(report.text);
+  deps.writeSummary?.(report.text);
+  return {
+    urls: urls.length,
+    checked: targets.length,
+    exitCode: report.exitCode,
+    text: report.text,
+  };
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
 // hit the network, mirroring the guard in discover-precompute.ts.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((err) => {
-    console.error((err as Error).message);
-    process.exit(0); // advisory even on an internal error
-  });
+  runCheckLinks(
+    nodeIO,
+    resolve(here, ".."),
+    {
+      probe: (url) => probe(url),
+      writeSummary: (text) => {
+        const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+        if (summaryFile) {
+          appendFileSync(
+            summaryFile,
+            `### External link check\n\n\`\`\`\n${text}\n\`\`\`\n`,
+            "utf8",
+          );
+        }
+      },
+    },
+    process.argv.includes("--all"),
+  )
+    .then((r) => process.exit(r.exitCode))
+    .catch((err) => {
+      console.error((err as Error).message);
+      process.exit(0); // advisory even on an internal error
+    });
 }
