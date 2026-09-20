@@ -1,3 +1,5 @@
+<!-- constitution-ok: a proposal names the ID it proposes, so the unknown-rule check must not fire here. The ID becomes real only if a human files this against the constitution repo; until then nothing in this repo may cite it as a rule. -->
+
 # 2026-09-20 · Proposal: CON-COV-005 — a web app's end-to-end suite covers UI, UX _and_ API
 
 **Status:** proposed, unfiled. Drafted in trailward; handed over rather than
