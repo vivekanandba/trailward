@@ -8,7 +8,7 @@
  * Zero network: reads the cached GeoNames dump.
  *   npm run build:names
  */
-import { createReadStream, readFileSync, writeFileSync } from "node:fs";
+import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -22,25 +22,61 @@ import {
   type NamerFeature,
 } from "./sources/nameinfer";
 import type { DetectedSummit } from "./build-detect";
+import { nodeIO, type BuildIO } from "./lib/buildIO";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const detectedFile = resolve(here, "detected/india-detected.json");
-const dumpFile = resolve(here, "geonames/.cache/IN.txt");
-const treksFile = resolve(here, "../src/data/treks.json");
+const repoRoot = resolve(here, "..");
+
+/** Paths derived from the repo root, never named by the caller (CON-PROC-006). */
+export function namesPathsFor(root: string): { detected: string; dump: string; treks: string } {
+  const r = root.replace(/\/+$/, "");
+  if (!r.startsWith("/") || r.split("/").includes("..")) {
+    throw new Error(`refusing to build names: ${root} is not an absolute repo root`);
+  }
+  return {
+    detected: `${r}/scripts/detected/india-detected.json`,
+    dump: `${r}/scripts/geonames/.cache/IN.txt`,
+    treks: `${r}/src/data/treks.json`,
+  };
+}
+
+/**
+ * The namer grid, injected (spec 41 §A). The real one streams a 400 MB
+ * GeoNames dump; a test supplies the parsed grid directly.
+ */
+export interface NamesDeps {
+  loadGrid: () => Promise<Map<string, NamerFeature[]>>;
+}
 
 const CELL = 0.012; // ~1.3 km buckets: covers the largest namer radius
 
-async function loadNamerFeatures(): Promise<Map<string, NamerFeature[]>> {
+/** Parse one GeoNames dump line into a namer feature, or null if unusable. */
+export function namerFeatureFrom(line: string): NamerFeature | null {
+  const c = line.split("\t");
+  if (!NAMER_CODES[c[7]] && !VILLAGE_NAMER_CODES[c[7]]) return null;
+  // Number("") is 0, not NaN — a blank coordinate would place the feature at
+  // 0°E in the Atlantic rather than being skipped. A missing value must never
+  // become a real one (CON-DATA-001).
+  if (!c[4]?.trim() || !c[5]?.trim() || !c[1]) return null;
+  const lat = Number(c[4]);
+  const lng = Number(c[5]);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+  return { name: c[1], code: c[7], lat, lng };
+}
+
+/** The bucket a feature or summit falls in. Exported so tests can build a grid. */
+export function cellKeyFor(lat: number, lng: number): string {
+  return `${Math.floor(lat / CELL)}:${Math.floor(lng / CELL)}`;
+}
+
+export async function loadNamerFeatures(dumpFile: string): Promise<Map<string, NamerFeature[]>> {
   const grid = new Map<string, NamerFeature[]>();
   const rl = createInterface({ input: createReadStream(dumpFile, "utf8"), crlfDelay: Infinity });
   for await (const line of rl) {
-    const c = line.split("\t");
-    if (!NAMER_CODES[c[7]] && !VILLAGE_NAMER_CODES[c[7]]) continue;
-    const lat = Number(c[4]);
-    const lng = Number(c[5]);
-    if (Number.isNaN(lat) || Number.isNaN(lng) || !c[1]) continue;
-    const key = `${Math.floor(lat / CELL)}:${Math.floor(lng / CELL)}`;
-    (grid.get(key) ?? grid.set(key, []).get(key)!).push({ name: c[1], code: c[7], lat, lng });
+    const f = namerFeatureFrom(line);
+    if (!f) continue;
+    const key = cellKeyFor(f.lat, f.lng);
+    (grid.get(key) ?? grid.set(key, []).get(key)!).push(f);
   }
   return grid;
 }
@@ -64,51 +100,69 @@ export function featuresNear(
 const dist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }): number =>
   distanceFrom({ id: "", name: "", ...a }, b);
 
-async function main(): Promise<void> {
-  const grid = await loadNamerFeatures();
-  const summits = JSON.parse(readFileSync(detectedFile, "utf8")) as (DetectedSummit & {
+export async function runBuildNames(
+  io: BuildIO,
+  root: string,
+  deps: NamesDeps,
+): Promise<{ named: number; patched: number; total: number }> {
+  const paths = namesPathsFor(root);
+  const grid = await deps.loadGrid();
+  const summits = JSON.parse(io.readFile(paths.detected)) as (DetectedSummit & {
     inferredFrom?: string;
   })[];
 
+  if (grid.size === 0 && summits.length > 0) {
+    // An empty namer grid means the dump is missing or unparsed, not that
+    // India has no place names. Writing now would bank "nothing named" as a
+    // result and the next run would skip nothing (spec 41 §C).
+    throw new Error("[names] refusing to write: the namer grid is empty");
+  }
+
   let named = 0;
-  const provenance = new Map<string, string>(); // summit id → provenance sentence
-  for (const s of summits) {
+  const next = summits.map((s) => {
     const hit = inferName(s, featuresNear(grid, s.lat, s.lng), dist);
     // Never overwrite a name a human suggested (future manual naming keeps
     // "Unnamed" out of the string, so the startsWith guard protects it).
-    if (!hit || !s.name.startsWith("Unnamed")) continue;
-    s.name = hit.name;
-    s.inferredFrom = `Name inferred from the adjacent '${hit.from}' (GeoNames, ~${hit.km.toFixed(1)} km); unverified.`;
-    provenance.set(s.id, s.inferredFrom);
+    if (!hit || !s.name.startsWith("Unnamed")) return s;
     named++;
-  }
-  writeFileSync(detectedFile, JSON.stringify(summits) + "\n", "utf8");
-  console.log(`[names] inferred names for ${named}/${summits.length} detected summits.`);
+    return {
+      ...s,
+      name: hit.name,
+      inferredFrom: `Name inferred from the adjacent '${hit.from}' (GeoNames, ~${hit.km.toFixed(1)} km); unverified.`,
+    };
+  });
 
   // Patch already-baked d12- records in place (keeps all other fields).
-  const treks = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
-  const byId = new Map(summits.map((s) => [s.id, s]));
+  const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
+  const byId = new Map(next.map((s) => [s.id, s]));
   let patched = 0;
-  const next = treks.map((t) => {
+  const nextTreks = treks.map((t) => {
     if (!t.id.startsWith("d12-")) return t;
     const s = byId.get(t.id);
     if (!s || !s.inferredFrom || t.name === s.name) return t;
     patched++;
     return { ...t, name: s.name, highlights: s.inferredFrom };
   });
-  const ds = validateDataset(next);
+  const ds = validateDataset(nextTreks);
   if (!ds.ok) throw new Error(`[names] dataset invalid: ${ds.error}`);
-  writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
-  console.log(`[names] patched ${patched} baked records.`);
-  for (const s of summits.filter((x) => x.inferredFrom).slice(0, 10)) {
-    console.log(`  · ${s.name}  ← ${s.inferredFrom!.slice(25, 80)}`);
+
+  // ---- Everything above can refuse. Everything below only writes. ----
+  io.writeFile(paths.detected, JSON.stringify(next) + "\n");
+  io.log(`[names] inferred names for ${named}/${summits.length} detected summits.`);
+  io.writeFile(paths.treks, JSON.stringify(ds.treks) + "\n");
+  io.log(`[names] patched ${patched} baked records.`);
+  for (const s of next.filter((x) => x.inferredFrom).slice(0, 10)) {
+    io.log(`  · ${s.name}  ← ${s.inferredFrom!.slice(25, 80)}`);
   }
+  return { named, patched, total: summits.length };
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
 // kick off a build, mirroring the guard in discover-precompute.ts.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((err) => {
+  runBuildNames(nodeIO, repoRoot, {
+    loadGrid: () => loadNamerFeatures(namesPathsFor(repoRoot).dump),
+  }).catch((err) => {
     console.error((err as Error).message);
     process.exit(1);
   });

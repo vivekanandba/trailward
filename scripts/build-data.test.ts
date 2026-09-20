@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildDataset } from "./build-data";
+import { buildDataset, liveEnrichers } from "./build-data";
 import { BANGALORE_ORIGIN, BANGALORE_SEED } from "./seed/bangalore";
 import { validateTrek, type Trek } from "../src/lib/trek";
 
@@ -52,5 +52,38 @@ describe("buildDataset (end-to-end, no network)", () => {
     });
     expect(treks).toHaveLength(1);
     expect(treks[0].distanceKm).toBeUndefined();
+  });
+});
+
+describe("liveEnrichers wiring (spec 41)", () => {
+  const seed = (over: Record<string, unknown> = {}) => ({
+    id: "x",
+    name: "X",
+    lat: 13,
+    lng: 77,
+    sources: [] as string[],
+    ...over,
+  });
+
+  it("does NOT spend a DEM lookup when the curated seed already has elevation", async () => {
+    // Curated elevation is a human judgement; a derived signal must not
+    // silently replace it (CON-DATA-004), and the lookup is wasted anyway.
+    const e = liveEnrichers();
+    await expect(e.elevation!(seed({ elevationM: 1478 }) as never)).resolves.toBeUndefined();
+  });
+
+  it("only looks for a wiki page when a source URL actually names one", async () => {
+    const e = liveEnrichers();
+    await expect(e.wiki!(seed({ sources: [] }) as never)).resolves.toBeUndefined();
+    await expect(
+      e.wiki!(seed({ sources: ["https://forest.example/page"] }) as never),
+    ).resolves.toBeUndefined();
+  });
+
+  it("scrapes nothing when every source is Wikipedia", async () => {
+    const e = liveEnrichers();
+    await expect(
+      e.scrape!(seed({ sources: ["https://en.wikipedia.org/wiki/X"] }) as never),
+    ).resolves.toEqual({});
   });
 });

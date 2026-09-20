@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runBuildSitemap } from "./build-sitemap";
+import { runBuildSitemap, lastCommitDate } from "./build-sitemap";
 import { runBuildSearchIndex } from "./build-search-index";
 import { runBuildPages } from "./build-pages";
 import { memoryIO } from "./lib/buildIO";
@@ -149,5 +149,24 @@ describe("build-search-index run (spec 38/40)", () => {
     const io = memoryIO({ [S.treks]: JSON.stringify(TREKS) });
     runBuildSearchIndex(io, S);
     expect(io.logs.join()).toContain("2 named entries");
+  });
+});
+
+describe("lastCommitDate (spec 35 — lastmod from the DATA's history)", () => {
+  // vitest runs from the repo root, which is the git work tree we want.
+  const repoRoot = process.cwd();
+
+  it("reads an ISO date from this repo's own git history", () => {
+    // A page whose facts did not change must not claim to have changed, or
+    // every rebuild invites a recrawl of everything.
+    expect(lastCommitDate("package.json", repoRoot)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("returns undefined for a path git has never seen, rather than today", () => {
+    expect(lastCommitDate("no/such/file.xyz", repoRoot)).toBeUndefined();
+  });
+
+  it("returns undefined outside a git repository instead of throwing", () => {
+    expect(lastCommitDate("package.json", "/")).toBeUndefined();
   });
 });

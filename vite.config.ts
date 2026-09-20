@@ -92,37 +92,44 @@ export default defineConfig({
       // land at 0% without moving the global number (spec 37). Per-directory
       // floors close that. Each was MEASURED, then set a few points under, and
       // each was proven to enforce by temporarily setting it to 100.
-      // Measured 2026-09-20 with the default exclusions intact, each floor set
-      // just under, so they ratchet up and never down (CON-COV-002). Every one
-      // of these is ABOVE what main enforced (global 68 → 74, scripts/lib
-      // 80 → 97): nothing here is a floor being lowered to make a build pass.
-      //
-      // An earlier revision of this block quoted numbers ~10 points higher.
-      // Those were measured while the test files themselves were instrumented
-      // and are not comparable — see the `exclude` note above.
+      // Measured 2026-09-20 with the default exclusions intact, reproduced
+      // across two consecutive runs, each floor set just under. They only
+      // ratchet up (CON-COV-002) and every one is at or above what main
+      // enforced before the build-CLI seams landed (spec 41).
       thresholds: {
-        // global measured: 74.90 lines / 74.10 functions, identical across
-        // consecutive runs. Branches vary slightly run to run (87.27–87.41
-        // observed), so that floor sits below the lowest figure seen rather
-        // than below a single reading.
-        // The target is 95 and this is not it. The gap is almost entirely the
-        // top-level scripts/ (45%) and scripts/geonames/ (43%) network CLIs,
-        // named as the next tranche in spec 40 rather than excluded here.
-        lines: 74,
-        branches: 86,
-        functions: 73,
-        statements: 74,
-        // measured 94.93 / 88.98 / 97.00 — pure application logic, no excuse
-        "src/lib/**": { statements: 94, lines: 94, branches: 88, functions: 96 },
-        // measured over the GLOB (which includes components/ui at 75%): 84.88
-        // / 84.96 / 70.00. The per-directory table row reads higher because it
-        // excludes the ui/ subtree; the floor follows the glob, because the
-        // glob is what enforces.
+        // global measured: 81.71 lines / 79.75 functions, identical run to run.
+        // Branches drift slightly (88.27–88.33 observed), so that floor sits
+        // below the lowest figure seen rather than below a single reading.
+        //
+        // The target is 95 and this is 81.7. What remains is named in spec 41
+        // rather than excluded: the DEM-walking functions (detectIndia, score,
+        // scoreSummits, crossMatchWikidata) and the `import.meta.url === argv[1]`
+        // CLI blocks, which cannot execute under vitest by construction.
+        lines: 81,
+        branches: 87,
+        functions: 79,
+        statements: 81,
+        // measured 95.08 / 89.13 / 97.00 — pure application logic, no excuse
+        "src/lib/**": { statements: 95, lines: 95, branches: 89, functions: 96 },
+        // measured over the GLOB (which includes components/ui at 75%):
+        // 84.88 / 84.96 / 70.00. The per-directory table row reads higher
+        // because it excludes the ui/ subtree; the floor follows the glob,
+        // because the glob is what enforces.
         "src/components/**": { statements: 84, lines: 84, branches: 84, functions: 69 },
-        // measured 98.14 / 94.71 / 96.22 — pure build logic
-        "scripts/lib/**": { statements: 97, lines: 97, branches: 94, functions: 95 },
-        // measured 76.79 / 86.78 / 72.35 — network adapters; parsers carry it
-        "scripts/sources/**": { statements: 76, lines: 76, branches: 86, functions: 72 },
+        // measured 98.27 / 94.88 / 96.36 — pure build logic
+        "scripts/lib/**": { statements: 98, lines: 98, branches: 94, functions: 96 },
+        // measured 91.57 / 88.01 / 88.61 — network adapters, now driven at the
+        // http boundary with their failure shapes asserted (spec 41)
+        "scripts/sources/**": { statements: 91, lines: 91, branches: 87, functions: 88 },
+        // The glob covers scripts/ AND its subtrees, so this is a BLEND —
+        // lib (98%) and sources (92%) pull it up and have their own floors
+        // above, so the top-level build CLIs this is really about sit lower
+        // (62.0% measured separately, reported in the per-directory table that
+        // `npm run coverage` prints). Kept as a blended backstop because a
+        // blend is what the glob actually enforces; it is not a claim about
+        // the CLIs. This tree had no floor at all before, which is how it sat
+        // at 45% unnoticed.
+        "scripts/**": { statements: 76, lines: 76, branches: 89, functions: 82 },
       },
     },
   },
