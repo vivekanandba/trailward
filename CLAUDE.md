@@ -1,9 +1,16 @@
 # trailward — working agreement
 
-> Machine-wide engineering rules live in the **engineering constitution**
-> (`~/.claude/CLAUDE.md`, versioned at `~/data-dash/constitution`) and are already loaded in
-> this session. Cite a rule ID (e.g. `CON-VER-001`) rather than restating it — copies drift,
-> citations don't. This file holds only what is specific to this repo.
+> Machine-wide engineering rules live in the **engineering constitution**, whose source of
+> truth is the remote repository <https://github.com/vivekanandba/constitution>. This repo
+> pins the exact version it was verified against in `constitution.lock`, keeps a read-only
+> copy under `.constitution/`, and `npm run check:constitution` fails the build if the two
+> disagree or if anything here points at a working copy instead of the remote (spec 39).
+> Update the pin with `npm run sync:constitution`, which fetches from the remote and never
+> from a local checkout.
+>
+> Cite a rule ID (e.g. `CON-VER-001`) rather than restating it — copies drift, citations
+> don't, and the gate rejects pasted rule text. This file holds only what is specific to this
+> repo.
 
 ## What this is
 
