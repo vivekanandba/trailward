@@ -69,23 +69,33 @@ function scannableFiles(): string[] {
 export function fetchRemote(lock: ConstitutionLock): string | null {
   const [, owner, repo] = /github\.com\/([^/]+)\/([^/]+)/.exec(lock.repo) ?? [];
   if (!owner || !repo) return null;
-  // Public repo: plain https, no credential. Private: gh api with a token.
-  try {
-    const raw = execFileSync(
-      "curl",
-      [
-        "-sfL",
-        "--max-time",
-        "20",
-        `https://raw.githubusercontent.com/${owner}/${repo}/${lock.ref}/CONSTITUTION.md`,
-      ],
-      { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
-    );
-    if (raw.trim()) return raw;
-  } catch {
-    /* fall through to the authenticated path */
+  // Prefer the API whenever a token exists: raw.githubusercontent is served
+  // through a CDN that caches for minutes, so a "match" from raw can mean
+  // yesterday's rules — and a verification that might be stale is not one.
+  const hasToken = Boolean(process.env.CONSTITUTION_TOKEN || process.env.GH_TOKEN);
+  if (!hasToken) {
+    try {
+      const raw = execFileSync(
+        "curl",
+        [
+          "-sfL",
+          "--max-time",
+          "20",
+          // Defeat the CDN copy; compare against the ref as it is now.
+          "-H",
+          "Cache-Control: no-cache",
+          "-H",
+          "Pragma: no-cache",
+          `https://raw.githubusercontent.com/${owner}/${repo}/${lock.ref}/CONSTITUTION.md`,
+        ],
+        { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
+      );
+      if (raw.trim()) return raw;
+    } catch {
+      return null; // private, or the ref is gone — the caller reports which
+    }
+    return null;
   }
-  if (!process.env.CONSTITUTION_TOKEN && !process.env.GH_TOKEN) return null;
   try {
     return decodeGhContent(
       execFileSync(
