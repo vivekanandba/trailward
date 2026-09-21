@@ -34,15 +34,18 @@ describe("checkDeployedVersion — 'stale' and 'wrong' are different answers", (
     expect(v).toMatchObject({ stale: true });
   });
 
-  it("FAILS on a sha that is neither ours nor the previous one", () => {
-    // Something else is being served. That is wrong now and will still be
-    // wrong in ten seconds, so it must not be retried into a pass.
-    const v = checkDeployedVersion(versionFile("c".repeat(40), "x"), SHA, PREV);
-    expect(v).toMatchObject({ ok: false });
+  it("treats ANY other sha as possibly-stale and retryable", () => {
+    // Not a pass — a bounded retry. The previous sha is frequently unknown
+    // (workflow_dispatch has no `before`; a cancelled run leaves the site
+    // older still), and in all those cases "a different sha" is usually CDN
+    // lag. Failing on attempt one disabled the retry budget silently.
+    expect(checkDeployedVersion(versionFile("c".repeat(40), "x"), SHA, PREV)).toMatchObject({
+      stale: true,
+    });
   });
 
-  it("FAILS when no previous sha is known and the live one differs", () => {
-    expect(checkDeployedVersion(versionFile(PREV, "x"), SHA)).toMatchObject({ ok: false });
+  it("retries rather than failing when NO previous sha is known", () => {
+    expect(checkDeployedVersion(versionFile(PREV, "x"), SHA)).toMatchObject({ stale: true });
   });
 
   it("FAILS on a body that is not JSON — a 404 page, say", () => {
@@ -57,10 +60,10 @@ describe("checkDeployedVersion — 'stale' and 'wrong' are different answers", (
     expect(checkDeployedVersion('{"sha":123}', SHA)).toMatchObject({ ok: false });
   });
 
-  it("names both shas when it fails, so the log says what is actually served", () => {
+  it("names both shas in its detail, so the log says what is actually served", () => {
     const v = checkDeployedVersion(versionFile(PREV, "x"), SHA);
-    expect("detail" in v && v.detail).toContain(PREV.slice(0, 8));
-    expect("detail" in v && v.detail).toContain(SHA.slice(0, 8));
+    expect(v.detail).toContain(PREV.slice(0, 8));
+    expect(v.detail).toContain(SHA.slice(0, 8));
   });
 });
 

@@ -55,8 +55,16 @@ export function checkDeployedVersion(
   if (previousSha && sha === previousSha) {
     return { stale: true, detail: `still serving the previous build ${sha.slice(0, 8)}` };
   }
+  // ANY other sha is treated as possibly-stale and retried, rather than failed
+  // outright. The previous sha is often unknown — workflow_dispatch has no
+  // `github.event.before`, and a run cancelled by the concurrency group leaves
+  // the live site older than it — and in every one of those cases the likeliest
+  // explanation of "a different sha" is still CDN lag. Requiring previousSha
+  // to earn a retry disabled the whole budget silently and reported "something
+  // else is deployed" for what was usually "not yet" (CON-VER-005). The retry
+  // is bounded, so a genuine mismatch still fails, just not on attempt one.
   return {
-    ok: false,
+    stale: true,
     detail: `serving ${sha.slice(0, 8)}, expected ${expectedSha.slice(0, 8)}`,
   };
 }

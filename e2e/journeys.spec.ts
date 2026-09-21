@@ -16,17 +16,17 @@ test("find a trek near a place, then get directions to it", async ({ page }) => 
 
   // 1. Start somewhere. The origin is the thing every distance is measured
   //    from, so the journey begins by choosing it.
-  await page.getByRole("button", { name: "Pune" }).click();
-  await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
+  await page.getByRole("button", { name: "Bengaluru" }).click();
 
-  // 2. Narrow to something achievable.
+  // 2. Narrow to something achievable. Moderate keeps Skandagiri, a CURATED
+  //    seed committed by hand — a journey must not depend on the discovery
+  //    population, which refresh-data.yml regenerates (spec 42 edge cases).
   if (isMobile(page)) await page.getByRole("button", { name: /^Filters/ }).click();
-  await page.getByRole("button", { name: "Easy", exact: true }).click();
+  await page.getByRole("button", { name: "Moderate", exact: true }).click();
   if (isMobile(page)) await page.keyboard.press("Escape");
 
-  // 3. Open the first result and get a route out of it.
-  const firstResult = page.getByRole("button", { name: /est\./i }).first();
-  await firstResult.click();
+  // 3. Open it and get a route out of it.
+  await page.getByText("Skandagiri").first().click();
   const detail = page.getByRole("dialog");
   await expect(detail).toBeVisible();
 
@@ -46,10 +46,12 @@ test("find a trek near a place, then get directions to it", async ({ page }) => 
 });
 
 test("arrive from a search engine on a trek page, and open it on the map", async ({ page }) => {
-  // Someone lands on a generated page from Google. The page has to be able to
-  // hand them to the live map with that trek already selected, or the static
-  // surface is a dead end.
-  await page.goto("/?sel=skandagiri&oid=bangalore&olat=12.97160&olng=77.59460&on=Bengaluru");
+  // Someone lands on a generated page from Google and follows its link into
+  // the map. That link is `/trailward/?sel=<id>` and carries NO origin params
+  // (trekPage.ts) — so this must use exactly that shape. An earlier version
+  // of this test added origin params the generated page never emits, which
+  // meant a change to the CTA would not have failed anything.
+  await page.goto("/?sel=skandagiri");
   await expect(page.getByRole("heading", { name: "Skandagiri" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Directions" })).toBeVisible();
 });

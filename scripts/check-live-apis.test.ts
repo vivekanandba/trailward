@@ -96,6 +96,32 @@ describe("runLiveCheck (spec 42 §A)", () => {
     expect(calls).toBe(3);
   });
 
+  it("says so LOUDLY when filing the issue fails, instead of going quietly green", async () => {
+    // The first real drift filed nothing: `gh issue create --label upstream`
+    // throws because that label does not exist, the CLI caught it and exited
+    // 0, and the run was indistinguishable from "all well" — the exact
+    // failure the issue exists to prevent.
+    const io = memoryIO();
+    const out = await runLiveCheck(
+      io,
+      {
+        fetchOne: async () => "{}",
+        fileIssue: () => {
+          throw new Error("could not add label: 'upstream' not found");
+        },
+      },
+      [drifting],
+    );
+
+    expect(out.drifted).toBe(1);
+    expect(out.filed).toBe(false);
+    expect(out.fileError).toMatch(/upstream/);
+    const log = io.logs.join("\n");
+    expect(log).toContain("COULD NOT FILE");
+    // And the drift itself is still reported, since that log is now the only record.
+    expect(log).toContain("no 'elements' array");
+  });
+
   it("reports drift but does not file when no filer is wired (no token)", async () => {
     const out = await runLiveCheck(memoryIO(), { fetchOne: async () => "{}" }, [drifting]);
     expect(out.drifted).toBe(1);

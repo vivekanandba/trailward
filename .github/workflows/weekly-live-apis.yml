@@ -28,7 +28,14 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Probe every upstream source once
-        run: npm run check:live | tee /tmp/live.txt
+        # pipefail, and stderr folded in: the default shell reports `tee`'s
+        # exit code, so a crash of the checker itself (a bad import, tsx
+        # failing) looked identical to a clean advisory run — and its message
+        # goes to stderr, so it never reached the summary anyone is asked to read.
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check:live 2>&1 | tee /tmp/live.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Report to the run summary

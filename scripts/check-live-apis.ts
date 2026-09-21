@@ -38,7 +38,7 @@ export async function runLiveCheck(
   deps: LiveCheckDeps,
   probes: Probe[] = PROBES,
   runUrl?: string,
-): Promise<{ results: ProbeResult[]; drifted: number; filed: boolean }> {
+): Promise<{ results: ProbeResult[]; drifted: number; filed: boolean; fileError?: string }> {
   const results: ProbeResult[] = [];
   for (const probe of probes) {
     try {
@@ -58,11 +58,21 @@ export async function runLiveCheck(
   io.log(text);
 
   let filed = false;
+  let fileError: string | undefined;
   if (drifted.length > 0 && deps.fileIssue) {
-    deps.fileIssue(DRIFT_ISSUE_TITLE, driftIssueBody(results, runUrl));
-    filed = true;
+    try {
+      deps.fileIssue(DRIFT_ISSUE_TITLE, driftIssueBody(results, runUrl));
+      filed = true;
+    } catch (err) {
+      // Swallowing this made the job green with drift detected and nothing
+      // filed — indistinguishable from "all well", which is the precise
+      // failure the issue exists to prevent. Say so where it will be read.
+      fileError = (err as Error).message;
+      io.log(`[live] DRIFT DETECTED BUT COULD NOT FILE AN ISSUE: ${fileError}`);
+      io.log("[live] the drift report above is the only record of this run.");
+    }
   }
-  return { results, drifted: drifted.length, filed };
+  return { results, drifted: drifted.length, filed, fileError };
 }
 
 /** One request, bounded, with the project's User-Agent. */
@@ -102,8 +112,13 @@ function fileIssue(title: string, body: string): void {
       repo,
       "--state",
       "open",
+      // Scoped to the title and paged generously: a free-text search over
+      // bodies, capped at gh's default 30, can miss the real thread and file
+      // a duplicate — which breaks the "one outage, one thread" guarantee.
       "--search",
-      title,
+      `in:title "${title}"`,
+      "--limit",
+      "100",
       "--json",
       "number,title",
     ],
@@ -118,11 +133,12 @@ function fileIssue(title: string, body: string): void {
     });
     return;
   }
-  execFileSync(
-    "gh",
-    ["issue", "create", "--repo", repo, "--title", title, "--body", body, "--label", "upstream"],
-    { stdio: "inherit" },
-  );
+  // No --label: gh resolves a label name to an id BEFORE creating, so naming
+  // one the repo does not have makes the whole call throw — and the first
+  // real drift would have filed nothing at all.
+  execFileSync("gh", ["issue", "create", "--repo", repo, "--title", title, "--body", body], {
+    stdio: "inherit",
+  });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -142,7 +158,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     runUrl,
   )
     .then((r) => {
-      if (r.drifted > 0 && !r.filed) {
+      if (r.drifted > 0 && !r.filed && !r.fileError) {
         console.log("[live] drift detected but no GITHUB_TOKEN — not filing an issue.");
       }
       // ADVISORY by design: upstream reorganising its API is not something a

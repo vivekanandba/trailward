@@ -185,6 +185,17 @@ describe("build-pages run (spec 35/36/40)", () => {
     expect(data).not.toMatch(/ODbL;\s*(<|$)/);
   });
 
+  it("emits version.json carrying the sha the deploy check compares against", () => {
+    // The reader (check-deploy) is tested against a versionFile() it builds
+    // itself, so without this the two sides could drift together and the only
+    // symptom would be a post-deploy 404 blamed on the CDN (CON-COV-003).
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-09-19", "abc123", "2026-09-21T00:00:00.000Z");
+    const written = JSON.parse(io.files.get(`${P.distDir}/version.json`)!);
+    expect(written.sha).toBe("abc123");
+    expect(written.builtAt).toBe("2026-09-21T00:00:00.000Z");
+  });
+
   it("a malformed RECORD cannot half-wipe dist/t either", () => {
     // renderTrekPage reaches trek.lat.toFixed(4) unguarded, and `npm run
     // build` never runs validateDataset — validate:data is a separate CI job.

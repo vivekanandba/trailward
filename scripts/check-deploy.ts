@@ -75,11 +75,6 @@ export async function runDeployCheck(
           await deps.wait(opts.waitMs ?? 10_000);
           continue;
         }
-      } else {
-        // Serving a SHA that is neither ours nor the previous one is wrong
-        // now and will still be wrong in ten seconds. Fail immediately.
-        versionDetail = verdict.detail;
-        break;
       }
     }
     if (attempt < attempts && !versionOk) await deps.wait(opts.waitMs ?? 10_000);
@@ -140,7 +135,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   runDeployCheck(
     nodeIO,
     { get, wait: (ms) => new Promise((r) => setTimeout(r, ms)) },
-    { sha, previousSha: arg("previous") ?? process.env.PREVIOUS_SHA, base: arg("url") },
+    {
+      sha,
+      // `||` not `??`: workflow_dispatch supplies an EMPTY string here, and an
+      // empty previous sha must read as "unknown", not as a value.
+      previousSha: arg("previous") || process.env.PREVIOUS_SHA || undefined,
+      base: arg("url"),
+    },
   )
     .then((r) => {
       if (!r.ok) {

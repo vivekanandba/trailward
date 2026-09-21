@@ -140,3 +140,9 @@ test("visual: the sources content page", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page).toHaveScreenshot("sources-page.png");
 });
+
+test("visual: the about content page", async ({ page }) => {
+  await page.goto("about/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page).toHaveScreenshot("about-page.png");
+});

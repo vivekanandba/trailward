@@ -104,7 +104,10 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     expect(out.ok).toBe(false);
   });
 
-  it("does NOT retry a wrong sha — it will still be wrong in ten seconds", async () => {
+  it("retries an unexpected sha to its budget, then FAILS", async () => {
+    // A third sha is usually still CDN lag — a run cancelled by the
+    // concurrency group leaves the site older than `github.event.before`.
+    // So it is retried, but the budget is finite and it does fail.
     let calls = 0;
     const pages = healthySite(SHA);
     const get = async (url: string): Promise<Fetched> => {
@@ -114,12 +117,55 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       }
       return pages[url.slice(BASE.length).replace(/\?.*$/, "")]!;
     };
-    await runDeployCheck(
+    const out = await runDeployCheck(
       memoryIO(),
       { get, wait: noWait },
       { sha: SHA, previousSha: PREV, base: BASE, attempts: 5 },
     );
-    expect(calls).toBe(1);
+    expect(calls).toBe(5);
+    expect(out.ok).toBe(false);
+  });
+
+  it("retries when the previous sha is UNKNOWN, rather than failing at once", async () => {
+    // workflow_dispatch supplies no `github.event.before`. Requiring it to
+    // earn a retry silently disabled the whole budget.
+    let calls = 0;
+    const pages = healthySite(SHA);
+    const get = async (url: string): Promise<Fetched> => {
+      if (url.includes("version.json")) {
+        calls++;
+        return {
+          status: 200,
+          body: versionFile(calls <= 2 ? PREV : SHA, "x"),
+          contentType: "application/json",
+        };
+      }
+      return pages[url.slice(BASE.length).replace(/\?.*$/, "")]!;
+    };
+    const out = await runDeployCheck(
+      memoryIO(),
+      { get, wait: noWait },
+      { sha: SHA, base: BASE }, // no previousSha at all
+    );
+    expect(out.ok).toBe(true);
+    expect(calls).toBe(3);
+  });
+
+  it("retries a missing version.json too — the deploy may not have landed yet", async () => {
+    let calls = 0;
+    const pages = healthySite(SHA);
+    const get = async (url: string): Promise<Fetched> => {
+      if (url.includes("version.json")) {
+        calls++;
+        return calls <= 2
+          ? { status: 404, body: "not found", contentType: "text/html" }
+          : { status: 200, body: versionFile(SHA, "x"), contentType: "application/json" };
+      }
+      return pages[url.slice(BASE.length).replace(/\?.*$/, "")]!;
+    };
+    const out = await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
+    expect(out.ok).toBe(true);
+    expect(calls).toBe(3);
   });
 
   it("FAILS on a missing version.json rather than skipping the check", async () => {
