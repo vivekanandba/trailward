@@ -30,11 +30,17 @@ export type LiveCheck =
 /**
  * Compare the live version.json against the SHA just built.
  *
- * "Stale" and "wrong" are deliberately different answers. GitHub Pages' CDN
- * takes a moment to turn over, so a previous SHA immediately after a deploy is
- * expected and must be retried; ANY other outcome — a missing file, an
- * unparseable one, no sha field — is a failure. A missing file is never a skip:
- * that is how an unverified deploy passes for green (CON-DATA-002).
+ * A sha that does not match is RETRYABLE; a malformed answer is not.
+ *
+ * The CDN takes a moment to turn over, and in that window almost every "wrong
+ * sha" is really "not yet" — so any non-matching sha returns `stale` and the
+ * caller retries it to a bounded budget before failing. Requiring the previous
+ * sha to earn that retry did not work: `workflow_dispatch` carries none, and a
+ * cancelled run leaves the site older than the one it would name.
+ *
+ * What is NOT retryable-into-a-pass: a body that is not JSON, or one with no
+ * `sha`. Those are failures however long you wait, and a missing file is never
+ * a skip — that is how an unverified deploy passes for green (CON-DATA-002).
  */
 export function checkDeployedVersion(
   body: string,

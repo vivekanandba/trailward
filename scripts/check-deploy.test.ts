@@ -168,6 +168,64 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     expect(calls).toBe(3);
   });
 
+  it("FAILS a malformed version.json and SAYS WHY, not 'never checked'", async () => {
+    // The mutant this pins: `if ("ok" in verdict)` instead of
+    // `if ("ok" in verdict && verdict.ok)` makes an unparseable or sha-less
+    // version.json a PASS — one token away from a silently green deploy gate.
+    for (const [body, reason] of [
+      ["<html>404</html>", /not JSON/],
+      ['{"builtAt":"x"}', /no 'sha'/],
+    ] as const) {
+      const pages = healthySite(SHA);
+      pages["version.json"] = { status: 200, body, contentType: "application/json" };
+      const { get } = serve(pages);
+      const out = await runDeployCheck(
+        memoryIO(),
+        { get, wait: noWait },
+        { sha: SHA, base: BASE, attempts: 2 },
+      );
+      expect(out.ok, body).toBe(false);
+      expect(out.results[0].detail, body).toMatch(reason);
+      expect(out.results[0].detail, body).not.toBe("never checked");
+    }
+  });
+
+  it("RETRIES a thrown transport error — the one CDN symptom a budget must absorb", async () => {
+    // undici throws on a connection reset mid-turnover. Abandoning the whole
+    // run there failed main's deploy gate for the most transient cause there
+    // is, and never checked the surface at all.
+    let calls = 0;
+    const pages = healthySite(SHA);
+    const get = async (url: string): Promise<Fetched> => {
+      if (url.includes("version.json")) {
+        calls++;
+        if (calls <= 2) throw new Error("ECONNRESET");
+        return { status: 200, body: versionFile(SHA, "x"), contentType: "application/json" };
+      }
+      return pages[url.slice(BASE.length).replace(/\?.*$/, "")]!;
+    };
+    const out = await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
+    expect(out.ok).toBe(true);
+    expect(calls).toBe(3);
+  });
+
+  it("reports a transport error that never clears, naming it", async () => {
+    const pages = healthySite(SHA);
+    const get = async (url: string): Promise<Fetched> => {
+      if (url.includes("version.json")) throw new Error("ENOTFOUND");
+      return pages[url.slice(BASE.length).replace(/\?.*$/, "")]!;
+    };
+    const out = await runDeployCheck(
+      memoryIO(),
+      { get, wait: noWait },
+      { sha: SHA, base: BASE, attempts: 2 },
+    );
+    expect(out.ok).toBe(false);
+    expect(out.results[0].detail).toMatch(/ENOTFOUND/);
+    // The surface was still checked — one flaky endpoint must not hide the rest.
+    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1);
+  });
+
   it("FAILS on a missing version.json rather than skipping the check", async () => {
     const pages = healthySite(SHA);
     delete pages["version.json"];

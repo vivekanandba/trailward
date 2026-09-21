@@ -50,9 +50,13 @@ test that asserts it would fail for the wrong reason forever.
 4. A sample trek page (`/t/skandagiri/`) returns 200 and carries its `<h1>`.
 5. `/sources/` returns 200 — a content page, which the sitemap advertises.
 
-Fetched with cache-busting and a short retry: GitHub Pages' CDN takes a moment to turn over,
-so "not yet" must be distinguished from "wrong", and the retry window is bounded so a genuine
-mismatch still fails rather than hanging.
+Fetched with cache-busting and a **bounded retry**, because the CDN takes a moment to turn
+over and almost every "wrong sha" seen in that window is really "not yet". Distinguishing the
+two up front turned out to be impossible in practice: `workflow_dispatch` carries no previous
+sha, and a run cancelled by the concurrency group leaves the live site older than the one it
+would name. So any non-matching sha is retried to the budget and then fails. A malformed or
+sha-less `version.json`, and a transport error, are retried on the same budget and likewise
+fail — each reporting _its own_ reason, never a generic one.
 
 **This job must be able to fail.** It is proven by pointing it at a SHA that was never
 deployed and watching it exit non-zero.

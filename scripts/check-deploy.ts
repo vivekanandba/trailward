@@ -56,28 +56,34 @@ export async function runDeployCheck(
   let versionDetail = "never checked";
   let versionOk = false;
   for (let attempt = 1; attempt <= attempts; attempt++) {
-    const { status, body } = await deps.get(`${base}version.json?cb=${opts.sha}-${attempt}`);
-    if (status !== 200) {
-      // A missing version.json is a FAILURE, not a skip — that is exactly how
-      // an unverified deploy would pass for green.
-      versionDetail = `version.json returned HTTP ${status}`;
-    } else {
-      const verdict = checkDeployedVersion(body, opts.sha, opts.previousSha);
-      if ("ok" in verdict && verdict.ok) {
-        versionOk = true;
+    // EVERY outcome sets `versionDetail`, including the thrown one. Leaving a
+    // path that does not means the final report reads "never checked" for a
+    // case that was in fact diagnosed exactly — sending whoever reads the
+    // failed deploy after a problem that does not exist (CON-VER-005).
+    try {
+      const { status, body } = await deps.get(`${base}version.json?cb=${opts.sha}-${attempt}`);
+      if (status !== 200) {
+        // A missing version.json is a FAILURE, not a skip — that is exactly
+        // how an unverified deploy would pass for green. Still retried: the
+        // deploy may not have landed yet.
+        versionDetail = `version.json returned HTTP ${status}`;
+      } else {
+        const verdict = checkDeployedVersion(body, opts.sha, opts.previousSha);
         versionDetail = verdict.detail;
-        break;
-      }
-      if ("stale" in verdict) {
-        versionDetail = verdict.detail;
-        io.log(`[deploy] attempt ${attempt}/${attempts}: ${verdict.detail}`);
-        if (attempt < attempts) {
-          await deps.wait(opts.waitMs ?? 10_000);
-          continue;
+        if ("ok" in verdict && verdict.ok) {
+          versionOk = true;
+          break;
         }
       }
+    } catch (err) {
+      // A transport error is the ONE symptom of a CDN mid-turnover that the
+      // budget cannot absorb if it aborts here — and undici throws exactly
+      // this in that window. Retrying a 404 while abandoning a reset would
+      // fail main's deploy gate for the most transient cause there is.
+      versionDetail = `version.json request failed: ${(err as Error).message}`;
     }
-    if (attempt < attempts && !versionOk) await deps.wait(opts.waitMs ?? 10_000);
+    io.log(`[deploy] attempt ${attempt}/${attempts}: ${versionDetail}`);
+    if (attempt < attempts) await deps.wait(opts.waitMs ?? 10_000);
   }
 
   const results: PageResult[] = [
