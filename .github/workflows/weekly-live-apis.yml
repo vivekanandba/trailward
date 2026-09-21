@@ -1,0 +1,50 @@
+name: Weekly live API contract check
+
+# Upstream drift is time-based, not PR-based: a source changes its shape long
+# after the merge that started depending on it, and nothing in the PR gates can
+# see that (spec 42 §A). The offline contract tests prove our parsers are right
+# about a shape we asserted; only this notices when the shape moves.
+#
+# ADVISORY — it never blocks. Upstream reorganising its API is not something a
+# revert here can fix. On drift it opens (or updates) an issue instead, because
+# a red scheduled run is easy to scroll past.
+on:
+  schedule:
+    - cron: "0 4 * * 3" # Wednesdays 04:00 UTC — off both the link check and the refresh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write # to file the drift issue
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Probe every upstream source once
+        # pipefail, and stderr folded in: the default shell reports `tee`'s
+        # exit code, so a crash of the checker itself (a bad import, tsx
+        # failing) looked identical to a clean advisory run — and its message
+        # goes to stderr, so it never reached the summary anyone is asked to read.
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check:live 2>&1 | tee /tmp/live.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Report to the run summary
+        if: always()
+        run: |
+          {
+            echo "### Live API contract check"
+            echo
+            echo '```'
+            cat /tmp/live.txt || echo "(no output)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

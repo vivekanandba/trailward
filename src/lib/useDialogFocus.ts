@@ -1,6 +1,12 @@
 /**
  * Dialog focus behaviour (spec 33), shared by Panel and Sheet: autofocus on
  * mount, Escape closes, focus restores to the opener on unmount — always.
+ *
+ * `autoFocus: false` is for a surface that is PRESENT from page load rather
+ * than opened by the user. The mobile results sheet is one: autofocusing it
+ * put focus inside the sheet before anyone had acted, which pushed the skip
+ * link out of reach entirely — tabbing forward from load walked the whole
+ * header it exists to skip and never came back (spec 37/42).
  * Tab-TRAPPING only when `trap` (i.e. only for genuinely modal surfaces;
  * the desktop detail panel is deliberately non-modal so clicking another pin
  * switches it, and trapping there would lie to keyboard users).
@@ -12,7 +18,7 @@ const FOCUSABLE =
 
 export function useDialogFocus(
   ref: RefObject<HTMLElement>,
-  { trap, onClose }: { trap: boolean; onClose(): void },
+  { trap, onClose, autoFocus = true }: { trap: boolean; onClose(): void; autoFocus?: boolean },
 ): void {
   // Read the latest callbacks via refs so the effect runs exactly once
   // (mount/unmount). Keying on onClose would refocus the opener on every
@@ -25,7 +31,7 @@ export function useDialogFocus(
   useEffect(() => {
     const el = ref.current;
     const opener = document.activeElement as HTMLElement | null;
-    el?.focus();
+    if (autoFocus) el?.focus();
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -57,8 +63,10 @@ export function useDialogFocus(
     el?.addEventListener("keydown", onKeyDown);
     return () => {
       el?.removeEventListener("keydown", onKeyDown);
-      // Restore focus to the opener so keyboard users aren't dumped at the top.
-      opener?.focus?.();
+      // Restore focus to the opener so keyboard users aren't dumped at the
+      // top — but only if we took it in the first place. Restoring focus we
+      // never had would steal it from wherever the user actually is.
+      if (autoFocus) opener?.focus?.();
     };
     // Mount/unmount only — callbacks are read via refs (see above).
     // eslint-disable-next-line react-hooks/exhaustive-deps

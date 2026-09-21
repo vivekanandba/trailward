@@ -97,11 +97,11 @@ export default defineConfig({
       // ratchet up (CON-COV-002) and every one is at or above what main
       // enforced before the build-CLI seams landed (spec 41).
       thresholds: {
-        // global measured: 81.71 lines / 79.75 functions, identical run to run.
+        // global measured: 81.29 lines / 79.73 functions, identical run to run.
         // Branches drift slightly (88.27–88.33 observed), so that floor sits
         // below the lowest figure seen rather than below a single reading.
         //
-        // The target is 95 and this is 81.7. What remains is named in spec 41
+        // The target is 95 and this is 81.3. What remains is named in spec 41
         // rather than excluded: the DEM-walking functions (detectIndia, score,
         // scoreSummits, crossMatchWikidata) and the `import.meta.url === argv[1]`
         // CLI blocks, which cannot execute under vitest by construction.

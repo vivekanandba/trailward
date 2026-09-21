@@ -39,7 +39,9 @@
     "check:links": "tsx scripts/check-links.ts",
     "build:search": "tsx scripts/build-search-index.ts",
     "check:constitution": "tsx scripts/check-constitution.ts",
-    "sync:constitution": "tsx scripts/check-constitution.ts --sync"
+    "sync:constitution": "tsx scripts/check-constitution.ts --sync",
+    "check:live": "tsx scripts/check-live-apis.ts",
+    "check:deploy": "tsx scripts/check-deploy.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
