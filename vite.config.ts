@@ -97,7 +97,7 @@ export default defineConfig({
       // ratchet up (CON-COV-002) and every one is at or above what main
       // enforced before the build-CLI seams landed (spec 41).
       thresholds: {
-        // global measured: 81.71 lines / 79.75 functions, identical run to run.
+        // global measured: 81.32 lines / 79.73 functions, identical run to run.
         // Branches drift slightly (88.27–88.33 observed), so that floor sits
         // below the lowest figure seen rather than below a single reading.
         //

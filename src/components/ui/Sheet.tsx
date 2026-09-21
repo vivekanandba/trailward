@@ -21,6 +21,12 @@ export interface SheetProps {
   modal?: boolean;
   /** When present the sheet can be dismissed (swipe-down past min / scrim / Escape). */
   onClose?(): void;
+  /**
+   * False for a sheet that is present from page load rather than opened by
+   * the user — taking focus before anyone has acted puts the skip link out
+   * of reach (spec 37/42).
+   */
+  autoFocus?: boolean;
   labelledBy: string;
   className?: string;
   children: ReactNode;
@@ -41,6 +47,7 @@ export function Sheet({
   onSnapChange,
   modal = false,
   onClose,
+  autoFocus = true,
   labelledBy,
   className = "",
   children,
@@ -61,6 +68,7 @@ export function Sheet({
 
   useDialogFocus(ref, {
     trap: modal,
+    autoFocus,
     onClose: () => closeRef.current?.(),
   });
 

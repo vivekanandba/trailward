@@ -623,6 +623,9 @@ export default function App() {
             snapPoints={[0.22, 0.55, 0.92]}
             snap={resultsSnap}
             onSnapChange={setResultsSnap}
+            // Present from page load, not opened by the user: taking focus
+            // here pushed the skip link out of reach on mobile entirely.
+            autoFocus={false}
             labelledBy="results-sheet-title"
           >
             <div className="flex items-center gap-2 border-b border-trail-100 px-4 pb-2 dark:border-slate-700">

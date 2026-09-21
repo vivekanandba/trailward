@@ -64,3 +64,36 @@ test("visual: filters surface", async ({ page }) => {
   await expect(page.getByLabel("Search treks")).toBeVisible();
   await expect(page).toHaveScreenshot("filters.png");
 });
+
+test("visual: command palette open", async ({ page }) => {
+  // The palette is the only way across the country (spec 38) and nothing
+  // captured it: a change to its layout or contrast shipped unseen.
+  await settled(page, `/?${BLR}`);
+  if (isMobile(page)) {
+    await page.getByRole("button", { name: /search any summit/i }).click();
+  } else {
+    await page.keyboard.press("ControlOrMeta+k");
+  }
+  const palette = page.getByRole("dialog");
+  await expect(palette.getByRole("combobox")).toBeVisible();
+  await palette.getByRole("combobox").fill("Kumara");
+  await expect(palette.getByRole("option").first()).toBeVisible({ timeout: 10_000 });
+  await page.waitForTimeout(300);
+  await expect(page).toHaveScreenshot("palette.png");
+});
+
+test("visual: results sheet at its half snap", async ({ page }) => {
+  // Mobile only: the half snap is where the sheet and the map share the
+  // screen, and it is the state a sizing bug shows up in (the GPX button once
+  // sat below the viewport there).
+  test.skip(!isMobile(page), "the sheet exists only on the mobile layout");
+  await settled(page, `/?${BLR}`);
+  await page.getByRole("button", { name: /^Filters/ }).waitFor();
+  // Drag the sheet handle up to the middle snap.
+  const handle = page
+    .getByRole("button", { name: /resize panel/i })
+    .or(page.locator('[aria-label="Resize panel"]'));
+  await handle.first().press("ArrowUp");
+  await page.waitForTimeout(500);
+  await expect(page).toHaveScreenshot("sheet-half.png");
+});

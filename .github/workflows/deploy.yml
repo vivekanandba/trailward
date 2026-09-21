@@ -135,3 +135,27 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  # CON-COV-001: "after deploying, assert the running version equals the
+  # version just built". Nothing did this — the deploy was the one step in the
+  # whole pipeline with no gate, on a project whose entire output IS the
+  # deployed site. This asserts the live version.json carries THIS commit, and
+  # that the crawl surface and a generated trek page are really being served
+  # (a 200 is not enough: the SPA shell as a soft 404 passes a status check).
+  verify-deploy:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Assert the live site serves this build
+        run: npm run check:deploy -- --sha "$GITHUB_SHA" --previous "$PREVIOUS_SHA"
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          # The commit this push replaced. Distinguishes "the CDN has not
+          # turned over yet" (retry) from "something else is deployed" (fail).
+          PREVIOUS_SHA: ${{ github.event.before }}

@@ -126,3 +126,17 @@ test("the app links to attribution — a licence obligation, not only an SEO pag
   await sources.click();
   await expect(page).toHaveURL(/\/sources\//);
 });
+
+test("visual: a generated trek page", async ({ page }) => {
+  // 3,886 of these ship and none was ever captured. One is the contract —
+  // capturing all of them would be noise (spec 42 §C).
+  await page.goto("t/skandagiri/");
+  await expect(page.getByRole("heading", { level: 1, name: "Skandagiri" })).toBeVisible();
+  await expect(page).toHaveScreenshot("trek-page.png");
+});
+
+test("visual: the sources content page", async ({ page }) => {
+  await page.goto("sources/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page).toHaveScreenshot("sources-page.png");
+});

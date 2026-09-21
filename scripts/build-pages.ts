@@ -7,6 +7,7 @@
  * (spec 33), and a page for a record that no longer exists would be advertised
  * by the sitemap and 404 for a reader.
  */
+import { execFileSync } from "node:child_process";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -22,6 +23,7 @@ import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
+import { versionFile } from "./lib/deploycheck";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
@@ -50,6 +52,8 @@ export function runBuildPages(
   repoRoot: string,
   contentFiles: string[],
   refreshed?: string,
+  buildSha = "unknown",
+  buildTime = "unknown",
 ): { treks: number; content: string[] } {
   const paths = pagePathsFor(repoRoot);
   const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
@@ -146,8 +150,21 @@ export function runBuildPages(
   }
   io.writeFile(`${paths.distDir}/data/index.html`, generatedHtml);
   written.push("data");
+  // The stamp the post-deploy check compares against (spec 42 §B). Written
+  // here because build-pages is the last step of `npm run build`, so a
+  // version.json that exists is a build that finished.
+  io.writeFile(`${paths.distDir}/version.json`, versionFile(buildSha, buildTime));
   io.log(`[pages] wrote content page(s): ${written.join(", ")}`);
   return { treks: pages.length, content: written };
+}
+
+/** The commit this working tree is on, or "unknown" outside git. */
+function headSha(root: string): string {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  } catch {
+    return "unknown";
+  }
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
@@ -166,6 +183,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       // /sources/ while the sitemap still advertised them.
       nodeIO.listDir(paths.contentDir),
       lastCommitDate("src/data/treks.json", repoRoot),
+      // GITHUB_SHA in CI; the local HEAD otherwise, so a hand-built dist is
+      // still identifiable rather than claiming to be something it is not.
+      process.env.GITHUB_SHA ?? headSha(repoRoot),
+      new Date().toISOString(),
     );
   } catch (err) {
     console.error((err as Error).message);

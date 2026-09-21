@@ -34,7 +34,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test visual.spec.ts --update-snapshots
+      # Both suites carry screenshots: visual.spec.ts covers the app states,
+      # static.spec.ts the generated pages served by `vite preview` (spec 42 §C).
+      - run: npx playwright test visual.spec.ts static.spec.ts --update-snapshots
       - name: Commit refreshed baselines if changed
         run: |
           if [[ -n "$(git status --porcelain e2e/__screenshots__)" ]]; then
