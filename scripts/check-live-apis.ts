@@ -16,6 +16,7 @@ import { request } from "undici";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
 import {
   PROBES,
+  rangeIgnored,
   summariseProbes,
   driftIssueBody,
   DRIFT_ISSUE_TITLE,
@@ -83,6 +84,9 @@ async function fetchOne(probe: Probe): Promise<string | Buffer> {
     headers: {
       "user-agent": UA,
       ...(probe.body ? { "content-type": "application/x-www-form-urlencoded" } : {}),
+      // A range request where the contract is the first few bytes. S3 answers
+      // 206 with just those bytes.
+      ...(probe.rangeBytes ? { range: `bytes=0-${probe.rangeBytes - 1}` } : {}),
       ...probe.headers,
     },
     headersTimeout: TIMEOUT_MS,
@@ -91,6 +95,9 @@ async function fetchOne(probe: Probe): Promise<string | Buffer> {
   if (res.statusCode >= 400) {
     await res.body.dump();
     throw new Error(`HTTP ${res.statusCode}`);
+  }
+  if (rangeIgnored(probe, res.statusCode)) {
+    console.log(`[live] ${probe.name}: range request ignored (HTTP ${res.statusCode})`);
   }
   return probe.binary ? Buffer.from(await res.body.arrayBuffer()) : await res.body.text();
 }

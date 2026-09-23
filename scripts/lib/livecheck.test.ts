@@ -10,6 +10,7 @@ import {
   checkTiff,
   expectArrayAt,
   summariseProbes,
+  rangeIgnored,
   driftIssueBody,
   DRIFT_ISSUE_TITLE,
   PNG_MAGIC,
@@ -248,5 +249,37 @@ describe("every shipped probe's check actually runs", () => {
     for (const probe of PROBES) {
       expect(() => probe.check(probe.binary ? Buffer.alloc(0) : ""), probe.name).not.toThrow();
     }
+  });
+});
+
+describe("probe cost — a contract check must not pull a whole object", () => {
+  it("range-requests the COG rather than downloading ~128 MB for four bytes", () => {
+    // Measured in the first real run: the WorldCover probe fetched
+    // 127,650,362 bytes off a free public bucket to read a magic number.
+    const cog = PROBES.find((p) => p.name.includes("WorldCover"))!;
+    expect(cog.rangeBytes).toBeGreaterThan(0);
+    expect(cog.rangeBytes).toBeLessThanOrEqual(64 * 1024);
+  });
+
+  it("leaves small objects alone — a DEM tile is already tiny", () => {
+    const tile = PROBES.find((p) => p.name.includes("Terrarium"))!;
+    expect(tile.rangeBytes).toBeUndefined();
+  });
+
+  it("notices when a server IGNORES the range and sends the whole object", () => {
+    const cog = PROBES.find((p) => p.name.includes("WorldCover"))!;
+    expect(rangeIgnored(cog, 206)).toBe(false); // honoured
+    expect(rangeIgnored(cog, 200)).toBe(true); // ignored — 128 MB incoming
+  });
+
+  it("says nothing about range for a probe that never asked for one", () => {
+    const tile = PROBES.find((p) => p.name.includes("Terrarium"))!;
+    expect(rangeIgnored(tile, 200)).toBe(false);
+  });
+
+  it("still validates a TIFF header from only the first bytes", () => {
+    // The range has to be enough for the check to work at all.
+    const cog = PROBES.find((p) => p.name.includes("WorldCover"))!;
+    expect(cog.check(Buffer.from([0x49, 0x49, 0x2a, 0x00]))).toMatchObject({ state: "ok" });
   });
 });
