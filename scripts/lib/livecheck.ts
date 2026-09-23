@@ -25,6 +25,12 @@ export interface Probe {
   headers?: Record<string, string>;
   /** True when this endpoint answers with bytes rather than text. */
   binary?: boolean;
+  /**
+   * Bytes to request, for an endpoint whose object is enormous. The COG is
+   * ~128 MB and the contract is its first four bytes; pulling the whole file
+   * weekly off a free public bucket to read a magic number is indefensible.
+   */
+  rangeBytes?: number;
   check: (body: string | Buffer) => ProbeVerdict;
 }
 
@@ -223,9 +229,24 @@ export const PROBES: Probe[] = [
       "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/" +
       "ESA_WorldCover_10m_2021_v200_N12E075_Map.tif",
     binary: true,
+    // The real reader is a range-reading COG client (spec 26); asking for the
+    // header is also what it does, so this probes the contract we rely on
+    // rather than one we never use.
+    rangeBytes: 1024,
     check: checkTiff,
   },
 ];
+
+/**
+ * Did the server honour our range request?
+ *
+ * S3 answers a range with 206. A 200 means it was IGNORED and the whole
+ * object is on its way — which for the WorldCover COG is ~128 MB every week
+ * to read four bytes. Worth saying out loud rather than quietly paying.
+ */
+export function rangeIgnored(probe: Probe, statusCode: number): boolean {
+  return Boolean(probe.rangeBytes) && statusCode !== 206;
+}
 
 export interface ProbeResult {
   name: string;
