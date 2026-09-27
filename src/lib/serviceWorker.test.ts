@@ -198,6 +198,23 @@ describe("registerServiceWorker (spec 43 §B)", () => {
     expect(e.reloads).toBe(1);
   });
 
+  it("reloads directly when ANOTHER TAB already applied the update", async () => {
+    // Two tabs, both showing the banner. The user accepts in tab A: its worker
+    // skips waiting, activates and claims every client — so in tab B there is
+    // no waiting worker left. Posting into the void there left a dead Reload
+    // button and a banner that never went away, which is the round-1 symptom
+    // re-created in the two-tab path. Nothing to wait for, so just reload.
+    const reg = fakeRegistration();
+    reg.setWaiting(true);
+    const e = env({ register: async () => reg });
+    await registerServiceWorker(e, "/sw.js");
+
+    reg.setWaiting(false); // the other tab's worker took over
+    e.updates[0](); // user presses Reload here
+    expect(e.reloads).toBe(1);
+    expect(reg.posted).toEqual([]);
+  });
+
   it("reloads at most once, however often the browser fires controllerchange", async () => {
     const reg = fakeRegistration();
     reg.setWaiting(true);

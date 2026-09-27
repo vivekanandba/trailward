@@ -77,7 +77,13 @@ export async function registerServiceWorker(
     offeredFor = reg.waiting;
     env.onUpdateReady(() => {
       accepted = true;
-      reg.waiting?.postMessage("SKIP_WAITING");
+      // No waiting worker left? Another TAB already accepted this update: its
+      // worker skipped waiting, activated, and claimed every client including
+      // this one. Posting into the void leaves a dead Reload button and a
+      // banner that never goes away — the round-1 symptom, re-created in the
+      // two-tab path. There is nothing to wait for, so just reload.
+      if (reg.waiting) reg.waiting.postMessage("SKIP_WAITING");
+      else env.reload();
     });
   };
 

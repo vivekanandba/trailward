@@ -117,4 +117,4 @@ size estimate, the budget cap, and the partial-on-quota outcome.
 ## Out of scope
 
 Caching basemap tiles (§D). Background sync. Push notifications. A worker build plugin — the
-worker is 120 lines of deliberate policy and a plugin would hide it.
+worker is ~200 lines of deliberate policy and a plugin would hide it.

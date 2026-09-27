@@ -59,6 +59,12 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE).then(async (cache) => {
       await cache.addAll([BASE, BASE + "manifest.webmanifest", BASE + "icon.svg"]);
+      // TWO passes. The first scrape can only see the shell HTML, because the
+      // CSS is not cached yet — so the fonts, which are referenced by url()
+      // from the stylesheet, were never precached at all. Scraping again once
+      // the CSS is present picks them up. (The prune at activate always saw
+      // them, because by then everything is cached; this is the install half.)
+      await cache.addAll([...(await shellAssets(cache))]);
       await cache.addAll([...(await shellAssets(cache))]);
       // The cell INDEX, always needed and small: on a first visit the page
       // fetches cells before this worker controls it, so nothing it loaded

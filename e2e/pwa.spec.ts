@@ -131,11 +131,12 @@ test.describe("service worker", () => {
         return { status: res.status, text: (await res.text()).slice(0, 400) };
       });
       expect(body.status).toBe(200);
-      const parsed = JSON.parse(
-        body.text.startsWith("{") ? `${body.text.split('"cells"')[0]}}` : "{}",
-      );
+      // This one line is the test. An earlier version also JSON.parsed a
+      // hand-sliced prefix, which evaluated to `{}` on BOTH the real and the
+      // soft-404 path — an assertion that could not fail — and would have
+      // thrown a SyntaxError the day index.json gained a key before `cells`,
+      // reporting a parse error instead of the thing it was checking.
       expect(body.text, "must be the cell index, not an HTML soft-404").toContain('"cells"');
-      expect(parsed).toBeTruthy();
     } finally {
       await context.setOffline(false);
     }

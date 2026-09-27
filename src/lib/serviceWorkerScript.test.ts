@@ -32,9 +32,13 @@ class FakeCache {
     const key = typeof req === "string" ? req : new URL(req.url).pathname;
     this.store.set(key, { body: res._body, type: res._type });
   }
-  async addAll(urls: string[]) {
-    for (const u of urls) this.store.set(u, { body: "", type: "text/html" });
-  }
+  /**
+   * Real enough to matter. A stub that stored empty bodies made the entire
+   * precache path untestable: `shellAssets` then always scraped nothing, so
+   * deleting the asset precache outright left the suite green. It fetches,
+   * and it rejects like the real thing when something is missing.
+   */
+  addAll!: (urls: string[]) => Promise<void>;
   async keys() {
     return [...this.store.keys()].map((k) => ({ url: `https://x${k}` }));
   }
@@ -101,7 +105,8 @@ function loadWorker(): Harness {
 
   const cachesApi = {
     open: async (name: string) => {
-      if (!caches.has(name)) caches.set(name, name.includes("trailward") ? cache : new FakeCache());
+      if (!caches.has(name))
+        caches.set(name, name.includes("trailward") ? cache : wire(new FakeCache()));
       return caches.get(name)!;
     },
     keys: async () => [...caches.keys()],
@@ -117,6 +122,20 @@ function loadWorker(): Harness {
     if (!res) throw new Error(`offline: ${path}`);
     return res;
   };
+
+  // addAll fetches for real, and rejects when something is missing — which is
+  // what the browser does, and what makes a broken precache visible.
+  const wire = (c: FakeCache) => {
+    c.addAll = async (urls: string[]) => {
+      for (const u of urls) {
+        const res = h.network.get(u);
+        if (!res) throw new Error(`addAll failed: ${u}`);
+        c.store.set(u, { body: res._body, type: res._type });
+      }
+    };
+    return c;
+  };
+  wire(cache);
 
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
   const run = new Function("self", "caches", "fetch", "URL", "Response", SW_SOURCE);
@@ -152,9 +171,17 @@ describe("sw.js install/activate (spec 43 §B)", () => {
     h = loadWorker();
   });
 
-  it("does NOT skipWaiting on install — that is the whole point of §B", () => {
+  it("does NOT skipWaiting on install — that is the whole point of §B", async () => {
     // Reverting this was invisible to the e2e gate. A worker that takes over
     // under a running page prunes assets that page still needs.
+    //
+    // The install event MUST be fired. An earlier version of this test
+    // asserted the count after merely loading the script, which only catches a
+    // top-level self.skipWaiting() that nobody would write — so the mutation
+    // it exists to catch still passed. It claimed to test §B and did not.
+    seedShell(h);
+    h.network.set(BASE + "data/cells/index.json", fakeResponse("{}", 200, "application/json"));
+    await fire(h, "install");
     expect(h.skipWaitingCalls).toBe(0);
   });
 
@@ -174,7 +201,40 @@ describe("sw.js install/activate (spec 43 §B)", () => {
     expect(h.claimCalls).toBe(1);
   });
 
+  /** Seed the network with everything install asks for. */
+  const seedShell = (h2: Harness, shellHtml = "<html></html>") => {
+    h2.network.set(BASE, fakeResponse(shellHtml));
+    h2.network.set(BASE + "manifest.webmanifest", fakeResponse("{}", 200, "application/json"));
+    h2.network.set(BASE + "icon.svg", fakeResponse("<svg/>", 200, "image/svg+xml"));
+  };
+
+  it("precaches the fonts the CSS references, not just the HTML's assets", async () => {
+    // The scrape runs twice for this reason: the first pass cannot see the
+    // CSS because it is not cached yet, so the fonts were never precached at
+    // all — install the PWA, go offline before a second visit, fallback fonts.
+    seedShell(h, `<link href="${BASE}assets/app.css">`);
+    h.network.set(
+      BASE + "assets/app.css",
+      fakeResponse(`@font-face{src:url(${BASE}assets/inter.woff2)}`, 200, "text/css"),
+    );
+    h.network.set(BASE + "assets/inter.woff2", fakeResponse("", 200, "font/woff2"));
+    h.network.set(BASE + "data/cells/index.json", fakeResponse("{}", 200, "application/json"));
+
+    await fire(h, "install");
+    expect(h.cache.store.has(BASE + "assets/app.css")).toBe(true);
+    expect(h.cache.store.has(BASE + "assets/inter.woff2")).toBe(true);
+  });
+
+  it("precaches the assets the shell references", async () => {
+    seedShell(h, `<script src="${BASE}assets/index.js"></script>`);
+    h.network.set(BASE + "assets/index.js", fakeResponse("", 200, "text/javascript"));
+    h.network.set(BASE + "data/cells/index.json", fakeResponse("{}", 200, "application/json"));
+    await fire(h, "install");
+    expect(h.cache.store.has(BASE + "assets/index.js")).toBe(true);
+  });
+
   it("precaches the cell index only when it really is JSON", async () => {
+    seedShell(h);
     h.network.set(
       BASE + "data/cells/index.json",
       fakeResponse('{"cells":{}}', 200, "application/json"),
@@ -187,6 +247,7 @@ describe("sw.js install/activate (spec 43 §B)", () => {
     // A static host answers an unknown path with the SPA shell, 200 text/html.
     // Storing that under a .json URL gives an offline first visit a 200 that
     // JSON.parse rejects.
+    seedShell(h);
     h.network.set(
       BASE + "data/cells/index.json",
       fakeResponse("<!doctype html>", 200, "text/html"),
