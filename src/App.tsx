@@ -90,10 +90,11 @@ export default function App() {
   // tested there; this is only the wiring.
   const [applyUpdate, setApplyUpdate] = useState<(() => void) | undefined>();
   useEffect(() => {
-    void registerServiceWorker(
-      browserEnvironment((apply) => setApplyUpdate(() => apply)),
-      `${import.meta.env.BASE_URL}sw.js`,
-    );
+    const env = browserEnvironment((apply) => setApplyUpdate(() => apply));
+    // Deferred to `load`: registration re-fetches the shell to precache it,
+    // and competing with first paint is exactly what the old window-load
+    // registration in main.tsx avoided.
+    env.whenIdle(() => void registerServiceWorker(env, `${import.meta.env.BASE_URL}sw.js`));
   }, []);
 
   // Light/dark theme (spec 08). The initial class is set pre-paint by an inline

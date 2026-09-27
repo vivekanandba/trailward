@@ -124,12 +124,18 @@ test.describe("service worker", () => {
     await context.setOffline(true);
     try {
       // Ask for a cell the page already pulled; the worker must answer it from
-      // cache rather than letting the request fail.
-      const status = await page.evaluate(async () => {
+      // cache rather than letting the request fail. Status alone is not
+      // enough — a cached HTML soft-404 is also a 200. Assert the shape.
+      const body = await page.evaluate(async () => {
         const res = await fetch("/trailward/data/cells/index.json");
-        return res.status;
+        return { status: res.status, text: (await res.text()).slice(0, 400) };
       });
-      expect(status).toBe(200);
+      expect(body.status).toBe(200);
+      const parsed = JSON.parse(
+        body.text.startsWith("{") ? `${body.text.split('"cells"')[0]}}` : "{}",
+      );
+      expect(body.text, "must be the cell index, not an HTML soft-404").toContain('"cells"');
+      expect(parsed).toBeTruthy();
     } finally {
       await context.setOffline(false);
     }
@@ -143,11 +149,11 @@ test.describe("service worker", () => {
     await page.goto("");
     await workerReady(page);
 
-    const served = await page.evaluate(async () => {
+    const status = await page.evaluate(async () => {
       const res = await fetch("/trailward/version.json", { cache: "no-store" });
-      return { status: res.status, fromCache: Boolean(res.headers.get("x-from-sw-cache")) };
+      return res.status;
     });
-    expect(served.status).toBe(200);
+    expect(status).toBe(200);
 
     const cached = await page.evaluate(async () => {
       const keys = await caches.keys();

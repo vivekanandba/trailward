@@ -52,7 +52,7 @@ function env(over: Partial<SwEnvironment> = {}): SwEnvironment & {
   return {
     isProduction: true,
     supported: true,
-    hasController: () => true,
+    whenIdle: (fn: () => void) => fn(),
     register: async () => fakeRegistration(),
     onUpdateReady: (apply) => updates.push(apply),
     onControllerChange: (fn) => {
@@ -154,23 +154,71 @@ describe("registerServiceWorker (spec 43 §B)", () => {
     expect(reg.posted).toEqual(["SKIP_WAITING"]);
   });
 
-  it("reloads once a NEW worker takes over from an existing one", async () => {
-    const e = env({ hasController: () => true });
+  it("does NOT reload on the first install's claim", async () => {
+    // The worker calls clients.claim() so the very first visit is cached, and
+    // that fires controllerchange too. Reloading there refreshes the page in
+    // the user's face on every first visit.
+    const e = env();
     await registerServiceWorker(e, "/sw.js");
+    e.controllerChange!();
     expect(e.reloads).toBe(0);
+  });
+
+  it("reloads after WE accept an update", async () => {
+    const reg = fakeRegistration();
+    reg.setWaiting(true);
+    const e = env({ register: async () => reg });
+    await registerServiceWorker(e, "/sw.js");
+
+    e.updates[0](); // user presses Reload
+    e.controllerChange!(); // the new worker takes over
+    expect(e.reloads).toBe(1);
+  });
+
+  it("STILL reloads for an update that arrives after a first-install claim", async () => {
+    // The sequence that was broken, and the reason this is keyed on intent
+    // rather than on "was there a controller at startup": on a first visit the
+    // claim fires controllerchange, which spent the old one-shot guard — so a
+    // deploy later in the SAME session left the banner up forever and never
+    // reloaded, on a page whose assets the new worker had just replaced.
+    const reg = fakeRegistration();
+    const e = env({ register: async () => reg });
+    await registerServiceWorker(e, "/sw.js");
+
+    e.controllerChange!(); // first install's claim — must not reload
+    expect(e.reloads).toBe(0);
+
+    reg.fireUpdateFound(); // a deploy lands while the page is open
+    reg.setWaiting(true);
+    reg.fireStateChange("installed");
+    expect(e.updates).toHaveLength(1);
+
+    e.updates[0](); // user presses Reload
+    e.controllerChange!(); // the new worker takes over
+    expect(e.reloads).toBe(1);
+  });
+
+  it("reloads at most once, however often the browser fires controllerchange", async () => {
+    const reg = fakeRegistration();
+    reg.setWaiting(true);
+    const e = env({ register: async () => reg });
+    await registerServiceWorker(e, "/sw.js");
+    e.updates[0]();
+    e.controllerChange!();
+    e.controllerChange!();
     e.controllerChange!();
     expect(e.reloads).toBe(1);
   });
 
-  it("does NOT reload on the first install's claim", async () => {
-    // The worker calls clients.claim() so the very first visit is cached, and
-    // that fires controllerchange too. Reloading there refreshes the page in
-    // the user's face on every first visit — and it destroyed the execution
-    // context mid-test, which is how this was caught.
-    const e = env({ hasController: () => false });
+  it("offers an update that was ALREADY installing when we registered", async () => {
+    // A second tab opened mid-install gets a registration with `installing`
+    // set and no further updatefound of its own.
+    const reg = fakeRegistration();
+    reg.setWaiting(true);
+    reg.installing!.state = "installed";
+    const e = env({ register: async () => reg });
     await registerServiceWorker(e, "/sw.js");
-    e.controllerChange!();
-    expect(e.reloads).toBe(0);
+    expect(e.updates).toHaveLength(1);
   });
 
   it("ignores a statechange that is not 'installed'", async () => {
@@ -224,26 +272,45 @@ describe("browserEnvironment (the thin adapter)", () => {
     });
   });
 
-  it("reports whether a controller is already present", () => {
-    withNavigator(fakeSw({ controller: {} }), () => {
-      expect(browserEnvironment(() => {}).hasController()).toBe(true);
-    });
-    withNavigator(fakeSw({ controller: null }), () => {
-      expect(browserEnvironment(() => {}).hasController()).toBe(false);
+  it("defers registration until the page has loaded", () => {
+    // Registration re-fetches ~680 KB to precache the shell; doing that during
+    // first paint is the contention the load-deferred idiom exists to avoid.
+    const sw = fakeSw();
+    withNavigator(sw, () => {
+      const originalState = document.readyState;
+      Object.defineProperty(document, "readyState", { value: "loading", configurable: true });
+      let ran = false;
+      browserEnvironment(() => {}).whenIdle(() => (ran = true));
+      expect(ran, "must NOT run while the document is still loading").toBe(false);
+      window.dispatchEvent(new Event("load"));
+      expect(ran).toBe(true);
+      Object.defineProperty(document, "readyState", {
+        value: originalState,
+        configurable: true,
+      });
     });
   });
 
-  it("fires the controllerchange callback ONCE, however often the browser fires it", () => {
-    // Chrome can fire controllerchange more than once; reloading twice is a
-    // visible flicker and loses whatever the user was doing.
+  it("runs immediately when the page has already loaded", () => {
+    const sw = fakeSw();
+    withNavigator(sw, () => {
+      let ran = false;
+      browserEnvironment(() => {}).whenIdle(() => (ran = true));
+      expect(ran).toBe(true); // jsdom reports "complete"
+    });
+  });
+
+  it("delivers EVERY controllerchange — de-duplication belongs to the logic", () => {
+    // A latch here swallowed the real update's controllerchange, because the
+    // first install's claim had already spent it. The adapter stays dumb; the
+    // "have we reloaded" decision is tested above.
     const sw = fakeSw();
     withNavigator(sw, () => {
       let called = 0;
       browserEnvironment(() => {}).onControllerChange(() => called++);
       sw.listeners.forEach((fn) => fn());
       sw.listeners.forEach((fn) => fn());
-      sw.listeners.forEach((fn) => fn());
-      expect(called).toBe(1);
+      expect(called).toBe(2);
     });
   });
 

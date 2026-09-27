@@ -22,8 +22,13 @@ export interface Registration {
 export interface SwEnvironment {
   isProduction: boolean;
   supported: boolean;
-  /** Whether a worker already controls this page when we register. */
-  hasController(): boolean;
+  /**
+   * Defer until the page has finished loading. Registration re-fetches the
+   * whole shell (~680 KB measured) to precache it, and doing that while the
+   * browser is still painting and the app is fetching its cells is direct
+   * contention for first paint — which is why the load-deferred idiom exists.
+   */
+  whenIdle(fn: () => void): void;
   register(url: string): Promise<Registration>;
   /** Called when a new version is ready and waiting. */
   onUpdateReady(apply: () => void): void;
@@ -53,38 +58,68 @@ export async function registerServiceWorker(
     return null;
   }
 
-  // A worker already waiting when we arrive: the update landed on a previous
-  // visit and was never applied.
-  if (reg.waiting) offerUpdate(env, reg);
+  // Reload ONLY when we asked for the swap.
+  //
+  // The previous version keyed this on "was a controller present when we
+  // registered", which was broken: on a first visit clients.claim() fires
+  // controllerchange, that consumed the one-shot guard, and the real update
+  // later in the same session could then never reload — the banner stayed up
+  // forever while the page was controlled by a worker that had just replaced
+  // its assets. Tracking our own intent is exact: we swap, we reload.
+  let accepted = false;
+  let reloaded = false;
+  // Offer each waiting worker ONCE. Both entry points below can fire for the
+  // same worker — a tab that arrives to find one already waiting *and*
+  // already installed hits both — and offering twice means prompting twice.
+  let offeredFor: Registration["waiting"] = null;
+  const offer = (): void => {
+    if (!reg.waiting || offeredFor === reg.waiting) return;
+    offeredFor = reg.waiting;
+    env.onUpdateReady(() => {
+      accepted = true;
+      reg.waiting?.postMessage("SKIP_WAITING");
+    });
+  };
+
+  // Already waiting when we arrive: the update landed on a previous visit and
+  // was never applied.
+  if (reg.waiting) offer();
+
+  // Already installing when we arrive — a second tab opened while the first
+  // tab's worker was mid-install gets no `updatefound` of its own, so without
+  // this that tab is never told.
+  if (reg.installing) watch(reg.installing, reg, offer);
 
   reg.addEventListener("updatefound", () => {
-    const incoming = reg.installing;
-    if (!incoming) return;
-    incoming.addEventListener("statechange", () => {
-      // "installed" with an existing controller means an UPDATE is ready.
-      // Without a controller it is the very first install — nothing to offer,
-      // the user already has what it just cached.
-      if (incoming.state === "installed" && reg.waiting) offerUpdate(env, reg);
-    });
+    if (reg.installing) watch(reg.installing, reg, offer);
   });
 
-  // Once a NEW worker takes over, the page must reload to match the assets it
-  // is now being served.
-  //
-  // "New" is load-bearing. On a first install the worker calls clients.claim(),
-  // which fires controllerchange too — reloading there would make every first
-  // visit refresh itself in the user's face for no reason. Only an update,
-  // i.e. a change of controller where one already existed, warrants a reload.
-  const controlledAtStart = env.hasController();
   env.onControllerChange(() => {
-    if (controlledAtStart) env.reload();
+    // A first install's claim() fires this too; reloading there refreshes the
+    // page in the user's face for nothing. `reloaded` guards the browser
+    // firing it more than once, which would be a second, visible reload.
+    if (!accepted || reloaded) return;
+    reloaded = true;
+    env.reload();
   });
 
   return reg;
 }
 
-function offerUpdate(env: SwEnvironment, reg: Registration): void {
-  env.onUpdateReady(() => reg.waiting?.postMessage("SKIP_WAITING"));
+/** Offer the update once this worker finishes installing and starts waiting. */
+function watch(
+  incoming: NonNullable<Registration["installing"]>,
+  reg: Registration,
+  offer: () => void,
+): void {
+  const check = (): void => {
+    // "installed" with something waiting is an UPDATE. Without a waiting
+    // worker it is the very first install — the user already has what it just
+    // cached, and a "new version" prompt would be a lie.
+    if (incoming.state === "installed" && reg.waiting) offer();
+  };
+  incoming.addEventListener("statechange", check);
+  check(); // it may already be past `installed` by the time we look
 }
 
 /** The real browser environment. Thin on purpose — the logic is above. */
@@ -92,18 +127,18 @@ export function browserEnvironment(onUpdateReady: (apply: () => void) => void): 
   return {
     isProduction: import.meta.env.PROD,
     supported: typeof navigator !== "undefined" && "serviceWorker" in navigator,
-    hasController: () => Boolean(navigator.serviceWorker?.controller),
     register: (url) => navigator.serviceWorker.register(url) as unknown as Promise<Registration>,
     onUpdateReady,
+    // Deliberately NOT de-duplicated here: the "have we already reloaded"
+    // decision belongs with the logic above, which is tested. A latch in this
+    // adapter silently swallowed the real update's controllerchange after the
+    // first install's claim had already spent it.
     onControllerChange: (fn) => {
-      let reloading = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        // Chrome can fire this more than once; reloading twice is a visible
-        // flicker and loses whatever the user was doing.
-        if (reloading) return;
-        reloading = true;
-        fn();
-      });
+      navigator.serviceWorker.addEventListener("controllerchange", fn);
+    },
+    whenIdle: (fn) => {
+      if (document.readyState === "complete") fn();
+      else window.addEventListener("load", fn, { once: true });
     },
     reload: () => window.location.reload(),
   };
