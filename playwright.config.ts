@@ -29,10 +29,10 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: /static\.spec\.ts/,
+      testIgnore: /(static|pwa)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
-    { name: "mobile", testIgnore: /static\.spec\.ts/, use: { ...devices["Pixel 7"] } },
+    { name: "mobile", testIgnore: /(static|pwa)\.spec\.ts/, use: { ...devices["Pixel 7"] } },
     {
       // The generated static surface (spec 35) does not exist on the dev
       // server: it is produced by `npm run build`. Run it against `vite
@@ -40,7 +40,9 @@ export default defineConfig({
       // path — so base-path and asset-resolution bugs surface in CI rather
       // than in production.
       name: "static",
-      testMatch: /static\.spec\.ts/,
+      // pwa.spec.ts joins it: a service worker cannot be exercised honestly
+      // against the dev server (spec 43).
+      testMatch: /(static|pwa)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:4173/trailward/" },
     },
   ],

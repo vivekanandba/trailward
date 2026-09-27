@@ -25,6 +25,8 @@ import { geolocationGranted, locateMe, nudgeSnoozed, snoozeNudge } from "./lib/l
 import CommandPalette from "./components/CommandPalette";
 import { GUIDED_PATHS, applyPath } from "./lib/paths";
 import type { IndexEntry } from "./lib/search";
+import UpdateBanner from "./components/UpdateBanner";
+import { browserEnvironment, registerServiceWorker } from "./lib/serviceWorker";
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
@@ -80,6 +82,20 @@ export default function App() {
   const [origin, setOrigin] = useState(() => initial.origin ?? loadOrigin());
   const [filters, setFilters] = useState<FilterState>(() => initial.filters);
   const [selectedId, setSelectedId] = useState<string | undefined>(() => initial.selectedId);
+
+  // Service worker (spec 43). Registered here rather than in main.tsx so the
+  // "a new version is waiting" handshake can reach the UI — the worker never
+  // skips waiting on its own, so without an offer the update never applies
+  // while a tab stays open. The logic lives in lib/serviceWorker and is
+  // tested there; this is only the wiring.
+  const [applyUpdate, setApplyUpdate] = useState<(() => void) | undefined>();
+  useEffect(() => {
+    const env = browserEnvironment((apply) => setApplyUpdate(() => apply));
+    // Deferred to `load`: registration re-fetches the shell to precache it,
+    // and competing with first paint is exactly what the old window-load
+    // registration in main.tsx avoided.
+    env.whenIdle(() => void registerServiceWorker(env, `${import.meta.env.BASE_URL}sw.js`));
+  }, []);
 
   // Light/dark theme (spec 08). The initial class is set pre-paint by an inline
   // script in index.html; here we own the runtime toggle + persistence.
@@ -513,6 +529,7 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col">
+      <UpdateBanner onApply={applyUpdate} onDismiss={() => setApplyUpdate(undefined)} />
       {/* Skip link (spec 37): first in tab order, revealed on focus. On a map
           app the alternative is tabbing through map controls forever. */}
       <a
