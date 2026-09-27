@@ -13,9 +13,21 @@
  *    the next load; offline still works from the cache.
  *  - Cross-origin (map tiles, Overpass, weather, geocoding): untouched; the
  *    app already degrades gracefully and tile caching would bloat storage.
+ *  - version.json: network-first. It exists to say WHICH BUILD IS LIVE, so a
+ *    cached copy answers the wrong question. It is same-origin, not under
+ *    data/, and not a navigation, so it used to fall through to the
+ *    cache-first branch and be pinned forever (spec 43 §A).
+ *
+ * This worker does NOT call skipWaiting(). The activate handler prunes hashed
+ * assets the current shell no longer references — so a worker that took over
+ * immediately would prune the chunks of a page that is still running, and the
+ * app lazy-loads the command palette. Waiting means the old page keeps the
+ * cache that matches it; the page offers a reload and posts SKIP_WAITING when
+ * the user accepts (spec 43 §B).
+ *
  * Bump VERSION to invalidate everything after a breaking SW change.
  */
-const VERSION = "v2"; // v2: data cells switched from cache-first to SWR
+const VERSION = "v3"; // v3: no skipWaiting (see below), version.json uncached
 const CACHE = `trailward-${VERSION}`;
 const BASE = "/trailward/";
 
@@ -33,14 +45,22 @@ self.addEventListener("install", (event) => {
   // would only get cached on a SECOND visit — and an offline reload after a
   // single visit would render a blank shell.
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then(async (cache) => {
-        await cache.addAll([BASE, BASE + "manifest.webmanifest", BASE + "icon.svg"]);
-        await cache.addAll([...(await shellAssets(cache))]);
-      })
-      .then(() => self.skipWaiting()),
+    caches.open(CACHE).then(async (cache) => {
+      await cache.addAll([BASE, BASE + "manifest.webmanifest", BASE + "icon.svg"]);
+      await cache.addAll([...(await shellAssets(cache))]);
+      // The cell INDEX, always needed and small: on a first visit the page
+      // fetches cells before this worker controls it, so nothing it loaded
+      // is cached and an offline reload finds no data at all. Precaching the
+      // index means even a first visit leaves something usable behind.
+      await cache.add(BASE + "data/cells/index.json").catch(() => {});
+    }),
+    // NB: no skipWaiting() — see the header. A new worker waits.
   );
+});
+
+// The page asks for the swap once the user accepts the reload prompt.
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -63,6 +83,13 @@ self.addEventListener("activate", (event) => {
           })
           .map((req) => cache.delete(req)),
       );
+      // claim() IS kept, and is safe precisely BECAUSE skipWaiting is gone.
+      // The hazard was taking over while an old page was still running and
+      // then pruning its chunks; without skipWaiting a replacement worker does
+      // not activate until the user accepts, so by the time this runs there is
+      // no old page to strand. On a FIRST install there is no old worker at
+      // all, and claiming is what lets that very first visit be cached —
+      // without it nothing the page already fetched passes through the worker.
       await self.clients.claim();
     })(),
   );
@@ -73,6 +100,10 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // leave tiles/APIs alone
+
+  // version.json: never cached. Same-origin and not under data/, so without
+  // this it lands in the cache-first branch below and freezes.
+  if (url.pathname === BASE + "version.json") return;
 
   if (req.mode === "navigate") {
     // Network-first: fresh HTML when online, cached shell when not.

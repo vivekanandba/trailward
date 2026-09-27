@@ -10,6 +10,11 @@
     />
     <link rel="icon" type="image/svg+xml" href="/trailward/icon.svg" />
     <link rel="apple-touch-icon" href="/trailward/icons/apple-touch-icon.png" />
+    <!-- iOS does not take `display: standalone` from the manifest on older
+         versions; without these an installed icon opens inside Safari chrome. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Trailward" />
     <link rel="manifest" href="/trailward/manifest.webmanifest" />
     <link rel="canonical" href="https://vivekanandba.github.io/trailward/" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#2f6b3f" />

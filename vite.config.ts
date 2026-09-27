@@ -72,8 +72,10 @@ export default defineConfig({
       //  - TrekMap: ~700 lines of Leaflet. jsdom has no layout engine, so it
       //    cannot execute; testing it here would prove a mock works, not the
       //    map. Covered by the e2e suite and 12 visual baselines instead.
-      //  - main.tsx: the bootstrap entry point, three lines and a service
-      //    worker registration that only runs in a production build.
+      //  - main.tsx: the bootstrap entry point. It is now ONLY createRoot —
+      //    the service-worker registration that used to live here moved to
+      //    src/lib/serviceWorker.ts precisely so it could be tested (spec 43),
+      //    and it is. Nothing here makes a decision.
       //
       // coverageConfigDefaults.exclude is spread in deliberately: vitest
       // REPLACES this array rather than merging it, so setting it bare drops
