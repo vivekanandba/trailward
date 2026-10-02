@@ -1,7 +1,7 @@
 # trailward — working agreement
 
 > Machine-wide engineering rules live in the **engineering constitution**, whose source of
-> truth is the remote repository <https://github.com/vivekanandba/constitution>. This repo
+> truth is the remote repository <https://github.com/vivekanandba/fleet>. This repo
 > pins the exact version it was verified against in `constitution.lock`, keeps a read-only
 > copy under `.constitution/`, and `npm run check:constitution` fails the build if the two
 > disagree or if anything here points at a working copy instead of the remote (spec 39).

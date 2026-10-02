@@ -1,7 +1,7 @@
 # Constitution proposals drafted here, filed elsewhere
 
 The engineering constitution lives in its own remote repository
-(`https://github.com/vivekanandba/constitution`), pinned by `constitution.lock`
+(`https://github.com/vivekanandba/fleet`), pinned by `constitution.lock`
 and enforced by `npm run check:constitution`. Nothing in this repo may edit it.
 
 When work here produces a learning that is **not specific to this codebase**, the
