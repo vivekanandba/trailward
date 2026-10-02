@@ -127,7 +127,7 @@ cmd_approve() {
   out="$(gh pr review "$num" --approve --body "Reviewed: all review threads resolved and checks green." 2>&1)" && rc=0 || rc=$?
   if [ "$rc" -eq 0 ]; then
     echo "approved PR #$num"
-  elif printf '%s' "$out" | grep -qiE 'can not approve your own|own pull request'; then
+  elif grep -qiE 'can not approve your own|own pull request' <<< "$out"; then
     echo "approve skipped (self-authored PR — GitHub forbids self-approval); gating on resolved threads + green checks instead"
   else
     die "approve failed for PR #$num: $out"
@@ -144,7 +144,7 @@ cmd_merge() {
   local checks rc
   checks="$(gh pr checks "$num" 2>&1)" && rc=0 || rc=$?
   if [ "$rc" -ne 0 ]; then
-    printf '%s' "$checks" | grep -qiE "no checks (reported|found)" \
+    grep -qiE "no checks (reported|found)" <<< "$checks" \
       || die "refusing to merge: CI is not green (failing or pending):"$'\n'"$checks"
   fi
   gh pr merge "$num" --squash --delete-branch

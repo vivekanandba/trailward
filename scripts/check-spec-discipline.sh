@@ -31,7 +31,7 @@ fi
 needs_spec="$(echo "$changed" | grep -E "$SPEC_REQUIRING" | grep -vE "$EXEMPT" || true)"
 [ -z "$needs_spec" ] && { echo "No spec-requiring files changed."; exit 0; }
 
-if echo "$changed" | grep -qE '^specs/'; then
+if grep -qE '^specs/' <<< "$changed"; then
   echo "Spec-requiring changes carry a specs/ edit:"
   echo "$needs_spec"
   exit 0
