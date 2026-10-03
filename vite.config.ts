@@ -107,10 +107,10 @@ export default defineConfig({
         // rather than excluded: the DEM-walking functions (detectIndia, score,
         // scoreSummits, crossMatchWikidata) and the `import.meta.url === argv[1]`
         // CLI blocks, which cannot execute under vitest by construction.
-        lines: 81,
+        lines: 82,
         branches: 87,
         functions: 79,
-        statements: 81,
+        statements: 82,
         // measured 95.08 / 89.13 / 97.00 — pure application logic, no excuse
         "src/lib/**": { statements: 95, lines: 95, branches: 89, functions: 96 },
         // measured over the GLOB (which includes components/ui at 75%):
@@ -119,7 +119,7 @@ export default defineConfig({
         // because the glob is what enforces.
         "src/components/**": { statements: 84, lines: 84, branches: 84, functions: 69 },
         // measured 98.27 / 94.88 / 96.36 — pure build logic
-        "scripts/lib/**": { statements: 98, lines: 98, branches: 94, functions: 96 },
+        "scripts/lib/**": { statements: 98, lines: 98, branches: 95, functions: 97 },
         // measured 91.57 / 88.01 / 88.61 — network adapters, now driven at the
         // http boundary with their failure shapes asserted (spec 41)
         "scripts/sources/**": { statements: 91, lines: 91, branches: 87, functions: 88 },
@@ -131,7 +131,7 @@ export default defineConfig({
         // blend is what the glob actually enforces; it is not a claim about
         // the CLIs. This tree had no floor at all before, which is how it sat
         // at 45% unnoticed.
-        "scripts/**": { statements: 76, lines: 76, branches: 89, functions: 82 },
+        "scripts/**": { statements: 78, lines: 78, branches: 89, functions: 82 },
       },
     },
   },

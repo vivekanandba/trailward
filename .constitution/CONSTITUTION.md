@@ -54,6 +54,20 @@ Say "compiles in CI", "review-verified", or "unverified" — never "works" for s
 could not run. If a language or tool is absent from the machine you are on, say so plainly
 and name where the real gate is.
 
+### CON-VER-008 · A test that fails only in the full run is a defect in the suite, not noise
+If a suite fails on different tests across runs while each passes in isolation, the suite
+has an ordering, timing or shared-state defect and the gate is **red** — not amber. Do not
+re-run until green and do not reach for the bypass: both convert an unreliable gate into an
+ignored one. Fix the isolation (or quarantine the offending test explicitly, named and
+tracked), and record the flakiness where the next person will see it. A timing assertion
+that depends on machine load belongs in a benchmark, not a merge gate.
+
+Incident (wealth-weave, 2026-09-02): a docs-only change could not pass `pre-push` — three
+full-suite runs, three different outcomes, each failing test green in isolation; the
+run-2 error was pytest's own fixture-teardown assertion, and wall-clock varied 4× between
+runs. resumefit's two-seed `PYTHONHASHSEED` matrix is the in-house precedent for making
+ordering defects fail loudly instead of intermittently.
+
 ---
 
 ## CON-COV — Coverage tells you less than you think
@@ -146,14 +160,54 @@ Work goes on a branch and lands through review (CON-PROC-004). This is a rule be
 broken: three commits went straight to `main` in resumefit — one of them *while building that
 repo's own hooks*. Discipline did not hold; the `house-gates` pre-commit hook does.
 
+### CON-PROC-009 · A review loop ends on a clean round, not on a green suite
+The likeliest place for the next defect is the fix for the last one, so re-review after every
+fix and stop only when a round finds nothing. This is a rule because five rounds across three
+trailward PRs (#67, #69, #70) each found real defects, and rounds 3–5 each found defects
+*introduced by the previous round's fix* — a data-loss guard that counted removed records when
+the incident it cited removed none, and then its replacement, whose shared denominator let one
+unrelated failure excuse a total wipe. Every one of those rounds began with every gate green.
+CON-PROC-004 gets you the first round; this one tells you when to stop. Trust a new assertion
+only after mutating the code it guards and watching it fail (CON-PROC-005 applied to a test
+written after the code) — several that could not fail were found exactly that way.
+
 ---
 
-## CON-SEC — Secrets
+## CON-SEC — Secrets and security
 
 ### CON-SEC-001 · A credential in a conversation is compromised
 Say so, decline to use it, and advise rotation — building on a leaked credential normalises
 the leak. Secrets live in a secret manager and are injected by name; never in a repo, never
 in chat.
+
+### CON-SEC-002 · Dependency and secret scanning are CI gates, not dashboards
+Every project scans its dependencies, and its **full git history** for secrets, in CI, failing
+the build at a stated severity. Ten of twelve projects here scanned nothing until 2026-09-20 —
+including a deployed service handling uploaded documents — while portfolio carried 26 known
+advisories that surfaced only because someone thought to ask. An alert nobody is required to
+read is not a control.
+
+### CON-SEC-003 · Audit the shipped tree and the build tree separately, and trace what actually ships
+A single vulnerability count misleads, and so does the tool's own split. portfolio had 26
+advisories; `npm audit --omit=dev` called 6 of them production, but two of those were dev-only
+packages it failed to exclude, and tracing the rest into the built output found **none** — the
+apparent hits were the English word "sharp" in the site's prose and Zod's `.nanoid()` validator.
+Every one of the 26 was build-time or server-only, so the entire real risk was supply chain,
+executing with credentials in CI. Report the trees separately, trace the shipped one into the
+artifact rather than trusting the flag (CON-VER-005), and never wave away a build-tree advisory
+as "not shipped".
+
+### CON-SEC-004 · A deployed surface declares its security headers, or records why it cannot
+State the Content-Security-Policy, Referrer-Policy and X-Content-Type-Options a deployed
+project sends, and assert them against the running site after deploy. Where the host cannot set
+headers — GitHub Pages cannot — record that and use what the platform does allow. portfolio
+served none of them, and nothing anywhere said whether that was a decision or an oversight.
+
+### CON-SEC-005 · A security pass is part of done, not a later project
+Shipping a feature includes an adversarial read of what it exposes: what it publishes, what it
+stores, what it now trusts. On 2026-07-23 a full personal-data export reached portfolio's git
+history and had to be purged; the review that would have caught it happened only because the
+data was already public. This is CON-PROC-004's adversarial review, applied to security.
 
 ---
 

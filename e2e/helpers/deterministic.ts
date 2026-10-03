@@ -4,7 +4,12 @@
  * flat PNGs (masking the tile pane instead would blind the suite to exactly
  * the layers the UI overhaul changed — pins, clusters, halo, legend), weather
  * is a fixed payload, and the lazy-enrichment endpoints return nothing.
- * Smoke tests deliberately stay UNstubbed — they assert real tile URLs.
+ * The smoke suite stubs tiles too (CON-VER-008). It used to stay unstubbed on
+ * the grounds that it "asserts real tile URLs" — but `route.fulfill` replaces
+ * the response and leaves the request URL alone, so `img.src` still carries
+ * the real host those assertions read. What the live fetch actually bought was
+ * a dependency on a third-party CDN under parallel load, which made the suite
+ * fail on a different test each run.
  */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

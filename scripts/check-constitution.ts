@@ -36,7 +36,7 @@ const pinnedFile = resolve(root, ".constitution/CONSTITUTION.md");
 const sha256 = (s: string): string => createHash("sha256").update(s).digest("hex");
 
 /** Files worth scanning: our own text and code, never generated artefacts. */
-function scannableFiles(): string[] {
+export function scannableFiles(): string[] {
   const skip = new Set([
     "node_modules",
     ".git",
@@ -65,8 +65,42 @@ function scannableFiles(): string[] {
   return out;
 }
 
+/**
+ * The lock to write after a sync. Pure, so the one invariant that matters is
+ * testable: `commit` and `sha256` MUST move together. They did not — sync
+ * updated the hash and left the commit, so the file recorded a commit whose
+ * content it did not hold.
+ */
+export function nextLock(lock: ConstitutionLock, remote: string, commit: string): ConstitutionLock {
+  return { ...lock, commit, sha256: sha256(remote) };
+}
+
+/**
+ * A full commit sha, or null for anything that is not one.
+ *
+ * Kept separate and pure because this is the bit that matters: an HTML error
+ * page, an empty body or a truncated answer are all failures dressed as
+ * success, and recording any of them as the pinned commit is worse than
+ * refusing to write at all.
+ */
+export function parseCommitSha(raw: string): string | null {
+  const sha = raw.trim();
+  return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+}
+
 /** Fetch CONSTITUTION.md from the REMOTE. Returns null when unreachable. */
-export function fetchRemote(lock: ConstitutionLock): string | null {
+export function fetchRemote(
+  lock: ConstitutionLock,
+  /**
+   * How to run a command. Injected so the fetch policy — prefer the API when
+   * a token exists, fall back to a cache-busted raw read, treat an empty body
+   * as a miss — is testable. Until this seam existed nothing imported this
+   * file at all, so v8 reported it as having NO functions and the coverage
+   * floor could not see it.
+   */
+  run: (cmd: string, args: string[]) => string = (cmd, args) =>
+    execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 }),
+): string | null {
   const [, owner, repo] = /github\.com\/([^/]+)\/([^/]+)/.exec(lock.repo) ?? [];
   if (!owner || !repo) return null;
   // Prefer the API whenever a token exists: raw.githubusercontent is served
@@ -75,21 +109,17 @@ export function fetchRemote(lock: ConstitutionLock): string | null {
   const hasToken = Boolean(process.env.CONSTITUTION_TOKEN || process.env.GH_TOKEN);
   if (!hasToken) {
     try {
-      const raw = execFileSync(
-        "curl",
-        [
-          "-sfL",
-          "--max-time",
-          "20",
-          // Defeat the CDN copy; compare against the ref as it is now.
-          "-H",
-          "Cache-Control: no-cache",
-          "-H",
-          "Pragma: no-cache",
-          `https://raw.githubusercontent.com/${owner}/${repo}/${lock.ref}/CONSTITUTION.md`,
-        ],
-        { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
-      );
+      const raw = run("curl", [
+        "-sfL",
+        "--max-time",
+        "20",
+        // Defeat the CDN copy; compare against the ref as it is now.
+        "-H",
+        "Cache-Control: no-cache",
+        "-H",
+        "Pragma: no-cache",
+        `https://raw.githubusercontent.com/${owner}/${repo}/${lock.ref}/CONSTITUTION.md`,
+      ]);
       if (raw.trim()) return raw;
     } catch {
       return null; // private, or the ref is gone — the caller reports which
@@ -98,26 +128,24 @@ export function fetchRemote(lock: ConstitutionLock): string | null {
   }
   try {
     return decodeGhContent(
-      execFileSync(
-        "gh",
-        [
-          "api",
-          `repos/${owner}/${repo}/contents/CONSTITUTION.md?ref=${lock.ref}`,
-          "--jq",
-          ".content",
-        ],
-        { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
-      ),
+      run("gh", [
+        "api",
+        `repos/${owner}/${repo}/contents/CONSTITUTION.md?ref=${lock.ref}`,
+        "--jq",
+        ".content",
+      ]),
     );
   } catch {
     return null;
   }
 }
 
-const accessConfigured = (): boolean =>
-  Boolean(
+/** Whether we have any way to read the remote at all. */
+export function accessConfigured(): boolean {
+  return Boolean(
     process.env.CONSTITUTION_TOKEN || process.env.GH_TOKEN || process.env.CONSTITUTION_PUBLIC,
   );
+}
 
 function main(): void {
   const problems: string[] = [];
@@ -210,11 +238,38 @@ function sync(): void {
     );
     process.exit(1);
   }
+  const [, owner, repoName] = /github\.com\/([^/]+)\/([^/]+)/.exec(lock.repo) ?? [];
+  let commit: string | null = null;
+  if (owner && repoName) {
+    try {
+      commit = parseCommitSha(
+        execFileSync(
+          "gh",
+          ["api", `repos/${owner}/${repoName}/commits/${lock.ref}`, "--jq", ".sha"],
+          {
+            encoding: "utf8",
+          },
+        ),
+      );
+    } catch {
+      commit = null;
+    }
+  }
+  if (!commit) {
+    // Refusing beats recording a commit we did not confirm. A lock whose
+    // `commit` and `sha256` disagree is worse than one that was never written.
+    console.error(
+      `::error::fetched the rules but could not resolve which commit ${lock.ref} points at. ` +
+        "Refusing to write a lock whose commit would be a guess.",
+    );
+    process.exit(1);
+  }
   writeFileSync(pinnedFile, remote, "utf8");
-  const next = { ...lock, sha256: sha256(remote) };
+  const next = nextLock(lock, remote, commit);
   writeFileSync(lockFile, `${JSON.stringify(next, null, 2)}\n`, "utf8");
   console.log(
-    `[constitution] synced from ${lock.repo}@${lock.ref}; review the diff before committing.`,
+    `[constitution] synced from ${lock.repo}@${lock.ref} (${commit.slice(0, 7)}); ` +
+      "review the diff before committing.",
   );
 }
 
