@@ -40,6 +40,14 @@ export default defineConfig({
       // path — so base-path and asset-resolution bugs surface in CI rather
       // than in production.
       name: "static",
+      // NB: this project is run in its OWN pass, not alongside the app ones —
+      // see `npm run e2e` (CON-VER-008). `vite preview` serves a full
+      // production build (3,886 generated pages) and on a small machine it
+      // starved the dev server: a bare `playwright test` failed on a DIFFERENT
+      // test every run, always because trek data had not loaded, while each
+      // passed in isolation. Playwright `dependencies` was tried and rejected:
+      // it also SKIPS this project when an app test fails, which hides 19
+      // results to fix a resource problem.
       // pwa.spec.ts joins it: a service worker cannot be exercised honestly
       // against the dev server (spec 43).
       testMatch: /(static|pwa)\.spec\.ts/,

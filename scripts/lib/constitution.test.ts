@@ -142,3 +142,183 @@ describe("decodeGhContent (spec 39 — base64 must be joined before decoding)", 
     expect(decodeGhContent(`${b64}\n`)).toBe("hello");
   });
 });
+
+describe("nextLock — commit and sha256 move together (spec 39)", () => {
+  const lock = {
+    repo: "https://github.com/vivekanandba/constitution",
+    ref: "main",
+    commit: "0".repeat(40),
+    sha256: "a".repeat(64),
+  };
+
+  it("records BOTH the new commit and the new hash", async () => {
+    // --sync used to update sha256 and leave commit untouched, so the lock
+    // claimed a commit whose content it did not hold. Nothing caught it: the
+    // verify path compares sha256 only, and `commit` exists for the human
+    // reading the diff — exactly who it was misleading (CON-DATA-001).
+    const { nextLock } = await import("../check-constitution");
+    const next = nextLock(lock, "# rules\n", "b".repeat(40));
+    expect(next.commit).toBe("b".repeat(40));
+    expect(next.sha256).not.toBe(lock.sha256);
+  });
+
+  it("leaves the repo and ref alone — a sync adopts, it does not re-point", async () => {
+    const { nextLock } = await import("../check-constitution");
+    const next = nextLock(lock, "# rules\n", "b".repeat(40));
+    expect(next.repo).toBe(lock.repo);
+    expect(next.ref).toBe(lock.ref);
+  });
+
+  it("produces a lock its own parser accepts", async () => {
+    const { nextLock } = await import("../check-constitution");
+    const next = nextLock(lock, "# rules\n", "b".repeat(40));
+    expect(() => parseLock(JSON.stringify(next))).not.toThrow();
+  });
+});
+
+describe("parseCommitSha (spec 39)", () => {
+  it("accepts a full sha, trimming the newline gh prints", async () => {
+    const { parseCommitSha } = await import("../check-constitution");
+    expect(parseCommitSha(`${"a".repeat(40)}\n`)).toBe("a".repeat(40));
+  });
+
+  it("REFUSES anything that is not one — a failure dressed as success", async () => {
+    // An HTML error page, an empty body, a truncated or upper-case answer.
+    // Recording any of these as the pinned commit is worse than refusing.
+    const { parseCommitSha } = await import("../check-constitution");
+    for (const bad of [
+      "",
+      "   ",
+      "not-a-sha",
+      "<html>404</html>",
+      "a".repeat(39),
+      "A".repeat(40),
+    ]) {
+      expect(parseCommitSha(bad), JSON.stringify(bad)).toBeNull();
+    }
+  });
+});
+
+describe("fetchRemote (spec 39) — the fetch policy", () => {
+  const lock = {
+    repo: "https://github.com/vivekanandba/constitution",
+    ref: "main",
+    commit: "0".repeat(40),
+    sha256: "a".repeat(64),
+  };
+
+  it("uses the API when a token exists — raw is CDN-cached and may be stale", async () => {
+    const { fetchRemote } = await import("../check-constitution");
+    const prev = process.env.CONSTITUTION_TOKEN;
+    process.env.CONSTITUTION_TOKEN = "t";
+    try {
+      const seen: string[] = [];
+      const body = fetchRemote(lock, (cmd, args) => {
+        seen.push(cmd);
+        void args;
+        return Buffer.from("# rules\n", "utf8").toString("base64");
+      });
+      expect(seen).toEqual(["gh"]);
+      expect(body).toBe("# rules\n");
+    } finally {
+      if (prev === undefined) delete process.env.CONSTITUTION_TOKEN;
+      else process.env.CONSTITUTION_TOKEN = prev;
+    }
+  });
+
+  it("falls back to a CACHE-BUSTED raw read with no token", async () => {
+    const { fetchRemote } = await import("../check-constitution");
+    const prevA = process.env.CONSTITUTION_TOKEN;
+    const prevB = process.env.GH_TOKEN;
+    delete process.env.CONSTITUTION_TOKEN;
+    delete process.env.GH_TOKEN;
+    try {
+      let args: string[] = [];
+      const body = fetchRemote(lock, (cmd, a) => {
+        expect(cmd).toBe("curl");
+        args = a;
+        return "# rules\n";
+      });
+      expect(body).toBe("# rules\n");
+      // A match read from a CDN copy can mean yesterday's rules, and a
+      // verification that might be stale is not one.
+      expect(args.join(" ")).toContain("Cache-Control: no-cache");
+    } finally {
+      if (prevA !== undefined) process.env.CONSTITUTION_TOKEN = prevA;
+      if (prevB !== undefined) process.env.GH_TOKEN = prevB;
+    }
+  });
+
+  it("treats an EMPTY body as a miss, not as empty rules", async () => {
+    const { fetchRemote } = await import("../check-constitution");
+    const prev = process.env.CONSTITUTION_TOKEN;
+    delete process.env.CONSTITUTION_TOKEN;
+    const prevB = process.env.GH_TOKEN;
+    delete process.env.GH_TOKEN;
+    try {
+      expect(fetchRemote(lock, () => "   ")).toBeNull();
+    } finally {
+      if (prev !== undefined) process.env.CONSTITUTION_TOKEN = prev;
+      if (prevB !== undefined) process.env.GH_TOKEN = prevB;
+    }
+  });
+
+  it("returns null when the command throws — private repo, or the ref is gone", async () => {
+    const { fetchRemote } = await import("../check-constitution");
+    expect(
+      fetchRemote(lock, () => {
+        throw new Error("404");
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null for a repo URL that is not GitHub", async () => {
+    const { fetchRemote } = await import("../check-constitution");
+    expect(fetchRemote({ ...lock, repo: "https://gitlab.com/a/b" }, () => "x")).toBeNull();
+  });
+});
+
+describe("scannableFiles and accessConfigured (spec 39)", () => {
+  it("scans our own text and code, never generated artefacts", async () => {
+    const { scannableFiles } = await import("../check-constitution");
+    const files = scannableFiles().map((f) => f.replace(`${process.cwd()}/`, ""));
+
+    expect(files.some((f) => f.startsWith("specs/"))).toBe(true);
+    expect(files.some((f) => f.startsWith("src/"))).toBe(true);
+    // Generated or vendored trees would make the gate scan its own output and
+    // the rules it pins — the copied-text check would then flag the pinned
+    // copy as a copy of itself.
+    for (const excluded of [".constitution/", "node_modules/", "dist/", "coverage/", "src/data/"]) {
+      expect(
+        files.filter((f) => f.startsWith(excluded)),
+        `${excluded} must not be scanned`,
+      ).toEqual([]);
+    }
+  });
+
+  it("reports access only when something could actually read the remote", async () => {
+    const { accessConfigured } = await import("../check-constitution");
+    const saved = {
+      a: process.env.CONSTITUTION_TOKEN,
+      b: process.env.GH_TOKEN,
+      c: process.env.CONSTITUTION_PUBLIC,
+    };
+    delete process.env.CONSTITUTION_TOKEN;
+    delete process.env.GH_TOKEN;
+    delete process.env.CONSTITUTION_PUBLIC;
+    try {
+      expect(accessConfigured()).toBe(false);
+      process.env.CONSTITUTION_PUBLIC = "1";
+      expect(accessConfigured()).toBe(true);
+    } finally {
+      for (const [k, v] of [
+        ["CONSTITUTION_TOKEN", saved.a],
+        ["GH_TOKEN", saved.b],
+        ["CONSTITUTION_PUBLIC", saved.c],
+      ] as const) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  });
+});

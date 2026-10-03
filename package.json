@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "e2e": "playwright test",
+    "e2e": "playwright test --project=chromium --project=mobile && playwright test --project=static",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -41,7 +41,9 @@
     "check:constitution": "tsx scripts/check-constitution.ts",
     "sync:constitution": "tsx scripts/check-constitution.ts --sync",
     "check:live": "tsx scripts/check-live-apis.ts",
-    "check:deploy": "tsx scripts/check-deploy.ts"
+    "check:deploy": "tsx scripts/check-deploy.ts",
+    "e2e:app": "playwright test --project=chromium --project=mobile",
+    "e2e:static": "playwright test --project=static"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

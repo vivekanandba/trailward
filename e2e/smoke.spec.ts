@@ -1,4 +1,21 @@
 import { test, expect, type Page } from "@playwright/test";
+import { stubTiles } from "./helpers/deterministic";
+
+// Basemap tiles are served from committed PNGs here too (CON-VER-008).
+//
+// These tests used to pull real tiles from CARTO/OpenTopoMap, which made the
+// suite fail under parallel load on a DIFFERENT test each run while every one
+// passed in isolation — the exact signature of a suite-level defect. Measured:
+// two consecutive runs of the mobile project failed on
+// "difficulty legend" and then "default Bangalore view", the latter on
+// `img.leaflet-tile` being hidden, with a third run fully green.
+//
+// Stubbing does not weaken the tile assertions: `route.fulfill` replaces the
+// RESPONSE, so `img.src` still carries the real opentopomap/cartocdn URL that
+// the basemap-switch and zoom tests read.
+test.beforeEach(async ({ page }) => {
+  await stubTiles(page);
+});
 
 // On mobile (spec 33) the FilterBar lives behind the results sheet's Filters
 // button; on desktop it sits in the always-open rail.
@@ -6,6 +23,35 @@ async function openFilters(page: Page): Promise<void> {
   if ((page.viewportSize()?.width ?? 1440) < 1024) {
     await page.getByRole("button", { name: /^Filters/ }).click();
   }
+}
+
+/**
+ * The visible result count, read only once it has stopped moving.
+ *
+ * Cells stream in after the preset is applied, so a count sampled immediately
+ * is a number that is still growing. Two filter tests took `before` from that
+ * moving value and then polled for a SMALLER one — which never arrived when
+ * more cells landed after the sample, and the test sat until the 30 s timeout.
+ * Under parallel load it was a different one of them each run (CON-VER-008).
+ */
+async function settledCount(page: Page): Promise<number> {
+  const read = async (): Promise<number> =>
+    Number(
+      (
+        await page
+          .getByText(/^\d+ treks?$/)
+          .first()
+          .innerText()
+      ).replace(/\D/g, ""),
+    );
+  let last = await read();
+  for (let stable = 0; stable < 3; ) {
+    await page.waitForTimeout(250);
+    const now = await read();
+    stable = now === last ? stable + 1 : 0;
+    last = now;
+  }
+  return last;
 }
 
 test("default Bangalore view renders map, markers and curated treks", async ({ page }) => {
@@ -91,38 +137,20 @@ test("hidden-gems filter narrows a preset region's list", async ({ page }) => {
   await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
   // The list rail is CAPPED at 300 rows, so with terrain-detected pins (spec 27)
   // row counts no longer move — assert on the true result count instead.
-  const count = async (): Promise<number> =>
-    Number(
-      (
-        await page
-          .getByText(/^\d+ treks?$/)
-          .first()
-          .innerText()
-      ).replace(/\D/g, ""),
-    );
-  const before = await count();
+  const before = await settledCount(page);
   await openFilters(page);
   await page.getByLabel("Hidden gems only").check();
-  await expect.poll(count).toBeLessThan(before);
+  await expect.poll(() => settledCount(page)).toBeLessThan(before);
 });
 
 test("named-pins-only filter hides Unnamed detected pins (spec 31)", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Pune" }).click();
   await expect(page.getByText(/ranked by terrain/i)).toBeVisible();
-  const count = async (): Promise<number> =>
-    Number(
-      (
-        await page
-          .getByText(/^\d+ treks?$/)
-          .first()
-          .innerText()
-      ).replace(/\D/g, ""),
-    );
-  const before = await count();
+  const before = await settledCount(page);
   await openFilters(page);
   await page.getByLabel("Named pins only").check();
-  await expect.poll(count).toBeLessThan(before);
+  await expect.poll(() => settledCount(page)).toBeLessThan(before);
   // Every remaining row is a real name — no "Unnamed …" placeholders.
   await expect(page.getByRole("list").getByText(/^Unnamed (peak|hill)/)).toHaveCount(0);
 });
