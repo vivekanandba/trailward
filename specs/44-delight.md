@@ -90,10 +90,15 @@ sentence. They are not data, and no test or fixture may use them as expected val
 ### A. The defect first
 
 - **R1.** A static trek page's JSON-LD `url` equals its canonical URL. `trekJsonLd` takes the
-  page's URL instead of deriving one from the id, so the two cannot disagree. A test over every
-  built page asserts equality, and `check-deploy` asserts it on its sample page against the live
-  site. It ships alone and first, because otherwise R16's new 404 is where those 3,815 search
-  results land.
+  page's URL instead of deriving one from the id, so the two cannot disagree. Two tests enforce it:
+  - a build test over **every** generated page asserts the equality;
+  - `check-deploy`'s live check samples a page whose slug **differs from** its id. It reads the
+    pages index (R16), takes the first such entry, and asserts the equality on the live page. Its
+    current sample, `t/skandagiri/`, has slug = id, so it could not see this defect or a
+    regression of it (R28).
+
+  It ships alone and first, because otherwise R16's new 404 is where those 3,815 search results
+  land.
 
 ### B. Absences that read as carelessness
 
@@ -126,12 +131,13 @@ sentence. They are not data, and no test or fixture may use them as expected val
   in the Revisions table along with the subset that gets cards (curated first, then by
   `discoveryScore`).
 - **R5.** `npm run check:size` fails the build when the app's own output exceeds its budget. That
-  output is `dist/assets` (JS+CSS) plus the files this spec generates: the pages index (R16) and
-  the social cards (R4). `dist/data/` is **not** budgeted here. The unattended weekly refresh
-  rewrites it, and its growth is governed by the data drift guard (spec 31). A size gate that only
-  a person could unblock would stop the cron's deploy. A budget is a ceiling, so it ratchets
-  **down**: after a reduction it is tightened to just above the new figure. It is raised only in a
-  reviewed change that states the cause and the new figure; R4's cards are such a cause.
+  output is `dist/assets` (JS+CSS), budgeted in bytes. The files this spec generates per page —
+  the pages index (R16) and the social cards (R4) — are budgeted in **bytes per page**, because
+  their total grows with the page count, and that count changes with the unattended weekly data
+  refresh. An absolute ceiling would block the cron's deploy on a person. Data files are governed
+  by the drift guard (spec 31), not by this gate. A budget is a ceiling, so it ratchets **down**:
+  after a reduction it is tightened to just above the new figure. It is raised only in a reviewed
+  change that states the cause and the new figure; R4's cards are such a cause.
 - **R6.** The theme toggle's new icon rotates in when pressed. The animation is keyed to the
   press count so it never plays on load, and it is still under D2.
 - **R7.** Nothing animates on page load unless data is arriving. Every movement in this spec
@@ -146,8 +152,9 @@ it is deleted, not tuned. Each gets a screenshot at 360/768/1280 in both themes 
 wired in.
 
 - **R8. Sunrise and sunset.** The sun's rise and set times and azimuths come from the NOAA
-  solar-position algorithm, using `lat`/`lng` and the **standard** sunrise definition (the sun's
-  upper limb at −0.833°, a sea-level horizon). No network and no key. The detail shows the **next**
+  solar-position algorithm, using `lat`/`lng` and the **standard** sunrise definition: the sun's
+  **centre** at −0.833° (34′ refraction plus 16′ semi-diameter, so the upper limb touches a
+  sea-level horizon). No network and no key. The detail shows the **next**
   sunrise (today's if it is still ahead, else tomorrow's), e.g. "Next sunrise 06:09, in the
   east-south-east (104°)", plus a small compass arc of the sun's path. The copy calls it the
   standard sunrise for this spot. Height is **not** corrected for: a summit's real horizon is a
@@ -178,19 +185,32 @@ wired in.
   nothing.
 - **R12.** Neither R8 nor R10 claims trail conditions, safety or crowds. They describe sun and
   rain averages, and their copy says so.
-- **R13. The search arrives.** When the origin changes, the map flies to it (Leaflet `flyTo`), and
-  the radius ring draws outward from the origin. Pins fade in as their cells load, so the motion is
-  the loading state rather than ornament on top of it. Any pan, zoom or tap during the flight
-  stops it where the person left it (D3). Under D2 it cuts straight to the result. Both branches
-  are tested end to end. The default e2e context emulates reduced motion (`playwright.config.ts`),
-  so R13 adds a test in a `reducedMotion: "no-preference"` context. That test starts a flight,
-  pans mid-flight, and asserts the map ends where the pan left it, not at the origin. Tests
-  assert endpoints only, never a frame in between (CON-VER-008).
-- **R14. The region speaks.** The stats card leads with one computed sentence:
-  "&lt;n&gt; peaks within &lt;r&gt; km of &lt;origin&gt;. The highest is &lt;name&gt; at
-  &lt;m&gt; m, and &lt;k&gt; are hidden gems." Each clause appears only when its number exists
-  and is non-zero, and every count agrees in number ("1 peak", "1 is a hidden gem"). A pure
-  `regionSentence(stats, origin, radius)` builds it.
+- **R13. The search arrives.** When the origin changes, the map flies to the new search area
+  (Leaflet `flyToBounds`), and the radius ring draws outward from the origin. Pins fade in as their
+  cells load, so the motion is the loading state rather than ornament on top of it.
+  - **One camera owner.** The flight replaces the origin-change branch of the existing
+    `FitToResults` effect (`TrekMap.tsx:155`); it is not a second mover beside it.
+  - **The person wins.** Any pan, zoom or tap during the flight stops it where the person left
+    it. After that, the "results first appear" refit (`hasResults` false → true) is
+    **suppressed** until the next origin or radius change, so arriving cells can never snap the
+    map back (D3).
+  - Under D2 it cuts straight to the result. Both branches are tested end to end.
+  - The default e2e context emulates reduced motion (`playwright.config.ts`), so R13 adds a test
+    in a `reducedMotion: "no-preference"` context. It **holds the cell responses** with a route,
+    changes the origin, pans mid-flight, then releases the cells, and asserts the map stays where
+    the pan left it. Holding the responses makes the order deterministic, not a race
+    (CON-VER-008). Tests assert endpoints only, never a frame in between.
+- **R14. The region speaks.** The stats card leads with one computed sentence about the set it
+  summarises, which is the **filtered** set (`regionStats(visible)`, `App.tsx:248`). So it says so:
+  - with no filters beyond the radius: "&lt;n&gt; peaks within &lt;r&gt; km of &lt;origin&gt;";
+  - otherwise: "&lt;n&gt; peaks match your filters within &lt;r&gt; km".
+
+  It then names "The highest is &lt;name&gt; at &lt;m&gt; m, and &lt;k&gt; are hidden gems."
+  `RegionStats` gains the highest peak's name and a hidden-gem count (`discoveryScore ≥
+HIDDEN_GEM_MIN`); it carries neither today. Each clause appears only when its number exists and
+  is non-zero, and every count agrees in number ("1 peak", "1 is a hidden gem"). A pure
+  `regionSentence(stats, origin, radius, filtered)` builds it.
+
 - **R15.** Every sentence builder in this spec — `regionSentence`, `seasonSentence`,
   `sunSentence`, `emptySuggestion` — is tested over generated sparse records, with every optional
   field removed in turn and every count at 0, 1 and many. No output may contain `undefined`,
@@ -200,20 +220,27 @@ wired in.
 ### D. The blank moments get a voice and an action
 
 - **R16. A 404 that helps.** For a path shaped like `/t/<slug>/`, the 404 page matches the slug
-  against a **pages index** generated at build: `data/pages-index.json`, one `[slug, name, id]`
-  per static page, measured and budgeted under R5. The 2 MB palette index is not used, because a
-  dead page link is most likely a renamed page, and 2 MB per 404 fails D5.
-  - On a confident match it says "Did you mean &lt;name&gt;?" and links to that page, which
-    exists by construction because the index lists only built pages.
+  against a **pages index** generated at build: `data/pages-index.json`, one
+  `[slug, name, id, formerSlugs]` per static page, budgeted per page under R5. The 2 MB palette
+  index is not used: 2 MB per 404 fails D5.
+  - **Renames are matched exactly, not guessed.** The most likely dead link is a renamed page,
+    whose old slug shares little with its new name (`unnamed-peak-…` after naming,
+    specs 28/29). `build-pages` keeps a committed `scripts/data/slug-history.json`
+    (id → every slug it has had) that it only ever appends to. An exact `formerSlugs` hit wins
+    outright; only when there is none does the fuzzy name match run.
+  - **An offer is checked before it is made.** The worker serves `data/` stale-while-revalidate
+    (spec 43), so the index can be a deploy behind. Before offering "Did you mean &lt;name&gt;?",
+    the page sends a `HEAD` to the target and offers it only on a 200. A stale index can make the
+    page offer less, never a link that 404s.
   - Otherwise it says, in the app's voice, that this trail has gone cold, and offers the app's
     search and the map.
   - "Confident" is defined in the pure matcher `src/lib/notFound.ts` and tested, including its
     refusals: a weak match, or two equally good ones, must **not** be offered as a correction.
   - **The tested matcher is the shipped one.** `404.html` moves out of `public/` (copied
-    verbatim) and becomes a Vite build input beside `index.html`, so its script imports
-    `src/lib/notFound.ts` and is bundled, never hand-copied (CON-COV-003). The index is fetched
-    by an absolute URL built from `import.meta.env.BASE_URL`, because the page is served at the
-    dead path, not at the root.
+    verbatim) and becomes a Vite build input beside `index.html`. Its script imports
+    `src/lib/notFound.ts` and is bundled, never hand-copied (CON-COV-003). The index is fetched by
+    an absolute URL built from `import.meta.env.BASE_URL`, because the page is served at the dead
+    path, not at the root.
   - R17's e2e is mutation-checked against the shipped page: break the matcher and the e2e must
     fail, not only the unit test.
 - **R17.** Every other unknown path keeps today's behaviour: redirect to the app root, keeping
@@ -240,6 +267,10 @@ wired in.
     button offers "Try the maximum, 500 km", without a promise.
   - When no non-empty cell comes within 500 km at all, the copy says so and there is no button.
   - If widening still yields nothing (a stale index), the copy says so; it never loops.
+  - **An empty list is not proof of an empty radius.** Today a failed cell is dropped silently,
+    and an index failure becomes `[]` (`App.tsx:167`). So the loader reports which cells failed,
+    and when any cell or the index failed, R18 offers **no** suggestion. The list then says the
+    peaks could not be loaded, which is the true cause (CON-VER-005), and offline defers to R21.
 - **R19.** When the palette finds nothing, it offers up to three summits whose folded names are
   nearest the query, as buttons that select them. Each suggestion is asserted to exist in the
   index.
@@ -253,10 +284,11 @@ wired in.
 - **R22.** The production app writes exactly one thing to the console: a greeting that names the
   repository and the data sources, inside a `try`. The assertion runs in the **static** project
   against the production build, where no dev-server or React DevTools messages exist. Before it
-  loads the page it applies `stubTiles` and `stubApis` (`e2e/helpers/deterministic.ts`) and fails
-  any other outbound request. So a slow or refused tile cannot log "Failed to load resource" and
-  make the result depend on the network (CON-VER-008). It then requires exactly the greeting,
-  with no ignore-list.
+  loads the page, every outbound request is **fulfilled**, never aborted: tiles with the committed
+  PNGs (`stubTiles`), APIs with fixed or empty valid bodies. `stubApis` aborts several hosts
+  today, and Chromium logs "Failed to load resource" for an aborted request, so R22 uses a variant
+  that fulfils them. The test also asserts that no request was aborted or failed. It then requires
+  exactly the greeting, with no ignore-list (CON-VER-008).
 
 ### E. The personal layer — **proposed, not approved**
 
@@ -285,7 +317,11 @@ yes. Until then they are recorded here so they are argued about once.
     needs no entry. Today's motion at or under 300 ms is Scrim `duration-200`, `.panel-enter`
     200 ms and Sheet 200 ms. The scan covers Tailwind `duration-*` and `animate-*` classes,
     `transition`/`animation` in CSS, and **string literals assigned to `style.transition` or
-    `style.animation` in TS/TSX**, which is how Sheet sets its motion. A Tailwind `animate-*`
+    `style.animation` in TS/TSX**, which is how Sheet sets its motion. It also scans **JS motion
+    calls**: Leaflet `flyTo`, `flyToBounds`, `panTo`, `setView` and `fitBounds` with animation
+    enabled, and WAAPI `.animate(`. Every such call site must take its preference from
+    `src/lib/motion.ts`. A `flyTo`/`flyToBounds` or `.animate(` call always needs an allow-list
+    entry, because its duration is computed rather than written. A Tailwind `animate-*`
     utility counts by its defined duration. Today's allow-list: `animate-pulse` (2 s) on loading
     skeletons (R7: an arrival, telling the person results are on their way), and R13 and R25 once
     they exist;
