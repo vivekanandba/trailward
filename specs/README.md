@@ -72,6 +72,11 @@ Verification section whose claims exist as tests.
 | [36-content-pages](./36-content-pages.md)                       | Attribution, method and dataset-freshness pages          |
 | [37-accessibility-and-gates](./37-accessibility-and-gates.md)   | A11y audit, contrast, link check, coverage & spec gates  |
 | [38-palette-and-paths](./38-palette-and-paths.md)               | Command palette over every named summit; guided paths    |
+| [39-constitution-gate](./39-constitution-gate.md)                            | CI checks this repo against the shared constitution      |
+| [40-testability-and-floors](./40-testability-and-floors.md)                       | Testability of the build tools; tiered coverage floors   |
+| [41-build-cli-seams](./41-build-cli-seams.md)                              | Seams for the network build tools and the floor they unlock |
+| [42-live-contracts-and-delivery](./42-live-contracts-and-delivery.md)                  | Live source contracts, the delivery path, journeys       |
+| [43-pwa](./43-pwa.md)                                          | Manifest and service worker: provable, installable, offline-honest |
 
 ## Glossary
 
