@@ -19,13 +19,14 @@ ways:
   restrained: one set-piece, 300 ms everywhere, "no confetti, ever". Trailward is a tool for going
   outside, and some joy suits it. Inside the five rules anything is allowed.
 
-**This spec grows one PR at a time.** Its requirements cover only what the next PRs build: the
-structured-data defect and the basics (R1–R8). Each later piece of the register — the set-pieces,
-the blank moments — gets its requirements written into this spec **in the PR that implements
-it**, next to the code they describe. An earlier draft specified all four phases up front, and
-five review rounds found 50 defects in it, most of them forecasts about code that did not exist
-yet. What those rounds learned is kept under "Constraints learned in review" so it is not
-re-learned.
+**This spec is written one step ahead of the code, not four.** Its requirements cover only what
+the next PRs build: the structured-data defect and the basics (R1–R7). Each later piece of the
+register — the set-pieces, the blank moments — gets its requirements added here in a **spec PR
+that lands before** the code that implements it, as CON-PROC-001 requires. The change is how far
+ahead, not whether. An earlier draft specified all four phases at once, and five review rounds
+found 50 defects in it, most of them forecasts about code that did not exist yet. That lesson is
+drafted for the fleet in `docs/proposals/2026-10-03-con-proc-specify-one-step-ahead.md`. What the
+rounds established about the codebase is kept under "Constraints learned in review".
 
 ## The five rules
 
@@ -37,15 +38,15 @@ These are the hard limits. Every requirement, now and later, is a consequence of
   is the rule most at risk here, because 120k sparse records make filling the silence tempting.
 - **D2 — Every movement has a still version.** CSS motion is already cut globally under
   `prefers-reduced-motion` (`src/index.css`). JavaScript motion reads the preference through
-  **one** module, `src/lib/motion.ts` (R8).
+  **one** module, `src/lib/motion.ts` (R7).
 - **D3 — The map stays usable.** Nothing blocks a pan, steals focus or delays a tap. Motion over
   300 ms is allowed only when it carries information. Motion of the map, or of anything the
   person is acting on, stops the moment they act. A loading indicator moves nothing the person
-  is acting on, and it ends when the loading does. Every such motion is on R8's allow-list with
+  is acting on, and it ends when the loading does. Every such motion is on R7's allow-list with
   its rule beside it.
 - **D4 — Everything visual has a text equivalent that says the same thing,** and keyboard focus
   is always visible.
-- **D5 — It pays its weight.** A size budget gate (R5) exists before any delight ships. An
+- **D5 — It pays its weight.** A size budget gate (R4) exists before any delight ships. An
   addition that brings a dependency names its cost in the PR.
 
 **Explicitly allowed** (portfolio forbade these): more than one set-piece, motion over 300 ms
@@ -62,9 +63,9 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
 | 0   | Static pages' JSON-LD              | **3,815 of 3,886** pages put a `url` in their structured data that 404s live: `trekJsonLd` uses `trek.id` (`seo.ts:140`), the page uses the slug (`pages.ts:14`)                                                                                                                       | **defect**                                                                                                                                                                          | R1           |
 | 1   | Focus                              | `focus-visible` is styled only in `ui/Button.tsx`; seven places set `outline-none` (R2 names them)                                                                                                                                                                                     | absence                                                                                                                                                                             | R2           |
 | 2   | Print                              | No `@media print` anywhere                                                                                                                                                                                                                                                             | absence                                                                                                                                                                             | R3           |
-| 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                               | absence                                                                                                                                                                             | R4           |
-| 4   | Size                               | No size budget. `dist/assets` is 768,325 bytes                                                                                                                                                                                                                                         | absence                                                                                                                                                                             | R5           |
-| 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                         | surface                                                                                                                                                                             | R6           |
+| 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                               | absence                                                                                                                                                                             | later        |
+| 4   | Size                               | No size budget. JS+CSS in `dist/assets` is 674,629 bytes                                                                                                                                                                                                                               | absence                                                                                                                                                                             | R4           |
+| 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                         | surface                                                                                                                                                                             | R5           |
 | 6   | Sparse peak detail                 | Numbers only for nearly all 120k records                                                                                                                                                                                                                                               | blank → deep                                                                                                                                                                        | later        |
 | 7   | Origin change                      | The map jumps                                                                                                                                                                                                                                                                          | surface → deep                                                                                                                                                                      | later        |
 | 8   | Region stats card                  | Accurate, reads like a dashboard                                                                                                                                                                                                                                                       | voice                                                                                                                                                                               | later        |
@@ -77,6 +78,7 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
 | 15  | Personal layer ("Been there")      | None                                                                                                                                                                                                                                                                                   | **proposed, needs the owner's approval** — it adds state, so it is a feature, not polish                                                                                            | later        |
 | 16  | Distance from a non-default origin | All **16** curated treks carry a road distance _from Bengaluru_ (`distanceKm`), and the filter, the map popup and the detail prefer it whatever the origin (`filters.ts:37`, `TrekMap.tsx:193`, `TrekDetail.tsx:268`). From Mysuru, Skandagiri is listed at 67.6 km; it is 176 km away | **defect, own PR**, in spec 05                                                                                                                                                      | —            |
 | 17  | Page URLs are not stable           | `slugMap` (`pages.ts:77`) gives the bare slug to whichever same-named record comes first in `treks.json`; the rest get `<slug>-<id>`. 456 pages are suffixed, 438 of them with `d12-` ids, which change when the terrain scan reruns, so those URLs die silently                       | **defect, own PR**, in spec 35. Sorting by id is **not** a fix (it would move 322 live URLs and still depend on unstable ids); it needs a persisted slug assignment, designed there | —            |
+| 18  | Diacritics in names                | The bundled Inter and Bricolage woff2 are Latin-only subsets with no `ā`, `ī` or `ū` (checked with fontTools); 1,944 of the 3,886 page names contain a character above U+00FF, so those letters render in a fallback font mid-word                                                     | absence; a later spec PR adds the Latin Extended subset, and social cards wait for it                                                                                               | later        |
 
 ## Requirements
 
@@ -86,29 +88,31 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
   page's URL instead of deriving one from the id, so the two cannot disagree. Two tests enforce
   it:
   - **The guarantee:** a build test over **every** generated page asserts the equality.
-  - **The live backstop:** `check-deploy` reads the live `sitemap.xml` and walks its `/t/` pages
-    from the **end**. Each static page names its record in its "Open on the map" link
-    (`?sel=<id>`), so the check knows which pages have a slug that differs from the id. It
-    asserts the equality on the first three such pages it finds. It walks from the end because
-    the sitemap opens with curated pages, whose ids equal their slugs. If it finds no such page
-    within the first 50 it walks, it fails with "could not find a sample", a different message
-    from "the url is wrong" (CON-VER-005). The build test is the guarantee; this is the live
-    backstop.
+  - **The live backstop:** `check-deploy` reads the live `sitemap.xml` and walks its `/t/` pages.
+    Each static page names its record in its "Open on the map" link (`?sel=<id>`), so the check
+    can tell which pages have a slug that differs from the id. It asserts the equality on the
+    first three such pages. If none turns up within the first 50 it walks, it fails with "could
+    not find a sample", a different message from "the url is wrong" (CON-VER-005). The check
+    chooses its sample by reading each page rather than by the sitemap's order, because order
+    is not a property anyone guarantees. Today's sample, `t/skandagiri/`, has slug = id, so it
+    could never see this defect.
 
   It ships alone and first.
 
 ### B. Absences that read as carelessness
 
-- **R2.** Every element a person can reach with Tab shows a visible focus ring, from one global
+- **R2.** Every element that receives keyboard focus shows a visible focus ring, from one global
   `:focus-visible` rule. No component removes its outline without replacing it with a
-  `focus-visible:` or `focus:ring` style. The seven `outline-none` sites, by name:
-  - **To fix:** the palette input, `CommandPalette.tsx:125`, which removes the outline and adds
-    nothing.
-  - **Already compliant:** `FilterBar.tsx:146` and `OriginSearch.tsx:117`, which add
-    `focus:ring-2`.
-  - **Exempt:** containers focused only from code (`tabIndex={-1}`), never by Tab: `#results`
-    (`TrekList.tsx:35`), the palette dialog (`CommandPalette.tsx:109`), the sheet
-    (`Sheet.tsx:177`) and the detail panel (`App.tsx:619`).
+  `focus-visible:` style. There are **no exemptions**. A container that has `tabIndex={-1}` is
+  still reached from the keyboard: the skip link focuses `#results` (`TrekList.tsx:35`), and
+  Enter on a result focuses the detail panel (`App.tsx:619`). The global rule also loses on
+  specificity to a component's own `focus:outline-none`, so each site must be changed, not
+  merely covered. The seven `outline-none` sites:
+  - **Get a `focus-visible:` ring:** the palette input (`CommandPalette.tsx:125`), `#results`,
+    the detail panel, the palette dialog (`CommandPalette.tsx:109`) and the sheet
+    (`Sheet.tsx:177`).
+  - **Already compliant:** `FilterBar.tsx:146` and `OriginSearch.tsx:117`, whose `focus:ring-2`
+    is converted to `focus-visible:ring-2`, so that one form is checked.
 - **R3.** Printing a trek produces a **trail card**, not a screenshot, both from the static page
   (`/t/<slug>/`) and from the in-app detail. The card carries:
   - the name;
@@ -123,54 +127,44 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
   the screen theme, and splits no fact table across a page. The point is a paper backup for a
   trailhead with no signal.
 
-- **R4.** Each static trek page gets its own social card, generated at build from the record:
-  - the name;
-  - the elevation;
-  - the nearest town, omitted when the record has none (records carry no region, spec 30);
-  - the trek's mark.
-
-  All text is drawn from bundled glyphs. A page uses the global card when **any** text the card
-  draws (the name or the nearest town) has a glyph the font lacks, or when its card exceeds R5's
-  per-card budget. R5 ships before R4, so the budget exists before the first card does (D5). The PR that adds cards records the
-  measured per-card size and total in Revisions.
-
-- **R5.** `npm run check:size` fails the build when the app's own output exceeds its budget:
-  - `dist/assets` (JS+CSS), budgeted in bytes;
-  - files this spec generates per page (none yet; the social cards once R4 lands), budgeted in **bytes per page**.
-    Their total grows with the page count, which the unattended weekly refresh changes, and an
-    absolute ceiling would block the cron's deploy on a person.
-
-  The dataset itself (`treks.json`, the cells) belongs to the drift guard (spec 31), not this
-  gate. A budget is a ceiling, so it ratchets **down**: after a reduction it is tightened to just
-  above the new figure. It is raised only in a reviewed change that states the cause and the new
-  figure.
-
-- **R6.** The theme toggle's new icon rotates in when pressed. The rotate class is applied only
+- **R4.** `npm run check:size` fails the build when the JS and CSS in `dist/assets` exceed their
+  budget in bytes: 674,629 bytes today, of 764,229 in the directory (the rest is committed woff2
+  fonts), from `find -printf %s` on a fresh build. Apparent size, not `du`'s block count, which
+  differs by filesystem. The dataset (`treks.json`, the cells) belongs to the drift guard
+  (spec 31), not to this gate. A budget is a ceiling, so it ratchets **down**: after a reduction
+  it is tightened to just above the new figure. It is raised only in a reviewed change that
+  states the cause and the new figure. It ships before any other delight (D5).
+- **R5.** The theme toggle's new icon rotates in when pressed. The rotate class is applied only
   when the press count is above 0, so the first render at load never animates. A React key alone
-  is not enough, because a remount at key 0 plays a CSS animation too. Under D2 it is still. A
-  unit test asserts that the first render has no animation class and that a press adds it.
-- **R7.** Nothing animates on page load unless data is arriving. Every movement answers either
+  is not enough, because a remount at key 0 plays a CSS animation too. Under D2 it is still.
+  `ThemeToggle.test.tsx` asserts that the first render has no animation class and that a press
+  adds it.
+- **R6.** Nothing animates on page load unless data is arriving. Every movement answers either
   an action (a press, a search) or an arrival (cells loading), and closing anything is instant.
-  It is testable at the one place it is broken today. A deep link with `?sel=` restores the
-  selection on load (`App.tsx:84`), which mounts the detail panel with `.panel-enter` and its
-  scrim with no press behind them. A selection restored from the URL opens **without** the
-  enter animation. An e2e test, run with motion allowed, loads a `?sel=` URL and asserts the
-  panel has no running animations, and that a click-opened panel does.
+  Two places break this today, and both are fixed:
+  - **Desktop:** a `?sel=` deep link restores the selection on load (`App.tsx:84`), which mounts
+    the detail panel with `.panel-enter`, and its scrim, with no press behind them. A selection
+    restored from the URL opens **without** the enter animation.
+  - **Mobile:** the sheet calls `applySnap(snap, true)` on mount (`Sheet.tsx:91`), so the results
+    sheet slides on every load, and a `?sel=` link slides the detail sheet in. The first
+    placement is made without a transition; later snaps animate as now.
+
+  `e2e/motion.spec.ts` runs in a context with motion allowed, in both the desktop and the mobile
+  project, each with its own selector (`.panel-enter` on desktop, the sheet on mobile). It
+  asserts that nothing is animating right after a `?sel=` load, and that a click-opened detail
+  does animate.
 
 ### C. Enforcement
 
-- **R8.** Motion is enforced from the code, not from memory:
+- **R7.** Motion is enforced from the code, not from memory:
   - **The helper.** `src/lib/motion.ts` exports `prefersReducedMotion()` and a hook
     `usePrefersReducedMotion()`. Both report **false** when `matchMedia` is missing, so jsdom
     takes the animated branch and a test opts into the still one. The hook reuses `useMediaQuery`
     through a new optional `fallback` argument. That hook keeps its default of `true`, which App's
     desktop split depends on. The two inline queries today (`Sheet.tsx:40`, `TrekMap.tsx:116`)
     move into it.
-  - **The contract test,** `src/lib/motion.contract.test.ts`, reads the non-test source
-    (`src/**/*.{ts,tsx,css}`, excluding `*.test.*`), and the inline `STYLE` of the static pages
-    (`scripts/lib/trekPage.ts`, `scripts/lib/contentPage.ts`). Those pages carry their own
-    stylesheet, so R2's focus rule must be in it too, and the test checks that it is. It fails
-    when:
+  - **The contract test,** `src/lib/motion.contract.test.ts`, reads the app's non-test source
+    (`src/**/*.{ts,tsx,css}`, excluding `*.test.*`). It fails when:
     - the string `prefers-reduced-motion` appears anywhere other than `src/lib/motion.ts` and
       `src/index.css`, comments included (the comment at `Sheet.tsx:76` is reworded);
     - the global reduced-motion block in `src/index.css` is missing or no longer targets `*`;
@@ -186,14 +180,18 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
       - WAAPI `.animate(`.
     - an animated Leaflet call (`TrekMap.tsx:146`, `:169`, `:334` today) does not take its
       preference from `src/lib/motion.ts`;
-    - a component sets `outline-none` without a `focus-visible:` or `focus:ring` replacement and
-      is not on R2's **exempt** list. The "to fix" list is not an exemption: the palette input
-      fails until it is fixed, and fails again if the fix is reverted.
+    - a component sets `outline-none` without a `focus-visible:` replacement (R2).
 
     Today's allow-list holds one entry: `animate-pulse` (2 s, repeating) on loading skeletons. It
     is a loading indicator under D3: it moves nothing the person acts on, and it is gone once the
     cells arrive.
 
+  - **The static pages** have their own inline stylesheets (`scripts/lib/trekPage.ts`,
+    `scripts/lib/contentPage.ts`), which cannot load `src/index.css`. Their build tests assert
+    that each stylesheet carries R2's focus rule. Any transition they add must carry its own
+    `@media (prefers-reduced-motion: reduce)` block in that stylesheet. That is the one place
+    besides the two files above where the string may appear, and the build test requires it
+    whenever the stylesheet has a transition.
   - Every new visual state gets a baseline reached by construction: reduced motion emulated
     **before** navigation, and no capture that waits on an observer or a timer.
   - Every new assertion is mutation-tested (CON-PROC-005), and review ends on a clean round
@@ -233,6 +231,10 @@ draft established, recorded so the PR that specifies each piece starts from them
     under `npm run dev`. `stubApis` aborts hosts, and Chromium logs every abort.
   - **Offline:** the installed app can open already offline, and no `offline` event fires then.
     The worker does not cache cross-origin basemap tiles.
+- **Social cards.** The fonts lack the glyphs half the page names need (register row 18), so
+  cards wait for the Latin Extended subset. A card over its byte budget must **fail the build**,
+  not quietly fall back to the global card: a fallback that hides growth turns the gate into a
+  formality.
 - **Personal layer.** `localStorage` only, with every access wrapped. It waits for the owner's
   decision.
 
@@ -241,11 +243,8 @@ draft established, recorded so the PR that specifies each piece starts from them
 - **A printed card for a record with almost nothing.** Name and coordinates always exist, so the
   card is never empty. Every other line is omitted when its field is absent, never printed as
   "—" or "unknown" (D1).
-- **A social card whose name or nearest town is in Devanagari or has diacritics.** It renders from
-  bundled glyphs, or the page uses the global card. That is tested with a name, and separately with
-  a town.
 - **`matchMedia` missing (jsdom, old browsers).** The motion helper reports "no preference" and
-  the animated branch runs, so tests must opt into reduced motion deliberately (R8).
+  the animated branch runs, so tests must opt into reduced motion deliberately (R7).
 
 ## Out of scope / not done
 
@@ -267,12 +266,14 @@ it added.
 
 ```sh
 npx vitest run src/lib/seo.test.ts scripts/lib/trekPage.test.ts scripts/build-pages.test.ts  # R1
-npm run check:deploy                                       # R1 live: the sitemap's last five pages
-npx vitest run src/lib/motion.test.ts src/lib/motion.contract.test.ts                # R2, R6, R7, R8
-npx vitest run src/lib/coords.test.ts                      # R3 degrees-minutes-seconds
-npm run check:size                                         # R5, proven able to fail
-npm run e2e:app                                            # R2 focus ring visible, R3 in-app print, R7 deep link
-npm run e2e:static                                         # R3 static print ("Built on"), R4 meta
+npm run check:deploy                         # R1 live: three pages whose ?sel= id differs from the slug
+npx vitest run src/lib/motion.test.ts src/lib/motion.contract.test.ts        # R2 outline sites, R7
+npx vitest run scripts/lib/trekPage.test.ts scripts/lib/contentPage.test.ts  # R2, R7 static stylesheets
+npx vitest run src/lib/coords.test.ts                                        # R3 degrees-minutes-seconds
+npm run check:size                                                           # R4, proven able to fail
+npx vitest run src/components/ThemeToggle.test.tsx                           # R5
+npm run e2e:app                  # R2 focus ring visible, R3 in-app print, R6 (e2e/motion.spec.ts)
+npm run e2e:static               # R3 static print ("Built on")
 ```
 
 R3 is asserted with Playwright `page.emulateMedia({ media: "print" })` against the text and the
@@ -282,4 +283,4 @@ absence of chrome. Its `page.pdf()` output is a CI artefact for a person to look
 
 | Date       | Change                                                                                                                                                                                                                                                                                                                                                             | Covered by |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| 2026-10-03 | Written with the five rules, a register of 18 surfaces and R1–R8. A first draft specified all four phases (R1–R28). Five review rounds on PR #76 found 50 defects, mostly forecasts about code not yet written, so later requirements will be written in the PRs that implement them. What those rounds established is kept under "Constraints learned in review". | —          |
+| 2026-10-03 | Written with the five rules, a register of 19 surfaces and R1–R7. A first draft specified all four phases (R1–R28). Five review rounds on PR #76 found 50 defects, mostly forecasts about code not yet written, so later requirements will be written in the PRs that implement them. What those rounds established is kept under "Constraints learned in review". | —          |

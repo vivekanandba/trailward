@@ -17,6 +17,8 @@ repo cites them.
 | ------------------------------------------------ | --------------------------------------------------------------------- |
 | `2026-09-20-con-cov-004-per-directory-floors.md` | Coverage floors are per directory, and each must be proven to enforce |
 | `2026-09-20-con-cov-005-e2e-covers-ui-ux-api.md` | A web app's end-to-end suite covers UI, UX _and_ API                  |
+| `2026-10-03-con-proc-specify-one-step-ahead.md`  | Specify the next step before its code, not a whole multi-phase plan   |
 
-Both came out of the work in `specs/40-testability-and-floors.md`, and both cite
-incidents from this repo rather than arguing from first principles.
+The first two came out of the work in `specs/40-testability-and-floors.md`, the third out of
+spec 44's review (PR #76). Each cites an incident from this repo rather than arguing from first
+principles.
