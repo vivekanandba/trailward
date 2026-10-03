@@ -39,8 +39,10 @@ These are the hard limits. Every requirement, now and later, is a consequence of
   `prefers-reduced-motion` (`src/index.css`). JavaScript motion reads the preference through
   **one** module, `src/lib/motion.ts` (R8).
 - **D3 — The map stays usable.** Nothing blocks a pan, steals focus or delays a tap. Motion over
-  300 ms is allowed only when it carries information and stops the moment the person acts. It
-  must be on R8's allow-list with its rule beside it.
+  300 ms is allowed only when it carries information. Motion of the map, or of anything the
+  person is acting on, stops the moment they act. A loading indicator moves nothing the person
+  is acting on, and it ends when the loading does. Every such motion is on R8's allow-list with
+  its rule beside it.
 - **D4 — Everything visual has a text equivalent that says the same thing,** and keyboard focus
   is always visible.
 - **D5 — It pays its weight.** A size budget gate (R5) exists before any delight ships. An
@@ -61,7 +63,7 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
 | 1   | Focus                              | `focus-visible` is styled only in `ui/Button.tsx`; seven places set `outline-none` (R2 names them)                                                                                                                                                                                     | absence                                                                                                                                                                             | R2           |
 | 2   | Print                              | No `@media print` anywhere                                                                                                                                                                                                                                                             | absence                                                                                                                                                                             | R3           |
 | 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                               | absence                                                                                                                                                                             | R4           |
-| 4   | Size                               | No size budget. `dist/assets` is 764 KB                                                                                                                                                                                                                                                | absence                                                                                                                                                                             | R5           |
+| 4   | Size                               | No size budget. `dist/assets` is 768,325 bytes                                                                                                                                                                                                                                         | absence                                                                                                                                                                             | R5           |
 | 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                         | surface                                                                                                                                                                             | R6           |
 | 6   | Sparse peak detail                 | Numbers only for nearly all 120k records                                                                                                                                                                                                                                               | blank → deep                                                                                                                                                                        | later        |
 | 7   | Origin change                      | The map jumps                                                                                                                                                                                                                                                                          | surface → deep                                                                                                                                                                      | later        |
@@ -84,13 +86,14 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
   page's URL instead of deriving one from the id, so the two cannot disagree. Two tests enforce
   it:
   - **The guarantee:** a build test over **every** generated page asserts the equality.
-  - **The live backstop:** `check-deploy` reads the live `sitemap.xml`, takes its **last** five
-    `/t/` pages, and asserts the equality on each. Not the first five: the sitemap opens with the
-    curated pages, whose hand-written ids equal their slugs (the first nine, measured
-    2026-10-03), so a sample from the head could never see this defect. Nor can the current
-    sample, `t/skandagiri/`. The tail is generated records with `gn-`/`d12-` ids, which never
-    equal a slug. That is a property of the data, not a guarantee; the build test is the
-    guarantee.
+  - **The live backstop:** `check-deploy` reads the live `sitemap.xml` and walks its `/t/` pages
+    from the **end**. Each static page names its record in its "Open on the map" link
+    (`?sel=<id>`), so the check knows which pages have a slug that differs from the id. It
+    asserts the equality on the first three such pages it finds. It walks from the end because
+    the sitemap opens with curated pages, whose ids equal their slugs. If it finds no such page
+    within the first 50 it walks, it fails with "could not find a sample", a different message
+    from "the url is wrong" (CON-VER-005). The build test is the guarantee; this is the live
+    backstop.
 
   It ships alone and first.
 
@@ -126,13 +129,14 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
   - the nearest town, omitted when the record has none (records carry no region, spec 30);
   - the trek's mark.
 
-  All text is drawn from bundled glyphs. A page whose name has a glyph the font lacks, or whose
-  card exceeds R5's per-card budget, uses the global card. The PR that adds cards records the
+  All text is drawn from bundled glyphs. A page uses the global card when **any** text the card
+  draws (the name or the nearest town) has a glyph the font lacks, or when its card exceeds R5's
+  per-card budget. R5 ships before R4, so the budget exists before the first card does (D5). The PR that adds cards records the
   measured per-card size and total in Revisions.
 
 - **R5.** `npm run check:size` fails the build when the app's own output exceeds its budget:
   - `dist/assets` (JS+CSS), budgeted in bytes;
-  - files this spec generates per page (today, the social cards), budgeted in **bytes per page**.
+  - files this spec generates per page (none yet; the social cards once R4 lands), budgeted in **bytes per page**.
     Their total grows with the page count, which the unattended weekly refresh changes, and an
     absolute ceiling would block the cron's deploy on a person.
 
@@ -141,10 +145,17 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
   above the new figure. It is raised only in a reviewed change that states the cause and the new
   figure.
 
-- **R6.** The theme toggle's new icon rotates in when pressed. The animation is keyed to the
-  press count so it never plays on load, and it is still under D2.
-- **R7.** Nothing animates on page load unless data is arriving. Every movement answers either an
-  action (a press, a search) or an arrival (cells loading), and closing anything is instant.
+- **R6.** The theme toggle's new icon rotates in when pressed. The rotate class is applied only
+  when the press count is above 0, so the first render at load never animates. A React key alone
+  is not enough, because a remount at key 0 plays a CSS animation too. Under D2 it is still. A
+  unit test asserts that the first render has no animation class and that a press adds it.
+- **R7.** Nothing animates on page load unless data is arriving. Every movement answers either
+  an action (a press, a search) or an arrival (cells loading), and closing anything is instant.
+  It is testable at the one place it is broken today. A deep link with `?sel=` restores the
+  selection on load (`App.tsx:84`), which mounts the detail panel with `.panel-enter` and its
+  scrim with no press behind them. A selection restored from the URL opens **without** the
+  enter animation. An e2e test, run with motion allowed, loads a `?sel=` URL and asserts the
+  panel has no running animations, and that a click-opened panel does.
 
 ### C. Enforcement
 
@@ -156,7 +167,10 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
     desktop split depends on. The two inline queries today (`Sheet.tsx:40`, `TrekMap.tsx:116`)
     move into it.
   - **The contract test,** `src/lib/motion.contract.test.ts`, reads the non-test source
-    (`src/**/*.{ts,tsx,css}`, excluding `*.test.*`). It fails when:
+    (`src/**/*.{ts,tsx,css}`, excluding `*.test.*`), and the inline `STYLE` of the static pages
+    (`scripts/lib/trekPage.ts`, `scripts/lib/contentPage.ts`). Those pages carry their own
+    stylesheet, so R2's focus rule must be in it too, and the test checks that it is. It fails
+    when:
     - the string `prefers-reduced-motion` appears anywhere other than `src/lib/motion.ts` and
       `src/index.css`, comments included (the comment at `Sheet.tsx:76` is reworded);
     - the global reduced-motion block in `src/index.css` is missing or no longer targets `*`;
@@ -176,13 +190,14 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
       is not on R2's **exempt** list. The "to fix" list is not an exemption: the palette input
       fails until it is fixed, and fails again if the fix is reverted.
 
-    Today's allow-list holds one entry: `animate-pulse` (2 s) on loading skeletons, under R7 (an
-    arrival: it says results are on their way).
+    Today's allow-list holds one entry: `animate-pulse` (2 s, repeating) on loading skeletons. It
+    is a loading indicator under D3: it moves nothing the person acts on, and it is gone once the
+    cells arrive.
 
   - Every new visual state gets a baseline reached by construction: reduced motion emulated
     **before** navigation, and no capture that waits on an observer or a timer.
-  - Every new assertion is mutation-tested (break the code it guards, watch it fail, restore),
-    and review continues until a round finds nothing (CON-PROC-009).
+  - Every new assertion is mutation-tested (CON-PROC-005), and review ends on a clean round
+    (CON-PROC-009).
 
 ## Constraints learned in review — for the requirements still to be written
 
@@ -226,8 +241,9 @@ draft established, recorded so the PR that specifies each piece starts from them
 - **A printed card for a record with almost nothing.** Name and coordinates always exist, so the
   card is never empty. Every other line is omitted when its field is absent, never printed as
   "—" or "unknown" (D1).
-- **A social card for a name in Devanagari or with diacritics.** It renders from bundled glyphs
-  or the page uses the global card. That is tested with such a name.
+- **A social card whose name or nearest town is in Devanagari or has diacritics.** It renders from
+  bundled glyphs, or the page uses the global card. That is tested with a name, and separately with
+  a town.
 - **`matchMedia` missing (jsdom, old browsers).** The motion helper reports "no preference" and
   the animated branch runs, so tests must opt into reduced motion deliberately (R8).
 
@@ -245,9 +261,8 @@ draft established, recorded so the PR that specifies each piece starts from them
 
 **Not yet implemented.** The commands below are what will verify each requirement. Some of these
 files and commands exist and pass **today** (`seo.test.ts`, `trekPage.test.ts`, the component
-tests, `check:deploy`, both e2e projects), but they test today's behaviour, not these
-requirements. A command that passes before its requirement's PR lands verifies nothing here
-(CON-VER-007). A requirement counts as verified only once its PR's Revisions row names the tests
+tests, `check:deploy`, the three e2e projects), but they test today's behaviour, not these
+requirements (CON-VER-007). A requirement counts as verified only once its PR's Revisions row names the tests
 it added.
 
 ```sh
@@ -256,7 +271,7 @@ npm run check:deploy                                       # R1 live: the sitema
 npx vitest run src/lib/motion.test.ts src/lib/motion.contract.test.ts                # R2, R6, R7, R8
 npx vitest run src/lib/coords.test.ts                      # R3 degrees-minutes-seconds
 npm run check:size                                         # R5, proven able to fail
-npm run e2e:app                                            # R2 focus ring visible, R3 in-app print
+npm run e2e:app                                            # R2 focus ring visible, R3 in-app print, R7 deep link
 npm run e2e:static                                         # R3 static print ("Built on"), R4 meta
 ```
 
