@@ -38,9 +38,12 @@ These are the hard limits. Every rule further down is a consequence of one of th
   make filling the silence tempting.
 - **D2 — Every movement has a still version.** CSS motion is already cut globally under
   `prefers-reduced-motion` (`src/index.css`). JavaScript motion (Leaflet `flyTo`, count-ups,
-  draws) reads the preference through **one** helper, `prefersReducedMotion()`, and a contract
-  test fails on any JS animation that bypasses it. Today the check is written inline twice
-  (`Sheet.tsx:40`, `TrekMap.tsx:116`).
+  draws) reads the preference through **one** helper module, `src/lib/motion.ts`: a hook
+  `usePrefersReducedMotion()` built on the existing `useMediaQuery`, and a plain
+  `prefersReducedMotion()` for non-React code. Both report **false** when `matchMedia` is missing,
+  unlike `useMediaQuery`'s desktop-friendly `true` default, so jsdom takes the animated branch
+  and tests must opt into the still one. Today the query is written inline twice (`Sheet.tsx:40`,
+  `TrekMap.tsx:116`). A contract test (R26) fails on the query string appearing anywhere else.
 - **D3 — The map stays usable.** Nothing blocks a pan, steals focus or delays a tap. Motion over
   300 ms is allowed only when it carries information and stops the moment the person acts, and it
   must sit on the allow-list in R26 with this spec's rule beside it.
@@ -58,24 +61,25 @@ scroll-jacking, and motion that plays on page load without an action or a data a
 
 ## Register — the surfaces, as observed on 2026-10-03
 
-| #   | Surface                 | Today (observed)                                                                                                                                                 | Kind                  | Rules   |
-| --- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------- |
-| 0   | Static pages' JSON-LD   | **3,815 of 3,886** pages put a `url` in their structured data that 404s live: `trekJsonLd` uses `trek.id` (`seo.ts:140`), the page uses the slug (`pages.ts:14`) | **defect**            | R1      |
-| 1   | Focus                   | `focus-visible` is styled only in `ui/Button.tsx`; the palette input sets `outline-none` (`CommandPalette.tsx:125`)                                              | absence               | R2      |
-| 2   | Print                   | No `@media print` anywhere                                                                                                                                       | absence               | R3      |
-| 3   | Social card             | One global `icons/og.png` for every page                                                                                                                         | absence               | R4      |
-| 4   | Size                    | No size budget. `dist/assets` is 764 KB today                                                                                                                    | absence               | R5      |
-| 5   | Theme toggle            | Hard icon swap                                                                                                                                                   | surface               | R6      |
-| 6   | Sparse peak detail      | Numbers only for nearly all 120k records                                                                                                                         | blank → deep          | R8–R12  |
-| 7   | Origin change           | The map jumps                                                                                                                                                    | surface → deep        | R13     |
-| 8   | Region stats card       | Accurate, reads like a dashboard                                                                                                                                 | voice                 | R14     |
-| 9   | 404                     | `public/404.html` redirects to the app root and **drops the path**; a dead `/t/<slug>/` lands on the default map without a word                                  | blank moment          | R16–R17 |
-| 10  | Empty result list       | Advises "try widening the radius", with no control that does it                                                                                                  | blank moment          | R18     |
-| 11  | Palette with no matches | A status message only                                                                                                                                            | blank moment          | R19     |
-| 12  | Unnamed peak            | The label `Unnamed peak`; naming actions exist further down (specs 28/29)                                                                                        | blank moment          | R20     |
-| 13  | Offline                 | Nothing says so                                                                                                                                                  | blank moment          | R21     |
-| 14  | Console                 | Silent                                                                                                                                                           | small                 | R22     |
-| 15  | Personal layer          | None                                                                                                                                                             | **proposed, R23–R25** | R23–R25 |
+| #   | Surface                            | Today (observed)                                                                                                                                                                                                                                                                                                                  | Kind                  | Rules   |
+| --- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------- |
+| 0   | Static pages' JSON-LD              | **3,815 of 3,886** pages put a `url` in their structured data that 404s live: `trekJsonLd` uses `trek.id` (`seo.ts:140`), the page uses the slug (`pages.ts:14`)                                                                                                                                                                  | **defect**            | R1      |
+| 1   | Focus                              | `focus-visible` is styled only in `ui/Button.tsx`; seven places remove the outline (R2 names them)                                                                                                                                                                                                                                | absence               | R2      |
+| 2   | Print                              | No `@media print` anywhere                                                                                                                                                                                                                                                                                                        | absence               | R3      |
+| 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                                                                          | absence               | R4      |
+| 4   | Size                               | No size budget. `dist/assets` is 764 KB today                                                                                                                                                                                                                                                                                     | absence               | R5      |
+| 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                                                                    | surface               | R6      |
+| 6   | Sparse peak detail                 | Numbers only for nearly all 120k records                                                                                                                                                                                                                                                                                          | blank → deep          | R8–R12  |
+| 7   | Origin change                      | The map jumps                                                                                                                                                                                                                                                                                                                     | surface → deep        | R13     |
+| 8   | Region stats card                  | Accurate, reads like a dashboard                                                                                                                                                                                                                                                                                                  | voice                 | R14     |
+| 9   | 404                                | `public/404.html` redirects to the app root and **drops the path**; a dead `/t/<slug>/` lands on the default map without a word                                                                                                                                                                                                   | blank moment          | R16–R17 |
+| 10  | Empty result list                  | Advises "try widening the radius", with no control that does it                                                                                                                                                                                                                                                                   | blank moment          | R18     |
+| 11  | Palette with no matches            | A status message only                                                                                                                                                                                                                                                                                                             | blank moment          | R19     |
+| 12  | Unnamed peak                       | The label `Unnamed peak`; naming actions exist further down (specs 28/29)                                                                                                                                                                                                                                                         | blank moment          | R20     |
+| 13  | Offline                            | Nothing says so                                                                                                                                                                                                                                                                                                                   | blank moment          | R21     |
+| 14  | Console                            | Silent                                                                                                                                                                                                                                                                                                                            | small                 | R22     |
+| 15  | Personal layer                     | None                                                                                                                                                                                                                                                                                                                              | **proposed, R23–R25** | R23–R25 |
+| 16  | Distance from a non-default origin | **12 curated treks** show and filter by their road distance _from Bengaluru_ whatever the origin: from Mysuru, Skandagiri is listed at 67.6 km when it is 176 km away (`filters.ts:37`, `TrekMap.tsx:193`, `TrekDetail.tsx:268` prefer `trek.distanceKm`). Reproduced through the app's own cell selection and filter, 2026-10-03 | **defect, own PR**    | —       |
 
 ## Rules
 
@@ -93,7 +97,12 @@ sentence. They are not data, and no test or fixture may use them as expected val
 ### B. Absences that read as carelessness
 
 - **R2.** Every focusable element shows a visible `:focus-visible` ring. One global rule covers
-  them all, and no component removes it. The palette input's `outline-none` is removed.
+  them all, and no component removes it. Today seven places remove the outline:
+  `CommandPalette.tsx:109` and `:125`, `FilterBar.tsx:146`, `OriginSearch.tsx:117`,
+  `App.tsx:619`, `TrekList.tsx:35` and `Sheet.tsx:177`. Each becomes `focus:outline-none` **plus**
+  a `focus-visible:` ring, or loses the override. Containers focused only programmatically, such
+  as `#results`, may keep no ring because they are never reached by Tab. Each exemption is named
+  in R26's test.
 - **R3.** Printing a trek produces a **trail card**, not a screenshot. That applies both to the
   static page (`/t/<slug>/`) and to the in-app detail. The card carries: the name; coordinates in
   decimal **and** degrees-minutes-seconds; elevation; season; nearest town; the directions URL
@@ -101,14 +110,17 @@ sentence. They are not data, and no test or fixture may use them as expected val
   and the sheet chrome, prints ink on white whatever the screen theme, and splits no fact table
   across a page. The point is a paper backup for a trailhead with no signal.
 - **R4.** Each static trek page gets its own social card, generated at build from the record:
-  name, elevation, region, and the trek's mark on a relief-tinted panel. All text is drawn from
+  name, elevation, nearest town (omitted when the record has none — records carry no region,
+  spec 30), and the trek's mark on a relief-tinted panel. All text is drawn from
   bundled glyphs; Devanagari and diacritics must render, or the card falls back to the global
   one. The total stays inside R5's budget. If 3,886 cards do not fit, the measured number goes
   in the Revisions table along with the subset that gets cards (curated first, then by
   `discoveryScore`).
-- **R5.** `npm run check:size` fails the build when the shipped JS+CSS exceeds a budget measured
-  just above today's figure, or when `dist/` grows past its own budget. The budget only moves up
-  in a reviewed change that says why, like the coverage ratchet (CON-COV-002).
+- **R5.** `npm run check:size` fails the build when the shipped JS+CSS (`dist/assets`) exceeds its
+  budget, or when `dist/` exceeds its own. A budget is a ceiling, so it ratchets **down**: after a
+  reduction it is tightened to just above the new figure. It is raised only in a reviewed change
+  that states the cause and the new figure. R4's social cards are such a cause, and their PR
+  carries the raise and the measurement.
 - **R6.** The theme toggle's new icon rotates in when pressed. The animation is keyed to the
   press count so it never plays on load, and it is still under D2.
 - **R7.** Nothing animates on page load unless data is arriving. Every movement in this spec
@@ -122,16 +134,20 @@ Each has a **kill criterion**: if it does not read correctly within two seconds 
 it is deleted, not tuned. Each gets a screenshot at 360/768/1280 in both themes _before_ it is
 wired in.
 
-- **R8. Sunrise and sunset from the summit.** The sun's rise and set times and azimuths come from
-  the NOAA solar-position algorithm, using `lat`/`lng` plus a horizon-dip correction from
-  `elevationM`. No network and no key. The detail shows "Sunrise tomorrow 06:09, in the
-  east-south-east (104°)", plus a small compass arc of the sun's path. Times are shown in the
-  peak's local time (IST). This is valid because the dataset's measured extent is 6.8–36.0° N,
-  68.2–97.4° E (2026-10-03). A record outside India changes this rule and gets a Revisions row.
-- **R9.** The sun computation is a pure module, `src/lib/sun.ts`. It is unit-tested against
-  published NOAA values for at least three Indian latitudes (8°, 20° and 34° N), at both solstices
-  and one equinox, within ±2 minutes and ±2°. The spec does not claim minute-level accuracy for
-  any real horizon: the copy says "sunrise over a flat horizon", because ridges are not modelled.
+- **R8. Sunrise and sunset.** The sun's rise and set times and azimuths come from the NOAA
+  solar-position algorithm, using `lat`/`lng` and the **standard** sunrise definition (the sun's
+  upper limb at −0.833°, a sea-level horizon). No network and no key. The detail shows the **next**
+  sunrise (today's if it is still ahead, else tomorrow's), e.g. "Next sunrise 06:09, in the
+  east-south-east (104°)", plus a small compass arc of the sun's path. The copy calls it the
+  standard sunrise for this spot. Height is **not** corrected for: a summit's real horizon is a
+  plateau or a ridge, not sea level, and a dip computed from `elevationM` would add precision we
+  do not have (D1). Times are shown in IST. This is valid because the dataset's measured extent is
+  6.8–36.0° N, 68.2–97.4° E (2026-10-03); a record outside India changes this rule and gets a
+  Revisions row.
+- **R9.** The sun computation is a pure module, `src/lib/sun.ts`. It is unit-tested against NOAA
+  calculator output, fetched and recorded in the fixture with its source, for at least three
+  Indian latitudes (8°, 20° and 34° N) at both solstices and one equinox, within ±2 minutes and
+  ±2°. Both sides use the same standard definition, so the tolerance is meaningful.
 - **R10. "Is now a good time?"** The existing rainfall strip (`TrekDetail.tsx:129`) marks the
   current month, and the detail opens the section with a computed sentence:
   - "October is in this peak's dry window", from `driestMonths`.
@@ -146,40 +162,57 @@ wired in.
   nothing.
 - **R12.** Neither R8 nor R10 claims trail conditions, safety or crowds. They describe sun and
   rain averages, and their copy says so.
-- **R13. The search arrives.** When the origin changes, the map flies to it (Leaflet `flyTo`,
-  interruptible by any pan or zoom), and the radius ring draws outward from the origin. Pins fade
-  in as their cells load, so the motion is the loading state rather than ornament on top of it.
-  Under D2 it cuts straight to the result. The e2e test asserts the endpoints — the map centred
-  and the ring at the radius — never a frame in between (CON-VER-008).
+- **R13. The search arrives.** When the origin changes, the map flies to it (Leaflet `flyTo`), and
+  the radius ring draws outward from the origin. Pins fade in as their cells load, so the motion is
+  the loading state rather than ornament on top of it. Any pan, zoom or tap during the flight
+  stops it where the person left it (D3). Under D2 it cuts straight to the result. Both branches
+  are tested end to end. The default e2e context emulates reduced motion (`playwright.config.ts`),
+  so R13 adds a test in a `reducedMotion: "no-preference"` context. That test starts a flight,
+  pans mid-flight, and asserts the map ends where the pan left it, not at the origin. Tests
+  assert endpoints only, never a frame in between (CON-VER-008).
 - **R14. The region speaks.** The stats card leads with one computed sentence:
   "&lt;n&gt; peaks within &lt;r&gt; km of &lt;origin&gt;. The highest is &lt;name&gt; at
   &lt;m&gt; m, and &lt;k&gt; are hidden gems." Each clause appears only when its number exists
-  and is non-zero. A pure `regionSentence(stats, origin, radius)` builds it.
+  and is non-zero, and every count agrees in number ("1 peak", "1 is a hidden gem"). A pure
+  `regionSentence(stats, origin, radius)` builds it.
 - **R15.** Every sentence builder in this spec — `regionSentence`, `seasonSentence`,
   `sunSentence`, `emptySuggestion` — is tested over generated sparse records, with every optional
-  field removed in turn. No output may contain `undefined`, `NaN`, `null`, an empty clause or a
-  dangling "and". This is D1 turned into a test.
+  field removed in turn and every count at 0, 1 and many. No output may contain `undefined`,
+  `NaN`, `null`, an empty clause, a dangling "and", "about", or a plural on a count of 1. This is
+  D1 turned into a test.
 
 ### D. The blank moments get a voice and an action
 
-- **R16. A 404 that helps.** For a path shaped like `/t/<slug>/`, the 404 page searches the slug
-  against the search index (`data/search-index.json`, the palette's). On a confident match it
-  says "Did you mean &lt;name&gt;?" and links to that trek. Otherwise it says, in the app's voice,
-  that this trail has gone cold, and offers search and the map. "Confident" is defined in the
-  pure matcher and tested, including the refusal: a weak match must **not** be offered as a
-  correction.
+- **R16. A 404 that helps.** For a path shaped like `/t/<slug>/`, the 404 page matches the slug
+  against a **pages index** generated at build: `data/pages-index.json`, one `[slug, name, id]`
+  per static page, measured and budgeted under R5. The 2 MB palette index is not used, because a
+  dead page link is most likely a renamed page, and 2 MB per 404 fails D5. On a confident match
+  it says "Did you mean &lt;name&gt;?" and links to that page, which exists by construction
+  because the index lists only built pages. Otherwise it says, in the app's voice, that this trail
+  has gone cold, and offers the palette's search in the app (`/trailward/`) and the map.
+  "Confident" is defined in the pure matcher `src/lib/notFound.ts` and tested, including its
+  refusals: a weak match, or two equally good ones, must **not** be offered as a correction.
 - **R17.** Every other unknown path keeps today's behaviour: redirect to the app root, keeping
-  the query string and hash, so shared URL state still resolves (`urlState.ts`). The 404 is
-  tested under `vite preview` by its content, not its status. The soft-404 lesson from spec 42
-  applies.
+  the query string and hash, so shared URL state still resolves (`urlState.ts`). `vite preview`
+  serves `index.html` for unknown paths and never `404.html`, so it cannot exercise this. The e2e
+  therefore reproduces GitHub Pages' behaviour itself: a Playwright route answers an unknown
+  `/trailward/t/<slug>/` with `dist/404.html` and status 404 **at the original URL**, so the page
+  sees the real pathname. A second test checks that a non-`/t/` path still redirects with its
+  query and hash. Both assert content, never status alone (spec 42's soft-404 lesson).
 - **R18. The empty list acts.** When no record falls within the radius **and filters are at
-  their defaults**, the list offers one button: "The nearest peaks are about 140 km away. Widen
-  to 150 km." The radius is computed from the cell index as the distance to the far corner of
-  the nearest non-empty cell, rounded up to the slider's 5 km step and capped at the 500 km
-  maximum. A far corner, so the suggestion is a guarantee and not a hope. A unit test asserts
-  that the suggested radius always contains the cell that justified it. When filters are active
-  the existing "Clear filters" stays the action. When nothing lies within 500 km, the copy says
-  so and offers no button.
+  their defaults**, the list offers one button: "Widen to 150 km to reach the nearest peaks." It
+  states **no distance to a peak**, because what is computed is a cell's corner, not a peak (D1).
+  The radius is the straight-line distance to the far corner of the nearest non-empty cell in
+  the cell index, rounded up to the slider's 5 km step. Because it is the far corner, every
+  record in that cell lies inside the suggested radius **as straight-line distance**. That
+  guarantee depends on the filter measuring straight-line distance, so it holds only once the
+  road-distance defect (register row 16) is fixed. A unit test drives `applyFilters` itself, not the geometry alone: whenever the suggestion is
+  not capped, filtering that cell's records at the suggested radius yields at least one result. Further rules:
+  - When filters are active, the existing "Clear filters" remains the action.
+  - When the far corner lies beyond the 500 km maximum but part of the cell lies within it, the
+    button offers "Try the maximum, 500 km", without a promise.
+  - When no non-empty cell comes within 500 km at all, the copy says so and there is no button.
+  - If widening still yields nothing (a stale index), the copy says so; it never loops.
 - **R19.** When the palette finds nothing, it offers up to three summits whose folded names are
   nearest the query, as buttons that select them. Each suggestion is asserted to exist in the
   index.
@@ -187,12 +220,13 @@ wired in.
   names this peak. If you know it, name it." That line links to the existing naming flow (specs
   28/29), and the record's computed facts follow.
 - **R21.** When `navigator.onLine` turns false, a quiet chip says what still works: the treks
-  already loaded, their details, and pins on any basemap tiles already viewed. When the
-  connection returns, the chip leaves without a fuss. It promises nothing the cache cannot do
-  (spec 43 §D).
-- **R22.** The app writes exactly one thing to the console: a greeting that names the
-  repository and the data sources, inside a `try`. An e2e test asserts there is no other console
-  output on load.
+  already loaded and their details. It says the map's background may be blank, because basemap
+  tiles are cross-origin and the service worker does not store them (spec 43). When the connection
+  returns, the chip leaves without a fuss. It promises nothing the cache cannot do.
+- **R22.** The production app writes exactly one thing to the console: a greeting that names the
+  repository and the data sources, inside a `try`. The assertion runs in the **static** project
+  against the production build, where no dev-server or React DevTools messages exist. It
+  collects every console message on load and requires exactly the greeting, with no ignore-list.
 
 ### E. The personal layer — **proposed, not approved**
 
@@ -209,12 +243,19 @@ yes. Until then they are recorded here so they are argued about once.
 
 ### F. Enforcement
 
-- **R26.** `src/lib/motion.contract.test.ts` reads the components and the stylesheet. It fails
-  when:
-  - a component calls `matchMedia("(prefers-reduced-motion…")` anywhere other than the helper;
-  - a `@keyframes` is not covered by the reduced-motion block;
-  - a `duration-*`, transition or animation longer than 300 ms is not on the allow-list in that
-    file, where each entry names its rule here (R13, R25 today).
+- **R26.** `src/lib/motion.contract.test.ts` reads the components and the stylesheet. It fails when:
+  - the string `prefers-reduced-motion` appears in any source file other than `src/lib/motion.ts`
+    and `src/index.css`, so `useMediaQuery("(prefers-reduced-motion…")` is caught as well as
+    `matchMedia`;
+  - the global reduced-motion block in `src/index.css` is missing or no longer targets `*`. That
+    one block is what stills every CSS animation, so its presence is what is checked; a per-
+    keyframe check could not fail while it exists;
+  - a `duration-*`, a `transition`/`animation` over 300 ms, or a Tailwind animation utility
+    (`animate-*`) appears without an entry in the file's allow-list. Each entry names its rule.
+    Today's entries: `animate-pulse` on loading skeletons (R7, an arrival, carrying the
+    information that results are on their way), R13, R25;
+  - a component removes its focus outline without a `focus-visible:` ring and is not on R2's
+    named exemptions.
 - **R27.** Every new visual state gets a baseline that is reached by construction. Reduced motion
   is emulated **before** navigation, and no capture depends on an observer or a timer firing
   during it.
@@ -229,9 +270,8 @@ yes. Until then they are recorded here so they are argued about once.
 - **The device clock is wrong, or set to another time zone.** R8 always shows times in IST and
   labels them, so a traveller's phone set to another zone does not move the sunrise. R10 uses the
   device's month, which is the person's present, and is right even then.
-- **The empty-list suggestion and the cell index disagree** (a stale index). The suggestion is
-  computed from the index the app already loaded, and the button's result is what the app then
-  loads. If that still yields nothing, the copy says so. It never loops.
+- **The empty-list suggestion and the cell index disagree** (a stale index). Covered by R18's
+  last clause.
 - **The 404 matcher finds two equally good candidates.** It offers neither as "did you mean" and
   shows search, because a confident wrong correction is worse than an honest search box.
 - **A social card's name contains a glyph the bundled font lacks.** The card falls back to the
@@ -244,26 +284,31 @@ yes. Until then they are recorded here so they are argued about once.
   terms (spec 43 §D).
 - **Trail duration, "start by" times and pacing.** No record carries `durationHrs` (0 of 120,441
   measured), so any such number would be invented (D1). This returns if a source supplies it.
-- **Ridge-aware sunrise** (casting the horizon from the DEM). The flat-horizon value is honest
-  and labelled. A terrain horizon is a later enrichment, not delight.
+- **Height and ridge-aware sunrise** (a dip from elevation, or a horizon cast from the DEM). The
+  standard value is honest and labelled; a corrected one needs the real horizon, not sea level. A terrain horizon is a later enrichment, not delight.
 - **A count-up on the stats card.** The number should be read, not watched. Considered and
   rejected.
 - **Onboarding tours.** The map is the onboarding.
 
 ## Verification
 
+**Not yet implemented.** Every test file and command below is the target this spec commits to.
+None of them exists until the PR that implements its rule; each PR's revision row records when
+its rows became real.
+
 ```sh
 npx vitest run src/lib/seo.test.ts scripts/lib/trekPage.test.ts      # R1
 npm run check:deploy                                                  # R1 against the live site
 npx vitest run src/lib/sun.test.ts                                    # R8, R9, polar edge
+npx vitest run src/lib/motion.test.ts                                 # D2 helper: false without matchMedia
 npx vitest run src/lib/voice.test.ts                                  # R10, R11, R14, R15, R18
 npx vitest run src/lib/notFound.test.ts                               # R16 matcher, incl. refusal
 npx vitest run src/lib/motion.contract.test.ts                        # R2, R6, R26 (D2, D3)
 npx vitest run src/components/CommandPalette.test.tsx                 # R19
 npx vitest run src/components/TrekDetail.test.tsx                     # R8, R10, R20
 npm run check:size                                                    # R5
-npm run e2e:app                                                       # R2 focus, R3 print text, R13, R18, R21, R22
-npm run e2e:static                                                    # R3 static print, R16, R17
+npm run e2e:app                                                       # R2 focus, R3 print text, R13 (both contexts), R18, R21
+npm run e2e:static                                                    # R3 static print, R16, R17 (routed 404), R22
 ```
 
 Print (R3) is asserted with Playwright `page.emulateMedia({ media: "print" })` against the text
@@ -274,4 +319,4 @@ a gate.
 
 | Date       | Change                                                                                                                                                          | Covered by |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 2026-10-03 | Written: the five rules, a register of fifteen surfaces observed today, R1–R28. R23–R25 recorded as proposed, pending the owner's approval. Spec only, no code. | —          |
+| 2026-10-03 | Written: the five rules, a register of sixteen surfaces observed today, R1–R28. R23–R25 recorded as proposed, pending the owner's approval. Spec only, no code. | —          |
