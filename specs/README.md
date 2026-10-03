@@ -31,47 +31,52 @@ Verification section whose claims exist as tests.
 
 ## Index
 
-| Spec                                                            | Module                                                   |
-| --------------------------------------------------------------- | -------------------------------------------------------- |
-| [00-architecture](./00-architecture.md)                         | System shape, data tiers, dataflow                       |
-| [01-data-model](./01-data-model.md)                             | `Trek` / `Origin` types, validation                      |
-| [02-data-pipeline](./02-data-pipeline.md)                       | Build-time fetch → `treks.json`                          |
-| [03-origin-picker](./03-origin-picker.md)                       | Dynamic origin, geocoding, discovery                     |
-| [04-map](./04-map.md)                                           | Leaflet map, markers, clustering, radius ring            |
-| [05-filters](./05-filters.md)                                   | Radius slider + filter panel + sync                      |
-| [06-trek-detail](./06-trek-detail.md)                           | Detail card, weather, external links                     |
-| [07-feedback](./07-feedback.md)                                 | _Superseded by spec 29_ (was Web3Forms)                  |
-| [08-design-system](./08-design-system.md)                       | Palette, type scale, components, responsive              |
-| [09-hosting-deploy](./09-hosting-deploy.md)                     | GitHub Pages, Vite base, gated CI                        |
-| [10-scheduled-refresh](./10-scheduled-refresh.md)               | Weekly cron, commit + redeploy                           |
-| [11-topography-discovery](./11-topography-discovery.md)         | OSM peak discovery + terrain scoring                     |
-| [12-manual-additions](./12-manual-additions.md)                 | Hand-added peaks the sources miss                        |
-| [13-map-layers-location-gpx](./13-map-layers-location-gpx.md)   | Basemaps, geolocation, GPX export                        |
-| [14-trails-elevation-profile](./14-trails-elevation-profile.md) | OSM trails + elevation profiles                          |
-| [15-polish](./15-polish.md)                                     | Hidden-gem score, badges, UX polish                      |
-| [16-geonames-listed-summits](./16-geonames-listed-summits.md)   | GeoNames listed tier (all summits, unscored pins)        |
-| [17-tile-dem-scoring](./17-tile-dem-scoring.md)                 | Tile-DEM terrain scoring (quota-free)                    |
-| [18-wikidata-crossmatch](./18-wikidata-crossmatch.md)           | Wikidata cross-match: hidden-gem honesty + photos        |
-| [19-lazy-enrichment](./19-lazy-enrichment.md)                   | On-open enrichment (Wikipedia/Commons/Nominatim)         |
-| [20-climate-best-season](./20-climate-best-season.md)           | Rainfall-derived `bestSeason` (Open-Meteo)               |
-| [21-gazetteer-history](./21-gazetteer-history.md)               | 1900s gazetteers → `historicalNote`                      |
-| [22-hill-features](./22-hill-features.md)                       | OSM hill features (forts, temples, caves)                |
-| [23-wildlife](./23-wildlife.md)                                 | iNaturalist wildlife (lazy)                              |
-| [24-protected-heritage](./24-protected-heritage.md)             | Protected-area + heritage flags                          |
-| [25-altnames-persistence](./25-altnames-persistence.md)         | Alternate names + cron-preservation of baked fields      |
-| [26-landcover](./26-landcover.md)                               | ESA WorldCover ground cover (COG reader)                 |
-| [27-peak-detection](./27-peak-detection.md)                     | DEM peak detection (summits no database names)           |
-| [28-naming](./28-naming.md)                                     | Naming the unnamed: inference, Maps link, suggest loop   |
-| [29-feedback-store](./29-feedback-store.md)                     | Feedback via GitHub Issues + apply-suggestions cron      |
-| [30-nationwide](./30-nationwide.md)                             | Region-free records, cell-chunked serving, any-city      |
-| [31-extra-sources-and-volume](./31-extra-sources-and-volume.md) | OSM/Wikidata sweep, village rule, UI volume, drift guard |
-| [32-data-operations](./32-data-operations.md)                   | Rebake runbook: writer serialization, order, caches      |
-| [33-ui-overhaul](./33-ui-overhaul.md)                           | Primitives, map-first mobile, honest overlays, visual CI |
-| [34-live-location](./34-live-location.md)                       | Origin follows the user; live directions; SW freshness   |
-| [35-discoverability](./35-discoverability.md)                   | Canonical URLs, structured data, 3,886 static trek pages |
-| [36-content-pages](./36-content-pages.md)                       | Attribution, method and dataset-freshness pages          |
-| [37-accessibility-and-gates](./37-accessibility-and-gates.md)   | A11y audit, contrast, link check, coverage & spec gates  |
-| [38-palette-and-paths](./38-palette-and-paths.md)               | Command palette over every named summit; guided paths    |
+| Spec                                                                  | Module                                                             |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [00-architecture](./00-architecture.md)                               | System shape, data tiers, dataflow                                 |
+| [01-data-model](./01-data-model.md)                                   | `Trek` / `Origin` types, validation                                |
+| [02-data-pipeline](./02-data-pipeline.md)                             | Build-time fetch → `treks.json`                                    |
+| [03-origin-picker](./03-origin-picker.md)                             | Dynamic origin, geocoding, discovery                               |
+| [04-map](./04-map.md)                                                 | Leaflet map, markers, clustering, radius ring                      |
+| [05-filters](./05-filters.md)                                         | Radius slider + filter panel + sync                                |
+| [06-trek-detail](./06-trek-detail.md)                                 | Detail card, weather, external links                               |
+| [07-feedback](./07-feedback.md)                                       | _Superseded by spec 29_ (was Web3Forms)                            |
+| [08-design-system](./08-design-system.md)                             | Palette, type scale, components, responsive                        |
+| [09-hosting-deploy](./09-hosting-deploy.md)                           | GitHub Pages, Vite base, gated CI                                  |
+| [10-scheduled-refresh](./10-scheduled-refresh.md)                     | Weekly cron, commit + redeploy                                     |
+| [11-topography-discovery](./11-topography-discovery.md)               | OSM peak discovery + terrain scoring                               |
+| [12-manual-additions](./12-manual-additions.md)                       | Hand-added peaks the sources miss                                  |
+| [13-map-layers-location-gpx](./13-map-layers-location-gpx.md)         | Basemaps, geolocation, GPX export                                  |
+| [14-trails-elevation-profile](./14-trails-elevation-profile.md)       | OSM trails + elevation profiles                                    |
+| [15-polish](./15-polish.md)                                           | Hidden-gem score, badges, UX polish                                |
+| [16-geonames-listed-summits](./16-geonames-listed-summits.md)         | GeoNames listed tier (all summits, unscored pins)                  |
+| [17-tile-dem-scoring](./17-tile-dem-scoring.md)                       | Tile-DEM terrain scoring (quota-free)                              |
+| [18-wikidata-crossmatch](./18-wikidata-crossmatch.md)                 | Wikidata cross-match: hidden-gem honesty + photos                  |
+| [19-lazy-enrichment](./19-lazy-enrichment.md)                         | On-open enrichment (Wikipedia/Commons/Nominatim)                   |
+| [20-climate-best-season](./20-climate-best-season.md)                 | Rainfall-derived `bestSeason` (Open-Meteo)                         |
+| [21-gazetteer-history](./21-gazetteer-history.md)                     | 1900s gazetteers → `historicalNote`                                |
+| [22-hill-features](./22-hill-features.md)                             | OSM hill features (forts, temples, caves)                          |
+| [23-wildlife](./23-wildlife.md)                                       | iNaturalist wildlife (lazy)                                        |
+| [24-protected-heritage](./24-protected-heritage.md)                   | Protected-area + heritage flags                                    |
+| [25-altnames-persistence](./25-altnames-persistence.md)               | Alternate names + cron-preservation of baked fields                |
+| [26-landcover](./26-landcover.md)                                     | ESA WorldCover ground cover (COG reader)                           |
+| [27-peak-detection](./27-peak-detection.md)                           | DEM peak detection (summits no database names)                     |
+| [28-naming](./28-naming.md)                                           | Naming the unnamed: inference, Maps link, suggest loop             |
+| [29-feedback-store](./29-feedback-store.md)                           | Feedback via GitHub Issues + apply-suggestions cron                |
+| [30-nationwide](./30-nationwide.md)                                   | Region-free records, cell-chunked serving, any-city                |
+| [31-extra-sources-and-volume](./31-extra-sources-and-volume.md)       | OSM/Wikidata sweep, village rule, UI volume, drift guard           |
+| [32-data-operations](./32-data-operations.md)                         | Rebake runbook: writer serialization, order, caches                |
+| [33-ui-overhaul](./33-ui-overhaul.md)                                 | Primitives, map-first mobile, honest overlays, visual CI           |
+| [34-live-location](./34-live-location.md)                             | Origin follows the user; live directions; SW freshness             |
+| [35-discoverability](./35-discoverability.md)                         | Canonical URLs, structured data, 3,886 static trek pages           |
+| [36-content-pages](./36-content-pages.md)                             | Attribution, method and dataset-freshness pages                    |
+| [37-accessibility-and-gates](./37-accessibility-and-gates.md)         | A11y audit, contrast, link check, coverage & spec gates            |
+| [38-palette-and-paths](./38-palette-and-paths.md)                     | Command palette over every named summit; guided paths              |
+| [39-constitution-gate](./39-constitution-gate.md)                     | CI checks this repo against the shared constitution                |
+| [40-testability-and-floors](./40-testability-and-floors.md)           | Testability of the build tools; tiered coverage floors             |
+| [41-build-cli-seams](./41-build-cli-seams.md)                         | Seams for the network build tools and the floor they unlock        |
+| [42-live-contracts-and-delivery](./42-live-contracts-and-delivery.md) | Live source contracts, the delivery path, journeys                 |
+| [43-pwa](./43-pwa.md)                                                 | Manifest and service worker: provable, installable, offline-honest |
 
 ## Glossary
 
