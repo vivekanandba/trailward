@@ -17,12 +17,19 @@ about the feature at all: they were forecasts about code that did not exist yet.
 - a camera-ownership rule for a map animation, which an existing effect contradicted;
 - a 404 page tested under a preview server that never serves 404 pages;
 - a slug history kept by a job that commits nothing;
-- a font whose glyphs were never checked.
+- a print date promised on a static page that runs no JavaScript.
 
 Each fix gave the next round more detail about the future to get wrong. Rounds 3, 4 and 5 each
-found defects that the previous round's fix had introduced. Cutting the spec down to the
-requirements of the next PRs, with the review findings kept as recorded constraints, gave a
-reviewable document.
+found defects that the previous round's fix had introduced.
+
+**The evidence is mixed, and this draft says so.** Cutting the spec to the next PRs did **not**
+lower the count: rounds 6, 7 and 8 found ten each. What changed was their kind. After the cut the
+findings were about today's code (a sheet that animates on mount, a font without macrons, a
+focus rule beaten by specificity) rather than forecasts. Some of those concrete findings were
+themselves introduced by the previous round's fix, so CON-PROC-009 applied throughout. The
+reviewer also reports up to ten findings a round, so a count that holds at ten may reflect that
+cap rather than the spec. Whoever files this should weigh it as one incident with a plausible
+mechanism, not as a measured improvement.
 
 ## Proposed rule
 

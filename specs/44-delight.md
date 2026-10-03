@@ -24,8 +24,10 @@ the next PRs build: the structured-data defect and the basics (R1–R7). Each la
 register — the set-pieces, the blank moments — gets its requirements added here in a **spec PR
 that lands before** the code that implements it, as CON-PROC-001 requires. The change is how far
 ahead, not whether. An earlier draft specified all four phases at once, and five review rounds
-found 50 defects in it, most of them forecasts about code that did not exist yet. That lesson is
-drafted for the fleet in `docs/proposals/2026-10-03-con-proc-specify-one-step-ahead.md`. What the
+found 50 defects in it, most of them forecasts about code that did not exist yet. Cutting it to
+this scope did **not** stop the findings: three more rounds found ten each. They were narrower
+and concrete, about today's code rather than imagined code, but the count did not fall. That
+lesson, with this mixed evidence, is drafted for the fleet in `docs/proposals/2026-10-03-con-proc-specify-one-step-ahead.md`. What the
 rounds established about the codebase is kept under "Constraints learned in review".
 
 ## The five rules
@@ -60,7 +62,7 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
 
 | #   | Surface                            | Today (observed)                                                                                                                                                                                                                                                                       | Kind                                                                                                                                                                                | Requirements |
 | --- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| 0   | Static pages' JSON-LD              | **3,815 of 3,886** pages put a `url` in their structured data that 404s live: `trekJsonLd` uses `trek.id` (`seo.ts:140`), the page uses the slug (`pages.ts:14`)                                                                                                                       | **defect**                                                                                                                                                                          | R1           |
+| 0   | Static pages' JSON-LD              | **3,815 of 3,886** pages put a `url` in their structured data that 404s live: `trekJsonLd` uses `trek.id` (`seo.ts:140`), the page uses `slugMap`'s slug (`pages.ts:77`), which adds `-<id>` on a name collision                                                                       | **defect**                                                                                                                                                                          | R1           |
 | 1   | Focus                              | `focus-visible` is styled only in `ui/Button.tsx`; seven places set `outline-none` (R2 names them)                                                                                                                                                                                     | absence                                                                                                                                                                             | R2           |
 | 2   | Print                              | No `@media print` anywhere                                                                                                                                                                                                                                                             | absence                                                                                                                                                                             | R3           |
 | 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                               | absence                                                                                                                                                                             | later        |
@@ -128,8 +130,10 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
   trailhead with no signal.
 
 - **R4.** `npm run check:size` fails the build when the JS and CSS in `dist/assets` exceed their
-  budget in bytes: 674,629 bytes today, of 764,229 in the directory (the rest is committed woff2
-  fonts), from `find -printf %s` on a fresh build. Apparent size, not `du`'s block count, which
+  budget in bytes. The budget is set **when R4 lands**, from that build's measured size plus 5%
+  headroom, so ordinary small PRs do not each have to raise it. On 2026-10-03 the figure was
+  674,629 bytes, of 764,229 in the directory; the rest is committed woff2 fonts. Measure with
+  `find -printf %s` on a fresh build. Apparent size, not `du`'s block count, which
   differs by filesystem. The dataset (`treks.json`, the cells) belongs to the drift guard
   (spec 31), not to this gate. A budget is a ceiling, so it ratchets **down**: after a reduction
   it is tightened to just above the new figure. It is raised only in a reviewed change that
@@ -143,16 +147,24 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
   an action (a press, a search) or an arrival (cells loading), and closing anything is instant.
   Two places break this today, and both are fixed:
   - **Desktop:** a `?sel=` deep link restores the selection on load (`App.tsx:84`), which mounts
-    the detail panel with `.panel-enter`, and its scrim, with no press behind them. A selection
-    restored from the URL opens **without** the enter animation.
-  - **Mobile:** the sheet calls `applySnap(snap, true)` on mount (`Sheet.tsx:91`), so the results
-    sheet slides on every load, and a `?sel=` link slides the detail sheet in. The first
-    placement is made without a transition; later snaps animate as now.
+    the detail panel with `.panel-enter` with no press behind it. (The scrim renders at its final
+    opacity and does not animate.) A selection restored from the URL opens **without** the enter
+    animation.
+  - **Mobile:** the sheet calls `applySnap(snap, true)` on mount (`Sheet.tsx:91`). Sheets mount
+    when they open (`App.tsx:683`, `:704`), so a mount is usually a press and **should** slide.
+    Two mounts are not presses: the results sheet at app load, and a detail sheet restored from
+    `?sel=`. Those two are placed without a transition, through a prop the caller sets only for
+    them. Every press-opened sheet slides in as now.
+  - **Focus on a restored selection.** The panel and the sheet focus themselves on mount
+    (`useDialogFocus.ts:34`). Under R2 that would draw a ring around the whole panel on every
+    shared link, before anyone has touched the page. A selection restored from the URL therefore
+    does not take focus; focus stays at the top of the document, as on any page load. A
+    press-opened detail still takes focus.
 
   `e2e/motion.spec.ts` runs in a context with motion allowed, in both the desktop and the mobile
   project, each with its own selector (`.panel-enter` on desktop, the sheet on mobile). It
-  asserts that nothing is animating right after a `?sel=` load, and that a click-opened detail
-  does animate.
+  asserts that nothing is animating, and nothing in the panel has focus, right after a `?sel=`
+  load. It also asserts that a click-opened detail does animate.
 
 ### C. Enforcement
 
@@ -180,6 +192,9 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
       - WAAPI `.animate(`.
     - an animated Leaflet call (`TrekMap.tsx:146`, `:169`, `:334` today) does not take its
       preference from `src/lib/motion.ts`;
+    - the `MapContainer` (`TrekMap.tsx:397`) does not set `inertia`, `zoomAnimation`,
+      `fadeAnimation` and `markerZoomAnimation` from the helper. Leaflet runs its own motion,
+      such as the glide after a drag, which reads no stylesheet; today it uses the defaults;
     - a component sets `outline-none` without a `focus-visible:` replacement (R2).
 
     Today's allow-list holds one entry: `animate-pulse` (2 s, repeating) on loading skeletons. It
@@ -191,7 +206,8 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
     that each stylesheet carries R2's focus rule. Any transition they add must carry its own
     `@media (prefers-reduced-motion: reduce)` block in that stylesheet. That is the one place
     besides the two files above where the string may appear, and the build test requires it
-    whenever the stylesheet has a transition.
+    whenever the stylesheet has a transition. The same over-300 ms rule and allow-list apply to
+    these stylesheets, through the same function the contract test uses.
   - Every new visual state gets a baseline reached by construction: reduced motion emulated
     **before** navigation, and no capture that waits on an observer or a timer.
   - Every new assertion is mutation-tested (CON-PROC-005), and review ends on a clean round
@@ -199,8 +215,8 @@ scroll-jacking, and motion on page load with no action or data arrival behind it
 
 ## Constraints learned in review — for the requirements still to be written
 
-Not requirements. These are facts about the codebase that five review rounds of the earlier
-draft established, recorded so the PR that specifies each piece starts from them.
+Not requirements. These are facts about the codebase that the review rounds on PR #76
+established, recorded so the PR that specifies each piece starts from them.
 
 - **Set-pieces (sunrise, "is now a good time?", the search arriving, the region sentence).**
   - **Sunrise:** use the standard definition (the sun's **centre** at −0.833°) and no elevation
@@ -281,6 +297,6 @@ absence of chrome. Its `page.pdf()` output is a CI artefact for a person to look
 
 ## Revisions
 
-| Date       | Change                                                                                                                                                                                                                                                                                                                                                             | Covered by |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| 2026-10-03 | Written with the five rules, a register of 19 surfaces and R1–R7. A first draft specified all four phases (R1–R28). Five review rounds on PR #76 found 50 defects, mostly forecasts about code not yet written, so later requirements will be written in the PRs that implement them. What those rounds established is kept under "Constraints learned in review". | —          |
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                           | Covered by |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| 2026-10-03 | Written with the five rules, a register of 19 surfaces and R1–R7. A first draft specified all four phases (R1–R28). Five review rounds on PR #76 found 50 defects, mostly forecasts about code not yet written. The spec was cut to this scope, and three further rounds found ten each, about today's code. Later requirements land in spec PRs ahead of their code. What the rounds established is kept under "Constraints learned in review". | —          |
