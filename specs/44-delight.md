@@ -39,11 +39,12 @@ These are the hard limits. Every rule further down is a consequence of one of th
 - **D2 — Every movement has a still version.** CSS motion is already cut globally under
   `prefers-reduced-motion` (`src/index.css`). JavaScript motion (Leaflet `flyTo`, count-ups,
   draws) reads the preference through **one** helper module, `src/lib/motion.ts`: a hook
-  `usePrefersReducedMotion()` built on the existing `useMediaQuery`, and a plain
-  `prefersReducedMotion()` for non-React code. Both report **false** when `matchMedia` is missing,
-  unlike `useMediaQuery`'s desktop-friendly `true` default, so jsdom takes the animated branch
-  and tests must opt into the still one. Today the query is written inline twice (`Sheet.tsx:40`,
-  `TrekMap.tsx:116`). A contract test (R26) fails on the query string appearing anywhere else.
+  `usePrefersReducedMotion()` and a plain `prefersReducedMotion()` for non-React code. Both report
+  **false** when `matchMedia` is missing, so jsdom takes the animated branch and a test must opt
+  into the still one. The hook reuses `useMediaQuery` through a new optional `fallback` argument;
+  that hook keeps its default of `true`, which App's desktop split depends on. Today the query is
+  written inline twice (`Sheet.tsx:40`, `TrekMap.tsx:116`). A contract test (R26) fails if the
+  query appears anywhere else.
 - **D3 — The map stays usable.** Nothing blocks a pan, steals focus or delays a tap. Motion over
   300 ms is allowed only when it carries information and stops the moment the person acts, and it
   must sit on the allow-list in R26 with this spec's rule beside it.
@@ -96,17 +97,25 @@ sentence. They are not data, and no test or fixture may use them as expected val
 
 ### B. Absences that read as carelessness
 
-- **R2.** Every focusable element shows a visible `:focus-visible` ring. One global rule covers
-  them all, and no component removes it. Today seven places remove the outline:
-  `CommandPalette.tsx:109` and `:125`, `FilterBar.tsx:146`, `OriginSearch.tsx:117`,
-  `App.tsx:619`, `TrekList.tsx:35` and `Sheet.tsx:177`. Each becomes `focus:outline-none` **plus**
-  a `focus-visible:` ring, or loses the override. Containers focused only programmatically, such
-  as `#results`, may keep no ring because they are never reached by Tab. Each exemption is named
-  in R26's test.
+- **R2.** Every element a person can reach with Tab shows a visible focus ring, from one global
+  `:focus-visible` rule, and no component removes it without replacing it. The seven
+  `outline-none` sites today, by name:
+  - **To fix:** the palette input, `CommandPalette.tsx:125`, which removes the outline and adds
+    nothing.
+  - **Already compliant:** `FilterBar.tsx:146` and `OriginSearch.tsx:117`, which replace it with
+    `focus:ring-2`.
+  - **Exempt:** containers focused only from code (`tabIndex={-1}`), never by Tab. These are
+    `#results` (`TrekList.tsx:35`), the palette dialog (`CommandPalette.tsx:109`), the sheet
+    (`Sheet.tsx:177`) and the detail panel (`App.tsx:619`).
+
+  R26's test carries exactly these lists.
+
 - **R3.** Printing a trek produces a **trail card**, not a screenshot. That applies both to the
   static page (`/t/<slug>/`) and to the in-app detail. The card carries: the name; coordinates in
   decimal **and** degrees-minutes-seconds; elevation; season; nearest town; the directions URL
-  written out in full; and the date it was printed. It leaves out map tiles, navigation, buttons
+  written out in full; and a date. In the app that is the print date, added on `beforeprint`. A
+  static page has no client JS (spec 35), so its card says **"Built on &lt;date&gt;"**, the fact it
+  actually knows, and never calls it a print date (D1). It leaves out map tiles, navigation, buttons
   and the sheet chrome, prints ink on white whatever the screen theme, and splits no fact table
   across a page. The point is a paper backup for a trailhead with no signal.
 - **R4.** Each static trek page gets its own social card, generated at build from the record:
@@ -116,11 +125,13 @@ sentence. They are not data, and no test or fixture may use them as expected val
   one. The total stays inside R5's budget. If 3,886 cards do not fit, the measured number goes
   in the Revisions table along with the subset that gets cards (curated first, then by
   `discoveryScore`).
-- **R5.** `npm run check:size` fails the build when the shipped JS+CSS (`dist/assets`) exceeds its
-  budget, or when `dist/` exceeds its own. A budget is a ceiling, so it ratchets **down**: after a
-  reduction it is tightened to just above the new figure. It is raised only in a reviewed change
-  that states the cause and the new figure. R4's social cards are such a cause, and their PR
-  carries the raise and the measurement.
+- **R5.** `npm run check:size` fails the build when the app's own output exceeds its budget. That
+  output is `dist/assets` (JS+CSS) plus the files this spec generates: the pages index (R16) and
+  the social cards (R4). `dist/data/` is **not** budgeted here. The unattended weekly refresh
+  rewrites it, and its growth is governed by the data drift guard (spec 31). A size gate that only
+  a person could unblock would stop the cron's deploy. A budget is a ceiling, so it ratchets
+  **down**: after a reduction it is tightened to just above the new figure. It is raised only in a
+  reviewed change that states the cause and the new figure; R4's cards are such a cause.
 - **R6.** The theme toggle's new icon rotates in when pressed. The animation is keyed to the
   press count so it never plays on load, and it is still under D2.
 - **R7.** Nothing animates on page load unless data is arriving. Every movement in this spec
@@ -149,10 +160,15 @@ wired in.
   Indian latitudes (8°, 20° and 34° N) at both solstices and one equinox, within ±2 minutes and
   ±2°. Both sides use the same standard definition, so the tolerance is meaningful.
 - **R10. "Is now a good time?"** The existing rainfall strip (`TrekDetail.tsx:129`) marks the
-  current month, and the detail opens the section with a computed sentence:
-  - "October is in this peak's dry window", from `driestMonths`.
-  - "This is the wettest month here (Jul, 412 mm)", from `wettestMonth`.
-  - Otherwise, the month's mean rainfall and the next dry month.
+  current month, and the section opens with a computed sentence. "The dry window" always means
+  the run that `driestMonths` returns: the longest consecutive run below its threshold, which may
+  wrap December to January. The first branch that applies wins:
+  - The month is in the dry window: "October is in this peak's dry window."
+  - The month is the wettest (`wettestMonth`): "This is the wettest month here (Jul, 412 mm)."
+  - A dry window exists: "&lt;Month&gt; averages &lt;mm&gt; mm here; the dry window starts in
+    &lt;first month of the run&gt;."
+  - No month is dry (`driestMonths` returns `[]`): "&lt;Month&gt; averages &lt;mm&gt; mm here;
+    this place has no clear dry season." It never names a next dry month that does not exist.
 
   The month comes from the device clock. It covers the 120,187 records with a climate cell, and
   says nothing for the rest (D1).
@@ -186,12 +202,20 @@ wired in.
 - **R16. A 404 that helps.** For a path shaped like `/t/<slug>/`, the 404 page matches the slug
   against a **pages index** generated at build: `data/pages-index.json`, one `[slug, name, id]`
   per static page, measured and budgeted under R5. The 2 MB palette index is not used, because a
-  dead page link is most likely a renamed page, and 2 MB per 404 fails D5. On a confident match
-  it says "Did you mean &lt;name&gt;?" and links to that page, which exists by construction
-  because the index lists only built pages. Otherwise it says, in the app's voice, that this trail
-  has gone cold, and offers the palette's search in the app (`/trailward/`) and the map.
-  "Confident" is defined in the pure matcher `src/lib/notFound.ts` and tested, including its
-  refusals: a weak match, or two equally good ones, must **not** be offered as a correction.
+  dead page link is most likely a renamed page, and 2 MB per 404 fails D5.
+  - On a confident match it says "Did you mean &lt;name&gt;?" and links to that page, which
+    exists by construction because the index lists only built pages.
+  - Otherwise it says, in the app's voice, that this trail has gone cold, and offers the app's
+    search and the map.
+  - "Confident" is defined in the pure matcher `src/lib/notFound.ts` and tested, including its
+    refusals: a weak match, or two equally good ones, must **not** be offered as a correction.
+  - **The tested matcher is the shipped one.** `404.html` moves out of `public/` (copied
+    verbatim) and becomes a Vite build input beside `index.html`, so its script imports
+    `src/lib/notFound.ts` and is bundled, never hand-copied (CON-COV-003). The index is fetched
+    by an absolute URL built from `import.meta.env.BASE_URL`, because the page is served at the
+    dead path, not at the root.
+  - R17's e2e is mutation-checked against the shipped page: break the matcher and the e2e must
+    fail, not only the unit test.
 - **R17.** Every other unknown path keeps today's behaviour: redirect to the app root, keeping
   the query string and hash, so shared URL state still resolves (`urlState.ts`). `vite preview`
   serves `index.html` for unknown paths and never `404.html`, so it cannot exercise this. The e2e
@@ -199,16 +223,19 @@ wired in.
   `/trailward/t/<slug>/` with `dist/404.html` and status 404 **at the original URL**, so the page
   sees the real pathname. A second test checks that a non-`/t/` path still redirects with its
   query and hash. Both assert content, never status alone (spec 42's soft-404 lesson).
-- **R18. The empty list acts.** When no record falls within the radius **and filters are at
-  their defaults**, the list offers one button: "Widen to 150 km to reach the nearest peaks." It
-  states **no distance to a peak**, because what is computed is a cell's corner, not a peak (D1).
-  The radius is the straight-line distance to the far corner of the nearest non-empty cell in
-  the cell index, rounded up to the slider's 5 km step. Because it is the far corner, every
-  record in that cell lies inside the suggested radius **as straight-line distance**. That
-  guarantee depends on the filter measuring straight-line distance, so it holds only once the
-  road-distance defect (register row 16) is fixed. A unit test drives `applyFilters` itself, not the geometry alone: whenever the suggestion is
-  not capped, filtering that cell's records at the suggested radius yields at least one result. Further rules:
-  - When filters are active, the existing "Clear filters" remains the action.
+- **R18. The empty list acts.** When no record falls within the radius **and every filter other
+  than the radius is at its default**, the list offers one button: "Widen to 150 km to reach the
+  nearest peaks." It states **no distance to a peak**, because what is computed is a cell's
+  corner, not a peak (D1). The radius is the straight-line distance to the far corner of the
+  nearest non-empty cell in the cell index, rounded up to the slider's 5 km step. Because it is the
+  far corner, every record in that cell lies inside the suggested radius **as straight-line
+  distance**. That guarantee depends on the filter measuring straight-line distance, so it holds
+  only once the road-distance defect (register row 16) is fixed. A unit test drives `applyFilters`
+  itself, not the geometry alone: whenever the suggestion is not capped, filtering that cell's
+  records at the suggested radius yields at least one result. Further rules:
+  - When another filter is active, "Clear filters" remains the action, and it now **keeps the
+    radius** the person chose. Today it resets everything to `DEFAULT_FILTERS` (`App.tsx:513`),
+    radius included, which can shrink a 300 km search to 100 km.
   - When the far corner lies beyond the 500 km maximum but part of the cell lies within it, the
     button offers "Try the maximum, 500 km", without a promise.
   - When no non-empty cell comes within 500 km at all, the copy says so and there is no button.
@@ -225,8 +252,11 @@ wired in.
   returns, the chip leaves without a fuss. It promises nothing the cache cannot do.
 - **R22.** The production app writes exactly one thing to the console: a greeting that names the
   repository and the data sources, inside a `try`. The assertion runs in the **static** project
-  against the production build, where no dev-server or React DevTools messages exist. It
-  collects every console message on load and requires exactly the greeting, with no ignore-list.
+  against the production build, where no dev-server or React DevTools messages exist. Before it
+  loads the page it applies `stubTiles` and `stubApis` (`e2e/helpers/deterministic.ts`) and fails
+  any other outbound request. So a slow or refused tile cannot log "Failed to load resource" and
+  make the result depend on the network (CON-VER-008). It then requires exactly the greeting,
+  with no ignore-list.
 
 ### E. The personal layer — **proposed, not approved**
 
@@ -243,19 +273,23 @@ yes. Until then they are recorded here so they are argued about once.
 
 ### F. Enforcement
 
-- **R26.** `src/lib/motion.contract.test.ts` reads the components and the stylesheet. It fails when:
-  - the string `prefers-reduced-motion` appears in any source file other than `src/lib/motion.ts`
-    and `src/index.css`, so `useMediaQuery("(prefers-reduced-motion…")` is caught as well as
-    `matchMedia`;
+- **R26.** `src/lib/motion.contract.test.ts` reads the non-test source (`src/**/*.{ts,tsx,css}`,
+  excluding `*.test.*`) and fails when:
+  - the string `prefers-reduced-motion` appears anywhere other than `src/lib/motion.ts` and
+    `src/index.css`, comments included, so `useMediaQuery("(prefers-reduced-motion…")` is caught
+    as well as `matchMedia` (the comment at `Sheet.tsx:76` is reworded);
   - the global reduced-motion block in `src/index.css` is missing or no longer targets `*`. That
-    one block is what stills every CSS animation, so its presence is what is checked; a per-
-    keyframe check could not fail while it exists;
-  - a `duration-*`, a `transition`/`animation` over 300 ms, or a Tailwind animation utility
-    (`animate-*`) appears without an entry in the file's allow-list. Each entry names its rule.
-    Today's entries: `animate-pulse` on loading skeletons (R7, an arrival, carrying the
-    information that results are on their way), R13, R25;
-  - a component removes its focus outline without a `focus-visible:` ring and is not on R2's
-    named exemptions.
+    one block stills every CSS animation, so its presence is what is checked; a per-keyframe check
+    could not fail while it exists;
+  - any motion **over 300 ms** has no allow-list entry naming its rule. Motion of 300 ms or less
+    needs no entry. Today's motion at or under 300 ms is Scrim `duration-200`, `.panel-enter`
+    200 ms and Sheet 200 ms. The scan covers Tailwind `duration-*` and `animate-*` classes,
+    `transition`/`animation` in CSS, and **string literals assigned to `style.transition` or
+    `style.animation` in TS/TSX**, which is how Sheet sets its motion. A Tailwind `animate-*`
+    utility counts by its defined duration. Today's allow-list: `animate-pulse` (2 s) on loading
+    skeletons (R7: an arrival, telling the person results are on their way), and R13 and R25 once
+    they exist;
+  - a component removes a focus outline and is on neither of R2's named lists.
 - **R27.** Every new visual state gets a baseline that is reached by construction. Reduced motion
   is emulated **before** navigation, and no capture depends on an observer or a timer firing
   during it.
@@ -305,6 +339,7 @@ npx vitest run src/lib/voice.test.ts                                  # R10, R11
 npx vitest run src/lib/notFound.test.ts                               # R16 matcher, incl. refusal
 npx vitest run src/lib/motion.contract.test.ts                        # R2, R6, R26 (D2, D3)
 npx vitest run src/components/CommandPalette.test.tsx                 # R19
+npx vitest run src/App.test.tsx                                       # R18: Clear filters keeps the radius
 npx vitest run src/components/TrekDetail.test.tsx                     # R8, R10, R20
 npm run check:size                                                    # R5
 npm run e2e:app                                                       # R2 focus, R3 print text, R13 (both contexts), R18, R21
