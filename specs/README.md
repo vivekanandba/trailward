@@ -77,6 +77,7 @@ Verification section whose claims exist as tests.
 | [41-build-cli-seams](./41-build-cli-seams.md)                         | Seams for the network build tools and the floor they unlock        |
 | [42-live-contracts-and-delivery](./42-live-contracts-and-delivery.md) | Live source contracts, the delivery path, journeys                 |
 | [43-pwa](./43-pwa.md)                                                 | Manifest and service worker: provable, installable, offline-honest |
+| [44-delight](./44-delight.md)                                         | Delight: five rules, a surface register, the basics                |
 
 ## Glossary
 
