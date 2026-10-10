@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { runDeployCheck, type Fetched } from "./check-deploy";
 import { memoryIO } from "./lib/buildIO";
 import { absoluteUrl } from "../src/lib/seo";
-import { versionFile, DEPLOY_SURFACE, JSONLD_SAMPLE } from "./lib/deploycheck";
+import { versionFile, DEPLOY_SURFACE } from "./lib/deploycheck";
 
 const SHA = "a".repeat(40);
 const PREV = "b".repeat(40);
@@ -23,22 +23,22 @@ function trekPage(slug: string, id: string, jsonLdUrl = absoluteUrl(`t/${slug}/`
   };
 }
 
-/** The sitemap's /t/ entries, in order: one slug == id page, then three that differ. */
-const TREK_PAGES: [string, string][] = [
-  ["skandagiri", "skandagiri"],
-  ["abapuri-hill", "gn-11022928"],
-  ["virapuli", "d12-2928-1951-105-136"],
+/** The sample the build lists in version.json, and the pages it names. */
+const SAMPLE: [string, string][] = [
   ["madhugiri-betta", "madhugiri"],
+  ["kumara-parvatha", "gn-11022928"],
+  ["virapuli", "d12-2928-1951-105-136"],
 ];
-
-function sitemap(entries: [string, string][]): string {
-  return `<urlset>${entries.map(([slug]) => `<url><loc>${BASE}t/${slug}/</loc></url>`).join("")}</urlset>`;
-}
+const SAMPLE_PATHS = SAMPLE.map(([slug]) => `t/${slug}/`);
 
 /** A site that serves everything correctly at `sha`. */
 function healthySite(sha: string): Record<string, Fetched> {
   const pages: Record<string, Fetched> = {
-    "version.json": { status: 200, body: versionFile(sha, "x"), contentType: "application/json" },
+    "version.json": {
+      status: 200,
+      body: versionFile(sha, "x", SAMPLE_PATHS),
+      contentType: "application/json",
+    },
   };
   for (const p of DEPLOY_SURFACE) {
     pages[p.path] = {
@@ -52,12 +52,7 @@ function healthySite(sha: string): Record<string, Fetched> {
             : "text/html; charset=utf-8",
     };
   }
-  pages["sitemap.xml"] = {
-    status: 200,
-    body: sitemap(TREK_PAGES),
-    contentType: "application/xml",
-  };
-  for (const [slug, id] of TREK_PAGES) pages[`t/${slug}/`] = trekPage(slug, id);
+  for (const [slug, id] of SAMPLE) pages[`t/${slug}/`] = trekPage(slug, id);
   return pages;
 }
 
@@ -102,7 +97,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
         // Two stale answers, then the new build appears.
         return {
           status: 200,
-          body: versionFile(call <= 2 ? PREV : SHA, "x"),
+          body: versionFile(call <= 2 ? PREV : SHA, "x", SAMPLE_PATHS),
           contentType: "application/json",
         };
       }
@@ -124,7 +119,11 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     const pages = healthySite(SHA);
     const get = async (url: string): Promise<Fetched> =>
       url.includes("version.json")
-        ? { status: 200, body: versionFile(PREV, "x"), contentType: "application/json" }
+        ? {
+            status: 200,
+            body: versionFile(PREV, "x", SAMPLE_PATHS),
+            contentType: "application/json",
+          }
         : (pages[url.slice(BASE.length).replace(/\?.*$/, "")] ?? {
             status: 404,
             body: "",
@@ -147,7 +146,11 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     const get = async (url: string): Promise<Fetched> => {
       if (url.includes("version.json")) {
         calls++;
-        return { status: 200, body: versionFile("c".repeat(40), "x"), contentType: "" };
+        return {
+          status: 200,
+          body: versionFile("c".repeat(40), "x", SAMPLE_PATHS),
+          contentType: "",
+        };
       }
       return pages[url.slice(BASE.length).replace(/\?.*$/, "")]!;
     };
@@ -170,7 +173,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
         calls++;
         return {
           status: 200,
-          body: versionFile(calls <= 2 ? PREV : SHA, "x"),
+          body: versionFile(calls <= 2 ? PREV : SHA, "x", SAMPLE_PATHS),
           contentType: "application/json",
         };
       }
@@ -193,7 +196,11 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
         calls++;
         return calls <= 2
           ? { status: 404, body: "not found", contentType: "text/html" }
-          : { status: 200, body: versionFile(SHA, "x"), contentType: "application/json" };
+          : {
+              status: 200,
+              body: versionFile(SHA, "x", SAMPLE_PATHS),
+              contentType: "application/json",
+            };
       }
       return pages[url.slice(BASE.length).replace(/\?.*$/, "")]!;
     };
@@ -234,7 +241,11 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       if (url.includes("version.json")) {
         calls++;
         if (calls <= 2) throw new Error("ECONNRESET");
-        return { status: 200, body: versionFile(SHA, "x"), contentType: "application/json" };
+        return {
+          status: 200,
+          body: versionFile(SHA, "x", SAMPLE_PATHS),
+          contentType: "application/json",
+        };
       }
       return pages[url.slice(BASE.length).replace(/\?.*$/, "")]!;
     };
@@ -311,7 +322,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     expect(out.ok).toBe(false);
     // Every other page was still checked — one failure must not hide the rest.
     // version + the surface + the structured-data sample (spec 44 R1)
-    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1 + JSONLD_SAMPLE);
+    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1 + SAMPLE_PATHS.length);
   });
 
   it("cache-busts the version request so a CDN cannot answer with our own check", async () => {
@@ -333,20 +344,19 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
   describe("structured-data sample (spec 44 R1)", () => {
     const run = (pages: Record<string, Fetched>) =>
       runDeployCheck(memoryIO(), { get: serve(pages).get, wait: noWait }, { sha: SHA, base: BASE });
-    // Structural, like the code: a trek page that is not the surface's fixed
-    // sample, or the sample summary — never inferred from a message's wording.
-    const sampleResults = (out: { results: { path: string; detail: string; ok: boolean }[] }) =>
-      out.results.filter(
-        (r) =>
-          (r.path.startsWith("t/") && r.path !== "t/skandagiri/") || r.path === "JSON-LD sample",
-      );
+    const sampled = (out: { results: { path: string }[] }) =>
+      out.results.filter((r) => SAMPLE_PATHS.includes(r.path)).map((r) => r.path);
 
-    it("checks the first three pages whose slug differs from their id", async () => {
-      const out = await run(healthySite(SHA));
+    it("checks every page the build listed in version.json, cache-busted", async () => {
+      const { get, asked } = serve(healthySite(SHA));
+      const out = await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
       expect(out.ok).toBe(true);
-      const checked = sampleResults(out).map((r) => r.path);
-      // skandagiri (slug == id) cannot show the defect, so it is walked past.
-      expect(checked).toEqual(["t/abapuri-hill/", "t/virapuli/", "t/madhugiri-betta/"]);
+      expect(sampled(out)).toEqual(SAMPLE_PATHS);
+      for (const p of SAMPLE_PATHS) {
+        const hit = asked.filter((u) => u.includes(`/${p}`));
+        expect(hit).toHaveLength(1);
+        expect(hit[0]).toContain(`?cb=${SHA}-`);
+      }
     });
 
     it("FAILS when a page's JSON-LD url is not its canonical — the 3,815-page defect", async () => {
@@ -354,89 +364,69 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       pages["t/virapuli/"] = trekPage(
         "virapuli",
         "d12-2928-1951-105-136",
-        `${BASE}t/d12-2928-1951-105-136/`,
+        absoluteUrl("t/d12-2928-1951-105-136/"),
       );
       const out = await run(pages);
       expect(out.ok).toBe(false);
-      const bad = out.results.find((r) => r.path === "t/virapuli/");
-      expect(bad?.ok).toBe(false);
-      expect(bad?.detail).toMatch(/JSON-LD url .* is not the canonical/);
+      expect(out.results.find((r) => r.path === "t/virapuli/")?.detail).toMatch(
+        /JSON-LD url .* is not the canonical/,
+      );
     });
 
-    it("FAILS with its own message when it cannot find three qualifying pages", async () => {
+    it("FAILS a page whose canonical and JSON-LD agree on the wrong url", async () => {
       const pages = healthySite(SHA);
-      pages["sitemap.xml"] = {
+      const wrong = absoluteUrl("t/gn-11022928/");
+      pages["t/kumara-parvatha/"] = {
         status: 200,
-        body: sitemap(TREK_PAGES.slice(0, 2)), // skandagiri + one qualifying page
-        contentType: "application/xml",
+        contentType: "text/html",
+        body: `<link rel="canonical" href="${wrong}" /><script type="application/ld+json">{"url":"${wrong}"}</script>`,
       };
       const out = await run(pages);
-      expect(out.ok).toBe(false);
-      const miss = out.results.find((r) => r.path === "JSON-LD sample");
-      expect(miss?.detail).toBe("could not find a sample (found 1 of 3)");
-    });
-
-    it("walks at most 50 pages looking for a sample", async () => {
-      const same: [string, string][] = Array.from({ length: 60 }, (_, i) => [`p${i}`, `p${i}`]);
-      const pages = healthySite(SHA);
-      pages["sitemap.xml"] = { status: 200, body: sitemap(same), contentType: "application/xml" };
-      for (const [slug, id] of same) pages[`t/${slug}/`] = trekPage(slug, id);
-      const { get, asked } = serve(pages);
-      const out = await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
-      expect(asked.filter((u) => /\/t\/p\d+\/\?cb=/.test(u))).toHaveLength(50);
-      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "could not find a sample (found 0 of 3)",
+      expect(out.results.find((r) => r.path === "t/kumara-parvatha/")?.detail).toMatch(
+        /is not this page's url/,
       );
+      expect(out.ok).toBe(false);
     });
 
-    it("FAILS a page it cannot read, naming why, rather than skipping it", async () => {
+    it("FAILS a page it cannot read, naming why", async () => {
       for (const [page, reason] of [
         [{ status: 404, body: "", contentType: "text/html" }, /HTTP 404/],
-        [{ ...trekPage("abapuri-hill", "gn-1"), body: "<h1>no link</h1>" }, /no \?sel= link/],
-        [
-          { ...trekPage("abapuri-hill", "gn-1"), body: '<a class="cta" href="/?sel=gn-1">' },
-          /no canonical/,
-        ],
+        [{ status: 200, body: "<h1>x</h1>", contentType: "text/html" }, /no canonical/],
         [
           {
-            ...trekPage("abapuri-hill", "gn-1"),
-            body: `<link rel="canonical" href="${absoluteUrl("t/abapuri-hill/")}" /><a class="cta" href="/?sel=gn-1">`,
+            status: 200,
+            body: `<link rel="canonical" href="${absoluteUrl("t/virapuli/")}" />`,
+            contentType: "text/html",
           },
           /no JSON-LD url/,
         ],
       ] as const) {
         const pages = healthySite(SHA);
-        pages["t/abapuri-hill/"] = page;
+        pages["t/virapuli/"] = page;
         const out = await run(pages);
-        const r = out.results.find((x) => x.path === "t/abapuri-hill/");
-        expect(r?.ok, String(reason)).toBe(false);
-        expect(r?.detail, String(reason)).toMatch(reason);
+        expect(out.results.find((r) => r.path === "t/virapuli/")?.detail, String(reason)).toMatch(
+          reason,
+        );
         expect(out.ok).toBe(false);
       }
     });
 
-    it("does not count an unreadable page toward the three — it proves nothing", async () => {
+    it("FAILS when version.json lists no sample — a build that chose none is not verified", async () => {
       const pages = healthySite(SHA);
-      pages["t/abapuri-hill/"] = { status: 404, body: "", contentType: "text/html" };
+      pages["version.json"] = {
+        status: 200,
+        body: versionFile(SHA, "x", []),
+        contentType: "application/json",
+      };
       const out = await run(pages);
       expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "could not find a sample (found 2 of 3)",
+        "version.json lists no jsonLdSample",
       );
-    });
-
-    it("FAILS when the sitemap cannot be read, and SAYS that was why", async () => {
-      const pages = healthySite(SHA);
-      pages["sitemap.xml"] = { status: 500, body: "", contentType: "text/html" };
-      const out = await run(pages);
-      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "could not find a sample (found 0 of 3) — sitemap.xml: HTTP 500",
-      );
+      expect(out.ok).toBe(false);
     });
 
     it("does not run against a site that is not serving the build just made", async () => {
-      // Pages from an older build would report THAT build's defects as this one's.
-      const pages = healthySite("c".repeat(40));
-      const { get, asked } = serve(pages);
+      const { get, asked } = serve(healthySite("c".repeat(40)));
       const out = await runDeployCheck(
         memoryIO(),
         { get, wait: noWait },
@@ -445,105 +435,36 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
         "not run — the site is not serving the build just made",
       );
-      expect(asked.some((u) => u.includes("/t/abapuri-hill/"))).toBe(false);
+      expect(asked.some((u) => SAMPLE_PATHS.some((p) => u.includes(`/${p}`)))).toBe(false);
     });
 
-    it("says when the sitemap answered 200 with something that is not a sitemap", async () => {
-      const pages = healthySite(SHA);
-      pages["sitemap.xml"] = {
-        status: 200,
-        body: '<div id="root"></div>',
-        contentType: "application/xml",
-      };
-      const out = await run(pages);
-      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "could not find a sample (found 0 of 3) — sitemap.xml: body does not contain <urlset",
-      );
-    });
-
-    it("reads the sitemap ONCE and cache-busts every sampled page", async () => {
-      const { get, asked } = serve(healthySite(SHA));
-      await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
-      expect(asked.filter((u) => u.includes("sitemap.xml"))).toHaveLength(1);
-      // Right after a deploy the CDN may hold the previous build's page.
-      const sampled = asked.filter((u) => /\/t\/(abapuri-hill|virapuli|madhugiri-betta)\//.test(u));
-      expect(sampled).toHaveLength(3);
-      for (const u of sampled) expect(u).toContain(`?cb=${SHA}-`);
-    });
-
-    it("retries a sampled page once on a transient failure, then judges it", async () => {
-      const pages = healthySite(SHA);
-      const { get } = serve(pages);
-      let thrown = 0;
-      const flaky = async (url: string): Promise<Fetched> => {
-        if (url.includes("/t/abapuri-hill/") && thrown++ === 0) throw new Error("ECONNRESET");
-        return get(url);
-      };
-      const out = await runDeployCheck(
-        memoryIO(),
-        { get: flaky, wait: noWait },
-        { sha: SHA, base: BASE },
-      );
-      expect(thrown).toBe(2);
-      expect(out.results.find((r) => r.path === "t/abapuri-hill/")?.ok).toBe(true);
-      expect(out.ok).toBe(true);
-    });
-
-    it("retries a sampled page once on a 5xx too, then judges it", async () => {
-      const pages = healthySite(SHA);
-      const { get } = serve(pages);
-      let served = 0;
-      const flaky = async (url: string): Promise<Fetched> =>
-        url.includes("/t/abapuri-hill/") && served++ === 0
-          ? { status: 503, body: "", contentType: "text/html" }
-          : get(url);
-      const out = await runDeployCheck(
-        memoryIO(),
-        { get: flaky, wait: noWait },
-        { sha: SHA, base: BASE },
-      );
-      expect(served).toBe(2);
-      expect(out.results.find((r) => r.path === "t/abapuri-hill/")?.ok).toBe(true);
+    it("retries a sampled page once on a thrown request, a 5xx, a 408 or a 429", async () => {
+      for (const transient of ["throw", 503, 408, 429] as const) {
+        const { get } = serve(healthySite(SHA));
+        let calls = 0;
+        const flaky = async (url: string): Promise<Fetched> => {
+          if (url.includes("/t/virapuli/") && calls++ === 0) {
+            if (transient === "throw") throw new Error("ECONNRESET");
+            return { status: transient, body: "", contentType: "text/html" };
+          }
+          return get(url);
+        };
+        const out = await runDeployCheck(
+          memoryIO(),
+          { get: flaky, wait: noWait },
+          { sha: SHA, base: BASE },
+        );
+        expect(calls, String(transient)).toBe(2);
+        expect(out.results.find((r) => r.path === "t/virapuli/")?.ok, String(transient)).toBe(true);
+      }
     });
 
     it("does NOT retry a 404 — it is not transient", async () => {
       const pages = healthySite(SHA);
-      pages["t/abapuri-hill/"] = { status: 404, body: "", contentType: "text/html" };
+      pages["t/virapuli/"] = { status: 404, body: "", contentType: "text/html" };
       const { get, asked } = serve(pages);
       await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
-      expect(asked.filter((u) => u.includes("/t/abapuri-hill/"))).toHaveLength(1);
-    });
-
-    it("stops after three unreadable pages in a row and says so", async () => {
-      const pages = healthySite(SHA);
-      const many: [string, string][] = Array.from({ length: 20 }, (_, i) => [`p${i}`, `id${i}`]);
-      pages["sitemap.xml"] = { status: 200, body: sitemap(many), contentType: "application/xml" };
-      // none of the p<i> pages exist: every one is a 404
-      const { get, asked } = serve(pages);
-      const out = await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
-      expect(asked.filter((u) => /\/t\/p\d+\//.test(u))).toHaveLength(3);
-      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "could not find a sample (found 0 of 3) — stopped after 3 unreadable pages in a row",
-      );
-    });
-
-    it("FAILS a page whose canonical and JSON-LD agree on the wrong url", async () => {
-      const pages = healthySite(SHA);
-      const wrong = `${BASE}t/gn-11022928/`;
-      pages["t/abapuri-hill/"] = {
-        status: 200,
-        contentType: "text/html",
-        body: [
-          `<link rel="canonical" href="${wrong}" />`,
-          `<script type="application/ld+json">{"url":"${wrong}"}</script>`,
-          `<a class="cta" href="/trailward/?sel=gn-11022928">`,
-        ].join(""),
-      };
-      const out = await run(pages);
-      expect(out.results.find((r) => r.path === "t/abapuri-hill/")?.detail).toMatch(
-        /is not this page's url/,
-      );
-      expect(out.ok).toBe(false);
+      expect(asked.filter((u) => u.includes("/t/virapuli/"))).toHaveLength(1);
     });
   });
 });

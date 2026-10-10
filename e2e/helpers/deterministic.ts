@@ -73,11 +73,11 @@ export async function deterministicPage(page: Page): Promise<void> {
  * test went on to race the cell load — failing under machine load, passing
  * when idle (CON-VER-008). `aria-busy="false"` on #results exists only after
  * the list rendered AND loading ended, so it cannot be satisfied early. The
- * timeout bounds a hang; it is not a speed assertion. It sits under the 30 s
+ * timeout bounds a hang; it is not a speed assertion. It sits under the 60 s
  * per-test timeout so a hang reports THIS wait, not a generic test timeout.
  */
 export async function resultsLoaded(page: Page): Promise<void> {
-  await page.locator('#results[aria-busy="false"]').waitFor({ state: "attached", timeout: 25_000 });
+  await page.locator('#results[aria-busy="false"]').waitFor({ state: "attached", timeout: 50_000 });
 }
 
 /**
@@ -89,7 +89,10 @@ export async function resultsLoaded(page: Page): Promise<void> {
  * returns once five reads in a row are identical — a state ("stopped
  * changing"), measured at whatever speed the machine runs.
  */
-export async function mapSettled(page: Page): Promise<void> {
+export async function mapSettled(
+  page: Page,
+  { markers = true }: { markers?: boolean } = {},
+): Promise<void> {
   // Fresh state per call: a second call in the same page must not inherit a
   // count that already reached five, or it returns before the map recomputes.
   await page.evaluate(() => {
@@ -98,21 +101,25 @@ export async function mapSettled(page: Page): Promise<void> {
     w.__mapStable = 0;
   });
   await page.waitForFunction(
-    () => {
+    (expectMarkers: boolean) => {
       const w = window as unknown as { __mapSig?: string; __mapStable?: number };
-      const sig = [...document.querySelectorAll(".trek-cluster, path.leaflet-interactive")]
+      // Pins and clusters only. The radius ring and the origin marker are
+      // interactive paths too, drawn at mount, so counting them made "an empty
+      // map" impossible to see.
+      const sig = [...document.querySelectorAll(".trek-cluster, path.trek-pin")]
         .map((e) => {
           const r = e.getBoundingClientRect();
           return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)}`;
         })
         .join("|");
-      // Nothing drawn yet is not "settled": an empty map holds still too.
-      if (sig === "") return false;
+      // Nothing drawn yet is not "settled": an empty map holds still too. A
+      // test whose map is MEANT to be empty says so.
+      if (sig === "" && expectMarkers) return false;
       w.__mapStable = w.__mapSig === sig ? (w.__mapStable ?? 0) + 1 : 0;
       w.__mapSig = sig;
       return w.__mapStable >= 5;
     },
-    undefined,
+    markers,
     { polling: 100, timeout: 20_000 },
   );
 }

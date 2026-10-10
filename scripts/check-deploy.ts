@@ -14,13 +14,10 @@ import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { absoluteUrl } from "../src/lib/seo";
 import {
   DEPLOY_SURFACE,
-  JSONLD_SAMPLE,
-  JSONLD_WALK_LIMIT,
   checkDeployedVersion,
   checkJsonLdPage,
-  type JsonLdVerdict,
   checkPage,
-  sitemapTrekPaths,
+  sampleFromVersion,
   summariseDeploy,
   type PageResult,
 } from "./lib/deploycheck";
@@ -61,6 +58,7 @@ export async function runDeployCheck(
   //    cached copy of our own check would make this assert nothing.
   let versionDetail = "never checked";
   let versionOk = false;
+  let versionBody = "";
   for (let attempt = 1; attempt <= attempts; attempt++) {
     // EVERY outcome sets `versionDetail`, including the thrown one. Leaving a
     // path that does not means the final report reads "never checked" for a
@@ -78,6 +76,7 @@ export async function runDeployCheck(
         versionDetail = verdict.detail;
         if ("ok" in verdict && verdict.ok) {
           versionOk = true;
+          versionBody = body;
           break;
         }
       }
@@ -100,20 +99,11 @@ export async function runDeployCheck(
   //    page and the content pages. A 200 is not enough — each must carry
   //    something proving it is the page and not the SPA shell served as a
   //    soft 404.
-  // The sitemap is fetched once, here, and its body reused for the sample —
-  // a second fetch could disagree with the first, and costs a ~3,900-entry
-  // download for nothing.
-  let sitemap: { body?: string; failure?: string } = { failure: "sitemap.xml was not fetched" };
   for (const expectation of DEPLOY_SURFACE) {
     const url = `${base}${expectation.path}`;
     try {
       const { status, body, contentType } = await deps.get(url);
-      const verdict = checkPage(expectation, status, body, contentType);
-      results.push(verdict);
-      // One rule for "is this the sitemap": the surface's own verdict, reused.
-      if (expectation.path === "sitemap.xml") {
-        sitemap = verdict.ok ? { body } : { failure: `sitemap.xml: ${verdict.detail}` };
-      }
+      results.push(checkPage(expectation, status, body, contentType));
     } catch (err) {
       results.push({
         path: expectation.path || "/",
@@ -121,103 +111,67 @@ export async function runDeployCheck(
         ok: false,
         detail: (err as Error).message,
       });
-      if (expectation.path === "sitemap.xml") {
-        sitemap = { failure: `sitemap.xml: ${(err as Error).message}` };
-      }
     }
   }
 
   // 3. Structured data (spec 44 R1). The fixed sample above has slug == id, so
-  //    it could never see a JSON-LD url built from the id. Walk the sitemap
-  //    instead, reading each page's own ?sel= id, and check the first pages
-  //    whose slug differs — the only ones that can show the defect.
-  // Only against the build just made: pages from an older build would report
-  // that build's defects as this one's (CON-VER-005).
-  if (versionOk) {
-    results.push(...(await sampleJsonLd(deps, base, opts.sha, sitemap)));
-  } else {
-    results.push({
-      path: "JSON-LD sample",
-      status: 0,
-      ok: false,
-      detail: "not run — the site is not serving the build just made",
-    });
-  }
+  //    it could never see a JSON-LD url built from the id. The build lists one
+  //    page of each kind whose slug differs, in the version.json just verified —
+  //    so the sample is from this build, and only ever from it.
+  results.push(...(await checkJsonLdSample(deps, base, opts.sha, versionOk, versionBody)));
 
   const { failed, text } = summariseDeploy(results);
   io.log(text);
   return { ok: failed.length === 0, results };
 }
 
-/** Consecutive unreadable pages after which the walk stops: the site is broken, not the sample. */
-const UNREADABLE_RUN_LIMIT = 3;
-
-async function sampleJsonLd(
+async function checkJsonLdSample(
   deps: DeployDeps,
   base: string,
   sha: string,
-  sitemap: { body?: string; failure?: string },
+  versionOk: boolean,
+  versionBody: string,
 ): Promise<PageResult[]> {
+  const summary = (detail: string): PageResult[] => [
+    { path: "JSON-LD sample", status: 0, ok: false, detail },
+  ];
+  // Pages from an older build would report THAT build's defects as this one's.
+  if (!versionOk) return summary("not run — the site is not serving the build just made");
+  const sample = sampleFromVersion(versionBody);
+  if (!sample) return summary("version.json lists no jsonLdSample");
   const out: PageResult[] = [];
-  const paths = sitemap.body ? sitemapTrekPaths(sitemap.body) : [];
-  let found = 0;
-  let unreadableRun = 0;
-  let stopped = "";
-  for (const path of paths.slice(0, JSONLD_WALK_LIMIT)) {
-    if (found === JSONLD_SAMPLE) break;
-    const verdict = await fetchAndJudge(deps, base, sha, path);
-    if (verdict.kind === "skip") continue; // slug == id: cannot show this defect
-    out.push(verdict.result);
-    if (verdict.kind === "checked") {
-      found++;
-      unreadableRun = 0;
-    } else if (++unreadableRun === UNREADABLE_RUN_LIMIT) {
-      // Every page failing to load is one problem, not fifty lines of it.
-      stopped = ` — stopped after ${UNREADABLE_RUN_LIMIT} unreadable pages in a row`;
-      break;
-    }
-  }
-  if (found < JSONLD_SAMPLE) {
-    // Say why there was nothing to walk when that is the reason, rather than
-    // reporting an unreadable sitemap as one with no qualifying pages.
-    const why = sitemap.failure ? ` — ${sitemap.failure}` : stopped;
-    out.push({
-      path: "JSON-LD sample",
-      status: 0,
-      ok: false,
-      detail: `could not find a sample (found ${found} of ${JSONLD_SAMPLE})${why}`,
-    });
+  for (const path of sample) {
+    // The canonical must be the PRODUCTION url of this page — that is what
+    // search engines are told — whatever host this check was pointed at.
+    out.push(await fetchAndJudge(deps, base, sha, path, absoluteUrl(path)));
   }
   return out;
 }
 
+/** Statuses worth one more try: the CDN mid-turnover, or rate limiting. */
+const TRANSIENT = (status: number): boolean => status >= 500 || status === 408 || status === 429;
+
 /**
- * One sampled page, with one retry for a transient failure (a thrown request
- * or a 5xx) — the same CDN turnover version.json's budget absorbs. A 404 or a
- * wrong url is not transient and is judged at once.
+ * One sampled page, retried once on a transient failure (a thrown request, a
+ * 5xx, 408 or 429). A 404 or a wrong url is not transient and is judged at once.
+ * Cache-busted like version.json: right after a deploy the CDN may still hold
+ * the previous build's page, which is not this defect (CON-VER-005).
  */
 async function fetchAndJudge(
   deps: DeployDeps,
   base: string,
   sha: string,
   path: string,
-): Promise<JsonLdVerdict> {
-  let last: JsonLdVerdict = { kind: "skip" };
+  expectedUrl: string,
+): Promise<PageResult> {
+  let last: PageResult = { path, status: 0, ok: false, detail: "JSON-LD sample: never fetched" };
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      // Cache-busted like version.json: right after a deploy the CDN may still
-      // hold the previous build's page, and reporting that as a JSON-LD defect
-      // would name the wrong cause (CON-VER-005).
       const { status, body } = await deps.get(`${base}${path}?cb=${sha}-${attempt}`);
-      // The canonical must be the PRODUCTION url of this page — that is what
-      // search engines are told — whatever host this check was pointed at.
-      last = checkJsonLdPage(path, absoluteUrl(path), status, body);
-      if (status < 500) return last;
+      last = checkJsonLdPage(path, expectedUrl, status, body);
+      if (!TRANSIENT(status)) return last;
     } catch (err) {
-      last = {
-        kind: "unreadable",
-        result: { path, status: 0, ok: false, detail: `JSON-LD sample: ${(err as Error).message}` },
-      };
+      last = { path, status: 0, ok: false, detail: `JSON-LD sample: ${(err as Error).message}` };
     }
     if (attempt === 1) await deps.wait(2_000);
   }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderTrekPage } from "./trekPage";
+import { esc, renderTrekPage, unescapeHtml } from "./trekPage";
 import { parseTrekPage } from "./deploycheck";
 import type { Trek } from "../../src/lib/trek";
 
@@ -108,6 +108,13 @@ describe("renderTrekPage structured data (spec 44 R1)", () => {
     const page = parseTrekPage(renderTrekPage(generated, "abapuri-hill"));
     expect(page.canonical).toMatch(/\/t\/abapuri-hill\/$/);
     expect(page.jsonLdUrl).toBe(page.canonical);
-    expect(page.selId).toBe("gn-11022928");
+  });
+});
+
+describe("esc / unescapeHtml (spec 44 R1)", () => {
+  it("round-trip every character esc rewrites, and leave the rest alone", () => {
+    const raw = `a&b<c>d"e'f — Abāpuri %20`;
+    expect(esc(raw)).not.toBe(raw);
+    expect(unescapeHtml(esc(raw))).toBe(raw);
   });
 });

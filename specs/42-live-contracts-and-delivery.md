@@ -93,7 +93,7 @@ The e2e jobs share this VM with every other project's CI, so load is normal, not
   average of 12–18 (2026-10-10). The result list now carries `aria-busy` while it loads, and its
   loading announcement sits outside it, because `aria-busy` holds back announcements within.
   `resultsLoaded()` (`e2e/helpers/deterministic.ts`) waits for `aria-busy="false"`, which exists
-  only once the list has rendered and loading has ended. Its 25 s timeout, under the 30 s per-test limit, bounds a hang so the failure names this wait; it does not assert speed.
+  only once the list has rendered and loading has ended. Its 50 s timeout, under the 60 s per-test limit (raised from Playwright's 30 s default after a first test paid for the dev server's cold compile at a load average of 13), bounds a hang so the failure names this wait; it does not assert speed.
 - **The map is settled by state too.** A fixed 600 ms sleep before screenshots let a capture
   beat the cluster recompute under load. `mapSettled()` waits until every pin and cluster has
   kept its position for five reads in a row, 100 ms apart. A detail screenshot also waits for

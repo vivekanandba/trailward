@@ -7,7 +7,8 @@ import {
   DEPLOY_SURFACE,
   jsonLdProblem,
   parseTrekPage,
-  sitemapTrekPaths,
+  pickJsonLdSample,
+  sampleFromVersion,
   type PageResult,
 } from "./deploycheck";
 
@@ -16,24 +17,24 @@ const PREV = "b".repeat(40);
 
 describe("version.json (spec 42 §B)", () => {
   it("carries the sha and a build time, and round-trips", () => {
-    const parsed = JSON.parse(versionFile(SHA, "2026-09-21T00:00:00.000Z"));
+    const parsed = JSON.parse(versionFile(SHA, "2026-09-21T00:00:00.000Z", ["t/a/"]));
     expect(parsed.sha).toBe(SHA);
     expect(parsed.builtAt).toBe("2026-09-21T00:00:00.000Z");
   });
 
   it("ends in a newline, like every other committed artefact here", () => {
-    expect(versionFile(SHA, "x").endsWith("\n")).toBe(true);
+    expect(versionFile(SHA, "x", ["t/a/"]).endsWith("\n")).toBe(true);
   });
 });
 
 describe("checkDeployedVersion — 'stale' and 'wrong' are different answers", () => {
   it("passes when the live sha is the one just built", () => {
-    expect(checkDeployedVersion(versionFile(SHA, "x"), SHA)).toMatchObject({ ok: true });
+    expect(checkDeployedVersion(versionFile(SHA, "x", ["t/a/"]), SHA)).toMatchObject({ ok: true });
   });
 
   it("reports the PREVIOUS sha as stale — the CDN has not turned over yet", () => {
     // Retrying here is correct. Failing would make every deploy flaky.
-    const v = checkDeployedVersion(versionFile(PREV, "x"), SHA, PREV);
+    const v = checkDeployedVersion(versionFile(PREV, "x", ["t/a/"]), SHA, PREV);
     expect(v).toMatchObject({ stale: true });
   });
 
@@ -42,13 +43,17 @@ describe("checkDeployedVersion — 'stale' and 'wrong' are different answers", (
     // (workflow_dispatch has no `before`; a cancelled run leaves the site
     // older still), and in all those cases "a different sha" is usually CDN
     // lag. Failing on attempt one disabled the retry budget silently.
-    expect(checkDeployedVersion(versionFile("c".repeat(40), "x"), SHA, PREV)).toMatchObject({
+    expect(
+      checkDeployedVersion(versionFile("c".repeat(40), "x", ["t/a/"]), SHA, PREV),
+    ).toMatchObject({
       stale: true,
     });
   });
 
   it("retries rather than failing when NO previous sha is known", () => {
-    expect(checkDeployedVersion(versionFile(PREV, "x"), SHA)).toMatchObject({ stale: true });
+    expect(checkDeployedVersion(versionFile(PREV, "x", ["t/a/"]), SHA)).toMatchObject({
+      stale: true,
+    });
   });
 
   it("FAILS on a body that is not JSON — a 404 page, say", () => {
@@ -64,7 +69,7 @@ describe("checkDeployedVersion — 'stale' and 'wrong' are different answers", (
   });
 
   it("names both shas in its detail, so the log says what is actually served", () => {
-    const v = checkDeployedVersion(versionFile(PREV, "x"), SHA);
+    const v = checkDeployedVersion(versionFile(PREV, "x", ["t/a/"]), SHA);
     expect(v.detail).toContain(PREV.slice(0, 8));
     expect(v.detail).toContain(SHA.slice(0, 8));
   });
@@ -133,26 +138,19 @@ describe("summariseDeploy", () => {
 });
 
 describe("parseTrekPage (spec 44 R1)", () => {
-  const html = [
-    '<link rel="canonical" href="https://x.test/trailward/t/abapuri-hill/" />',
-    '<script type="application/ld+json">{"name":"A \\u003c B","url":"https://x.test/trailward/t/abapuri-hill/"}</script>',
-    '<a class="cta" href="/trailward/?sel=gn-11022928">Open on the map →</a>',
-  ].join("\n");
-
-  it("reads the canonical, the JSON-LD url and the ?sel= id from the page", () => {
+  it("reads the canonical and the JSON-LD url from the page", () => {
+    const html = [
+      '<link rel="canonical" href="https://x.test/trailward/t/abapuri-hill/" />',
+      '<script type="application/ld+json">{"name":"A \\u003c B","url":"https://x.test/trailward/t/abapuri-hill/"}</script>',
+    ].join("\n");
     expect(parseTrekPage(html)).toEqual({
       canonical: "https://x.test/trailward/t/abapuri-hill/",
       jsonLdUrl: "https://x.test/trailward/t/abapuri-hill/",
-      selId: "gn-11022928",
     });
   });
 
   it("reports each missing piece as undefined, never as a guess", () => {
-    expect(parseTrekPage("<html></html>")).toEqual({
-      canonical: undefined,
-      jsonLdUrl: undefined,
-      selId: undefined,
-    });
+    expect(parseTrekPage("<html></html>")).toEqual({ canonical: undefined, jsonLdUrl: undefined });
   });
 
   it("treats unparseable JSON-LD as absent rather than throwing", () => {
@@ -160,41 +158,58 @@ describe("parseTrekPage (spec 44 R1)", () => {
     expect(parseTrekPage(broken).jsonLdUrl).toBeUndefined();
   });
 
-  it("inverts exactly what renderTrekPage writes: HTML-escaped, not URL-encoded", () => {
-    const page = parseTrekPage(
-      '<link rel="canonical" href="https://x.test/t/a&amp;b/" /><a class="cta" href="/?sel=a&amp;b%1">',
-    );
-    expect(page.canonical).toBe("https://x.test/t/a&b/");
-    // `&` is not a terminator and `%` is not decoded — no URIError, no truncation.
-    expect(page.selId).toBe("a&b%1");
+  it("unescapes the canonical with esc's inverse", () => {
+    expect(
+      parseTrekPage('<link rel="canonical" href="https://x.test/t/a&amp;b/" />').canonical,
+    ).toBe("https://x.test/t/a&b/");
   });
 });
 
-describe("parseTrekPage reads the id from the map link only (spec 44 R1)", () => {
-  it("ignores a ?sel= in the description, which carries untrusted prose", () => {
-    const page = parseTrekPage(
-      '<meta name="description" content="see ?sel=foo for more" />' +
-        '<a class="cta" href="/trailward/?sel=gn-1">Open on the map</a>',
-    );
-    expect(page.selId).toBe("gn-1");
+describe("pickJsonLdSample (spec 44 R1)", () => {
+  const p = (id: string, slug: string, tier = "discovery") => ({ id, slug, tier });
+
+  it("takes one page of each kind whose slug differs from its id, in build order", () => {
+    expect(
+      pickJsonLdSample([
+        p("skandagiri", "skandagiri", "curated"), // slug == id: cannot show the defect
+        p("madhugiri", "madhugiri-betta", "curated"),
+        p("osm-1", "nandi", "discovery"),
+        p("gn-7", "kumara-parvatha"),
+        p("gn-8", "second-gn"), // a second of a kind already taken
+        p("d12-1-2", "virapuli"),
+        p("d12-9", "nandi-hills-d12-9"), // collision-suffixed
+      ]),
+    ).toEqual([
+      "t/madhugiri-betta/",
+      "t/nandi-hills-d12-9/",
+      "t/kumara-parvatha/",
+      "t/virapuli/",
+      "t/nandi/",
+    ]);
+  });
+
+  it("never samples a page whose slug equals its id", () => {
+    expect(
+      pickJsonLdSample([p("osmx-5", "osmx-5"), p("skandagiri", "skandagiri", "curated")]),
+    ).toEqual([]);
+  });
+
+  it("never lists one page twice when it fits several kinds", () => {
+    // curated AND gn-: taken once, by the first kind that matches.
+    expect(pickJsonLdSample([p("gn-1", "kumara", "curated")])).toEqual(["t/kumara/"]);
   });
 });
 
-describe("sitemapTrekPaths (spec 44 R1)", () => {
-  it("returns the /t/ pages as base-relative paths, in sitemap order", () => {
-    const xml = [
-      "<urlset>",
-      "<url><loc>https://x.test/trailward/</loc></url>",
-      "<url><loc>https://x.test/trailward/t/skandagiri/</loc></url>",
-      "<url><loc>https://x.test/trailward/about/</loc></url>",
-      "<url><loc>https://x.test/trailward/t/abapuri-hill/</loc></url>",
-      "</urlset>",
-    ].join("");
-    expect(sitemapTrekPaths(xml)).toEqual(["t/skandagiri/", "t/abapuri-hill/"]);
+describe("sampleFromVersion (spec 44 R1)", () => {
+  it("returns the sample a version.json lists", () => {
+    expect(sampleFromVersion(versionFile(SHA, "x", ["t/a/", "t/b/"]))).toEqual(["t/a/", "t/b/"]);
   });
 
-  it("returns nothing for a body that is not a sitemap", () => {
-    expect(sitemapTrekPaths("<html>soft 404</html>")).toEqual([]);
+  it("returns null for none, an empty list, a malformed list or a body that is not JSON", () => {
+    expect(sampleFromVersion('{"sha":"x"}')).toBeNull();
+    expect(sampleFromVersion(versionFile(SHA, "x", []))).toBeNull();
+    expect(sampleFromVersion('{"jsonLdSample":[1]}')).toBeNull();
+    expect(sampleFromVersion("<html>")).toBeNull();
   });
 });
 

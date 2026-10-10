@@ -77,30 +77,37 @@ that implements each one names its check. R1 is enforced by the tests named unde
 - **R1.** A static trek page names its own URL as its canonical, and its JSON-LD `url` is that
   canonical. `trekJsonLd` takes the page's URL as an argument instead of deriving one from the id.
   One pure judgement, `jsonLdProblem()` (`scripts/lib/deploycheck.ts`), decides both checks
-  below. The canonical must **equal** the page's production URL, `absoluteUrl("t/<slug>/")`, in
-  full, and the JSON-LD url must equal the canonical. Self-consistency alone, or a match on the
-  end of the path, would pass a canonical with an id-derived slug, a doubled base path or the
-  wrong host. All of those 404.
+  below. The canonical must **equal** the page's production URL in full, and the JSON-LD url must
+  equal the canonical. Self-consistency alone, or a match on the end of the path, would pass a
+  canonical with an id-derived slug, a doubled base path or the wrong host. All of those 404.
   - **Every real page, every build.** `build-pages` applies `jsonLdProblem` to each of the
     ~3,886 pages it renders, and **fails the build** before writing any of them, so nothing
-    deploys. (Inside `npm run build`, vite has already emptied `dist/`, so the previous build does
-    not survive on disk; what the refusal protects is the deploy.) Since `trekJsonLd` now takes
-    the canonical, the two halves agree by construction. The check exists to catch a renderer
-    regression that breaks that, on real data rather than a fixture.
-  - **The live backstop.** It runs only once `version.json` shows the build just made; otherwise
-    it reports "not run", because an older build's pages would report that build's defects as
-    this one's (CON-VER-005). `check-deploy` reuses the `sitemap.xml` body it already fetched for
-    the deploy surface, and walks its `/t/` pages. For each it reads the record id from the
-    "Open on the map" link (`?sel=<id>`, read from that link only, because the description
-    above it carries untrusted prose), and checks the pages whose slug differs from their id,
-    because only those can show this defect. It checks the first **three** such pages. Each
-    request is cache-busted with the deployed sha, because right after a deploy the CDN may
-    still hold the previous build's page, and that is not this defect (CON-VER-005).
-  - **The sample is exactly three, counted structurally.** A page counts only when its url was
-    actually compared. If fewer than three turn up within the first **50**, the check fails with
-    "could not find a sample (found N of 3)". When the sitemap could not be read, or answered 200
-    with something that is not a sitemap, the message says which, reusing the deploy surface's own verdict on the sitemap. A page that fails with a thrown request or a 5xx is retried once. After three unreadable pages in a row the walk stops and says so: a site where every page fails has one problem, not fifty lines of it. A page that cannot be read, or that has no `?sel=` link, fails naming
-    what is missing. It is reported, never skipped, and never counted as a sample.
+    deploys. (Inside `npm run build`, vite has already emptied `dist/`, so the previous build
+    does not survive on disk; what the refusal protects is the deploy.) The expected URL is
+    spelled out from `SITE_URL`, not built with `absoluteUrl` as the renderer does, so a bug in
+    `absoluteUrl` cannot pass on both sides. Since `trekJsonLd` takes the canonical, the JSON-LD
+    half agrees by construction; this check exists to catch a renderer regression on real data.
+  - **The live check samples pages the build chose.** The build knows which pages have a slug
+    that differs from their id, the only ones that can show this defect. It writes one of each
+    **kind** into `version.json` as `jsonLdSample`, the first in build order of each:
+    - curated;
+    - collision-suffixed (`<slug>-<id>`);
+    - GeoNames (`gn-`);
+    - terrain-detected (`d12-`);
+    - OpenStreetMap (`osm`).
+
+    A sample from the head of the sitemap would always be the same few curated pages, and would
+    pass a regression limited to generated pages.
+
+  - `check-deploy` reads that sample only from the `version.json` it has just verified as this
+    build's, fetched cache-busted. So the sample can never come from a different build than the
+    pages it checks: a stale sitemap or a CDN-cached old page cannot be mistaken for this
+    defect (CON-VER-005). If the site is not serving the build just made, the sample reports
+    "not run". If `version.json` lists no sample, the check fails, because a build that chose
+    none has verified nothing.
+  - Each sampled page is fetched cache-busted. A thrown request, 5xx, 408 or 429 is retried once,
+    as CDN turnover or rate limiting; a 404 or a wrong url is judged at once. A page that cannot
+    be read fails, naming what is missing.
   - The fixed sample `t/skandagiri/` stays in the deploy surface for what it checks (the page
     exists and is not a soft 404). Its slug equals its id, so it could never see this defect.
 
@@ -153,14 +160,13 @@ that specifies each piece starts from them.
 
 ## Edge cases / failure modes
 
-- **A page with no JSON-LD, no canonical or no `?sel=` link.** The live check fails that page
-  with the missing piece named, rather than skipping it, which would make the sample look
-  smaller than it is.
+- **A page with no JSON-LD or no canonical.** It fails with the missing piece named, rather than
+  being skipped.
 - **A slug that equals the id** (71 pages today: 15 curated, 56 generated `osm` pages whose name
-  has no ASCII letters). These cannot show this defect, so they are walked past without counting
-  toward the sample.
-- **A sitemap with fewer than three qualifying pages in its first 50** fails with its own message
-  (R1). Today the first 20 already hold five.
+  has no ASCII letters). These cannot show this defect, so the build never puts them in the
+  sample.
+- **A dataset with no page of some kind.** The sample simply has no page of that kind. If it has
+  none at all, the live check fails (R1).
 
 ## Out of scope / not done
 
@@ -182,6 +188,6 @@ npm run check:deploy                                # R1 against the live site, 
 
 ## Revisions
 
-| Date       | Change                                                                                                                                                                                                                                   | Covered by                                                                                              |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 2026-10-10 | Written with the five rules, a register of 20 surfaces, and R1 with its fix. A first draft (PR #76, closed) specified every phase ahead of the code and did not converge in nine review rounds; later requirements land with their code. | `seo.test.ts`, `trekPage.test.ts`, `build-pages.test.ts`, `deploycheck.test.ts`, `check-deploy.test.ts` |
+| Date       | Change                                                                                                                                                                                                                                   | Covered by                                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-10 | Written with the five rules, a register of 20 surfaces, and R1 with its fix. A first draft (PR #76, closed) specified every phase ahead of the code and did not converge in nine review rounds; later requirements land with their code. | `seo.test.ts`, `trekPage.test.ts`, `build-pages.test.ts`, `build-pages.jsonld.test.ts`, `deploycheck.test.ts`, `check-deploy.test.ts` |

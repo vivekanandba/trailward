@@ -15,11 +15,11 @@ test.skip(process.platform !== "linux", "visual baselines are linux-only");
 
 const BLR = "oid=bangalore&olat=12.97160&olng=77.59460&on=Bengaluru";
 
-async function settled(page: Page, url: string): Promise<void> {
+async function settled(page: Page, url: string, markers = true): Promise<void> {
   await deterministicPage(page);
   await page.goto(url);
   await resultsLoaded(page);
-  await mapSettled(page);
+  await mapSettled(page, { markers });
 }
 
 const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1440) < 1024;
@@ -55,7 +55,7 @@ test("visual: detail open, dark", async ({ page }) => {
 });
 
 test("visual: empty state (impossible filter combo)", async ({ page }) => {
-  await settled(page, `/?${BLR}&q=zzzznomatch`);
+  await settled(page, `/?${BLR}&q=zzzznomatch`, false); // no pins, by design
   await expect(page.getByText(/No treks match/)).toBeVisible();
   await expect(page).toHaveScreenshot("empty.png");
 });

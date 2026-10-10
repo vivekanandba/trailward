@@ -208,6 +208,9 @@ describe("build-pages run (spec 35/36/40)", () => {
     const written = JSON.parse(io.files.get(`${P.distDir}/version.json`)!);
     expect(written.sha).toBe("abc123");
     expect(written.builtAt).toBe("2026-09-21T00:00:00.000Z");
+    // The live check's sample (spec 44 R1): gn-1 lives at kumara-parvatha/;
+    // skandagiri's slug equals its id, so it is never sampled.
+    expect(written.jsonLdSample).toEqual(["t/kumara-parvatha/"]);
   });
 
   it("a malformed RECORD cannot half-wipe dist/t either", () => {

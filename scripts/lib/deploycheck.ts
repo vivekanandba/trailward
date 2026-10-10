@@ -9,15 +9,24 @@
  * exercised by a workflow that runs after a merge.
  */
 
+import { unescapeHtml } from "./trekPage";
+
 export interface VersionFile {
   /** The commit this build came from. */
   sha: string;
   /** ISO timestamp, for a human reading the file. Never compared. */
   builtAt: string;
+  /**
+   * Pages the live structured-data check samples (spec 44 R1), chosen by the
+   * build, which knows which slugs differ from their ids. Shipped in this file
+   * because it is fetched cache-busted and pinned to the sha just built, so the
+   * sample can never come from a different build than the pages it checks.
+   */
+  jsonLdSample: string[];
 }
 
-export function versionFile(sha: string, builtAt: string): string {
-  return `${JSON.stringify({ sha, builtAt } satisfies VersionFile, null, 2)}\n`;
+export function versionFile(sha: string, builtAt: string, jsonLdSample: string[]): string {
+  return `${JSON.stringify({ sha, builtAt, jsonLdSample } satisfies VersionFile, null, 2)}\n`;
 }
 
 export type LiveCheck =
@@ -142,25 +151,13 @@ export interface TrekPageFacts {
   canonical?: string;
   /** The JSON-LD `url` — where the page tells search engines it lives. */
   jsonLdUrl?: string;
-  /** The record id, from the "Open on the map" `?sel=` link. */
-  selId?: string;
 }
 
-const unescapeHtml = (s: string): string =>
-  s
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
-
 /**
- * Read the three facts R1 compares out of a page's HTML. Each is undefined when
+ * Read the two facts R1 compares out of a page's HTML. Each is undefined when
  * the page lacks it — never a guess — so the caller can say WHICH is missing.
- *
- * The exact inverse of what renderTrekPage writes: attribute values are
- * HTML-escaped (`esc`) and NOT URL-encoded, so a value is captured up to its
- * closing quote and only HTML-unescaped.
+ * Attribute values are HTML-escaped by renderTrekPage (`esc`), so they are
+ * unescaped with its exact inverse.
  */
 export function parseTrekPage(html: string): TrekPageFacts {
   const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
@@ -174,23 +171,15 @@ export function parseTrekPage(html: string): TrekPageFacts {
       // Unparseable structured data is absent structured data.
     }
   }
-  // Anchored to the "Open on the map" link: the meta description comes first
-  // and carries untrusted prose, which could itself contain "?sel=".
-  const sel = /<a class="cta" href="[^"]*\?sel=([^"]+)"/.exec(html)?.[1];
-  return {
-    canonical: canonical === undefined ? undefined : unescapeHtml(canonical),
-    jsonLdUrl,
-    selId: sel === undefined ? undefined : unescapeHtml(sel),
-  };
+  return { canonical: canonical === undefined ? undefined : unescapeHtml(canonical), jsonLdUrl };
 }
 
 /**
  * R1's judgement, shared by the build (every page, every build) and the live
- * backstop. `expectedUrl` is the full URL the page must live at —
- * `absoluteUrl("t/<slug>/")`. The canonical must BE that url, not merely end in
- * the right path: a doubled base path or a wrong host also 404s. And the
- * JSON-LD url must be the canonical. Checking only that the two agree would pass
- * a page where both name a url that 404s.
+ * check. `expectedUrl` is the full URL the page must live at. The canonical
+ * must BE that url, not merely end in the right path: a doubled base path or a
+ * wrong host also 404s. And the JSON-LD url must be the canonical. Checking
+ * only that the two agree would pass a page where both name a url that 404s.
  */
 export function jsonLdProblem(expectedUrl: string, page: TrekPageFacts): string | null {
   if (!page.canonical) return "no canonical";
@@ -204,48 +193,57 @@ export function jsonLdProblem(expectedUrl: string, page: TrekPageFacts): string 
   return null;
 }
 
-/** The `/t/<slug>/` pages a sitemap lists, as base-relative paths, in order. */
-export function sitemapTrekPaths(xml: string): string[] {
+export interface SampleCandidate {
+  id: string;
+  slug: string;
+  tier: string;
+}
+
+/**
+ * The live check's sample: one page of each KIND whose slug differs from its
+ * id, the only pages this defect can show on. A sample drawn from the head of
+ * the sitemap is always the same few curated pages, so a regression limited to
+ * generated or collision-suffixed pages would pass it. Deterministic: the first
+ * of each kind in build order.
+ */
+export function pickJsonLdSample(pages: SampleCandidate[]): string[] {
+  const kinds: ((p: SampleCandidate) => boolean)[] = [
+    (p) => p.tier === "curated",
+    (p) => p.slug.endsWith(`-${p.id}`), // a name collision's suffixed page
+    (p) => p.id.startsWith("gn-"),
+    (p) => p.id.startsWith("d12-"),
+    (p) => p.id.startsWith("osm"),
+  ];
   const out: string[] = [];
-  for (const m of xml.matchAll(/<loc>[^<]*?\/(t\/[^/<]+\/)<\/loc>/g)) out.push(m[1]);
+  for (const kind of kinds) {
+    const hit = pages.find((p) => p.slug !== p.id && kind(p) && !out.includes(`t/${p.slug}/`));
+    if (hit) out.push(`t/${hit.slug}/`);
+  }
   return out;
 }
 
-/** How many qualifying pages the live backstop checks, and how far it looks. */
-export const JSONLD_SAMPLE = 3;
-export const JSONLD_WALK_LIMIT = 50;
+/** The sample a deployed version.json lists, or null when it lists none. */
+export function sampleFromVersion(body: string): string[] | null {
+  try {
+    const sample = (JSON.parse(body) as { jsonLdSample?: unknown }).jsonLdSample;
+    return Array.isArray(sample) && sample.length > 0 && sample.every((p) => typeof p === "string")
+      ? (sample as string[])
+      : null;
+  } catch {
+    return null;
+  }
+}
 
-/**
- * One sampled page, judged. `skip` means the page cannot show the defect (its
- * slug equals its id). `unreadable` is reported as a failure but proves nothing
- * about the url, so it never counts toward the sample. Only `checked` does.
- * The kind is structural, never inferred from the wording of a message.
- */
-export type JsonLdVerdict =
-  | { kind: "skip" }
-  | { kind: "unreadable"; result: PageResult }
-  | { kind: "checked"; result: PageResult };
-
+/** Judge one sampled page against R1. */
 export function checkJsonLdPage(
   path: string,
   expectedUrl: string,
   status: number,
   body: string,
-): JsonLdVerdict {
-  const unreadable = (detail: string): JsonLdVerdict => ({
-    kind: "unreadable",
-    result: { path, status, ok: false, detail: `JSON-LD sample: ${detail}` },
-  });
-  if (status !== 200) return unreadable(`HTTP ${status}`);
-  const page = parseTrekPage(body);
-  if (!page.selId) return unreadable("no ?sel= link");
-  const slug = path.replace(/^t\//, "").replace(/\/$/, "");
-  if (page.selId === slug) return { kind: "skip" };
-  const problem = jsonLdProblem(expectedUrl, page);
-  return {
-    kind: "checked",
-    result: problem
-      ? { path, status, ok: false, detail: problem }
-      : { path, status, ok: true, detail: "JSON-LD url is the canonical" },
-  };
+): PageResult {
+  if (status !== 200) return { path, status, ok: false, detail: `JSON-LD sample: HTTP ${status}` };
+  const problem = jsonLdProblem(expectedUrl, parseTrekPage(body));
+  return problem
+    ? { path, status, ok: false, detail: problem }
+    : { path, status, ok: true, detail: "JSON-LD url is the canonical" };
 }
