@@ -7,7 +7,7 @@
  * Regenerate intentionally with: npm run e2e:update
  */
 import { test, expect, type Page } from "@playwright/test";
-import { deterministicPage } from "./helpers/deterministic";
+import { deterministicPage, resultsLoaded } from "./helpers/deterministic";
 
 // Baselines are rendered on linux (local + CI agree); other platforms would
 // generate a second, conflicting set.
@@ -18,8 +18,7 @@ const BLR = "oid=bangalore&olat=12.97160&olng=77.59460&on=Bengaluru";
 async function settled(page: Page, url: string): Promise<void> {
   await deterministicPage(page);
   await page.goto(url);
-  // The sr-only loading status disappearing = cells loaded and rows rendered.
-  await page.locator("role=status >> text=/Loading peaks/").waitFor({ state: "detached" });
+  await resultsLoaded(page);
   await page.waitForTimeout(600); // map pan/zoom settle (animations disabled)
 }
 

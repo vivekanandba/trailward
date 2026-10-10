@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { stubTiles } from "./helpers/deterministic";
+import { resultsLoaded, stubTiles } from "./helpers/deterministic";
 
 // Basemap tiles are served from committed PNGs here too (CON-VER-008).
 //
@@ -76,6 +76,8 @@ test("Bangalore's full radius caps the list and points overflow to the map (spec
   page,
 }) => {
   await page.goto("/?oid=bangalore&olat=12.97160&olng=77.59460&on=Bengaluru&r=500");
+  // A 500 km radius loads many cells; wait for them by state, not by clock.
+  await resultsLoaded(page);
   // GeoNames listed summits push Bangalore past the 300-row cap: the footer must
   // appear so the thousands of extra pins are still discoverable via the map.
   await expect(page.getByText(/\+[\d,]+ more on the map/)).toBeVisible();

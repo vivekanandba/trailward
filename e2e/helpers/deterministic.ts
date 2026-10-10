@@ -64,3 +64,17 @@ export async function deterministicPage(page: Page): Promise<void> {
   await stubTiles(page);
   await stubApis(page);
 }
+
+/**
+ * Wait until the result list has finished loading its cells (spec 42 §E).
+ *
+ * Waiting for the "Loading peaks" status to DETACH raced: before React's first
+ * render the status does not exist yet, so "detached" was already true and the
+ * test went on to race the cell load — failing under machine load, passing
+ * when idle (CON-VER-008). `aria-busy="false"` on #results exists only after
+ * the list rendered AND loading ended, so it cannot be satisfied early. The
+ * timeout bounds a hang; it is not a speed assertion.
+ */
+export async function resultsLoaded(page: Page): Promise<void> {
+  await page.locator('#results[aria-busy="false"]').waitFor({ state: "attached", timeout: 60_000 });
+}

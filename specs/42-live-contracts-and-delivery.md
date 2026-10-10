@@ -84,6 +84,21 @@ Assert the flow end to end rather than the click:
 
 A journey test asserts the user's goal was achievable, not that a particular button exists.
 
+## E. The suite must be deterministic (CON-VER-008)
+
+A test that passes when the machine is idle and fails under load is a defect in the suite, and
+the gate is red. The e2e jobs share this VM with every other project's CI, so load is normal, not
+exceptional.
+
+- **Wait for a state, never for a clock or a disappearance.** Waiting for the "Loading peaks"
+  status to detach passed before React had rendered it at all, so tests raced the cell load and
+  failed 1 run in 6 under a load average of 12–18 (2026-10-10). The result list carries
+  `aria-busy` while it loads, and `resultsLoaded()` (`e2e/helpers/deterministic.ts`) waits for
+  `aria-busy="false"`, a state that exists only after the list rendered and loading ended. Its
+  60 s timeout bounds a hang; it does not assert speed.
+- Third-party tiles are stubbed; counts are read once they are stable; the static project runs
+  in its own pass.
+
 ## Edge cases & error states
 
 - The live check runs in CI where a request may simply time out; a timeout is reported as

@@ -32,6 +32,11 @@ export default function TrekList({
     <ul
       id="results"
       tabIndex={-1}
+      // Busy while cells load. Assistive tech hears the region is updating, and
+      // the e2e suite waits on aria-busy="false" — a state that cannot be met
+      // before the list has rendered, unlike waiting for "Loading" to detach
+      // (spec 42 §E).
+      aria-busy={loading}
       className="flex-1 divide-y divide-trail-50 dark:divide-slate-700 focus:outline-none"
     >
       {loading && (
