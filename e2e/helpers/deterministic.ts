@@ -109,7 +109,8 @@ export async function mapSettled(
       const sig = [...document.querySelectorAll(".trek-cluster, path.trek-pin")]
         .map((e) => {
           const r = e.getBoundingClientRect();
-          return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)}`;
+          // The label too: a cluster recount ("10+" → "20+") moves nothing.
+          return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${e.textContent}`;
         })
         .join("|");
       // Nothing drawn yet is not "settled": an empty map holds still too. A
@@ -117,7 +118,7 @@ export async function mapSettled(
       if (sig === "" && expectMarkers) return false;
       w.__mapStable = w.__mapSig === sig ? (w.__mapStable ?? 0) + 1 : 0;
       w.__mapSig = sig;
-      return w.__mapStable >= 5;
+      return w.__mapStable >= 5; // five repeats: six identical reads
     },
     markers,
     { polling: 100, timeout: 20_000 },

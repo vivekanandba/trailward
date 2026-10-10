@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { runDeployCheck, type Fetched } from "./check-deploy";
 import { memoryIO } from "./lib/buildIO";
-import { absoluteUrl } from "../src/lib/seo";
+import { SITE_URL } from "../src/lib/seo";
+
+/** The production url, spelled out as the code under test spells it. */
+const absoluteUrl = (path: string): string => `${SITE_URL}/${path}`;
 import { versionFile, DEPLOY_SURFACE } from "./lib/deploycheck";
 
 const SHA = "a".repeat(40);

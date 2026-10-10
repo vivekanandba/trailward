@@ -8,6 +8,7 @@ import {
   jsonLdProblem,
   parseTrekPage,
   pickJsonLdSample,
+  sampleByKind,
   sampleFromVersion,
   type PageResult,
 } from "./deploycheck";
@@ -197,6 +198,26 @@ describe("pickJsonLdSample (spec 44 R1)", () => {
   it("never lists one page twice when it fits several kinds", () => {
     // curated AND gn-: taken once, by the first kind that matches.
     expect(pickJsonLdSample([p("gn-1", "kumara", "curated")])).toEqual(["t/kumara/"]);
+  });
+});
+
+describe("sampleByKind (spec 44 R1)", () => {
+  const p = (id: string, slug: string, tier = "discovery") => ({ id, slug, tier });
+
+  it("names each kind, and leaves a kind with no page without a path", () => {
+    expect(sampleByKind([p("gn-1", "kumara")])).toEqual([
+      { kind: "curated" },
+      { kind: "collision-suffixed" },
+      { kind: "gn-", path: "t/kumara/" },
+      { kind: "d12-" },
+      { kind: "osm-" },
+    ]);
+  });
+
+  it("does not count an osmx- record as the osm- kind — they are separate sources", () => {
+    expect(
+      sampleByKind([p("osmx-5", "five")]).find((k) => k.kind === "osm-")?.path,
+    ).toBeUndefined();
   });
 });
 

@@ -38,6 +38,25 @@ test("the trek page carries TouristAttraction structured data", async ({ page })
   expect(ld.geo.latitude).toBeCloseTo(13.5021, 3);
 });
 
+test("every sampled page's JSON-LD url is its own canonical, as served (spec 44 R1)", async ({
+  page,
+}) => {
+  // t/skandagiri/ above has slug == id, so it could never show this defect,
+  // which shipped on 3,815 pages. The build lists one page of each kind whose
+  // slug differs in version.json; check them as a crawler receives them.
+  const version = (await (await page.request.get("version.json")).json()) as {
+    jsonLdSample: string[];
+  };
+  expect(version.jsonLdSample.length).toBeGreaterThan(0);
+  for (const path of version.jsonLdSample) {
+    await page.goto(path);
+    const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
+    expect(canonical, path).toBe(`https://vivekanandba.github.io/trailward/${path}`);
+    const raw = await page.locator('script[type="application/ld+json"]').innerText();
+    expect((JSON.parse(raw) as { url: string }).url, path).toBe(canonical);
+  }
+});
+
 test("the map link deep-links into the live app and opens that trek", async ({ page }) => {
   await page.goto("t/skandagiri/");
   await page.getByRole("link", { name: /Open on the map/ }).click();

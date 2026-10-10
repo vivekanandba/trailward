@@ -213,6 +213,25 @@ describe("build-pages run (spec 35/36/40)", () => {
     expect(written.jsonLdSample).toEqual(["t/kumara-parvatha/"]);
   });
 
+  it("refuses to build when no page qualifies for the JSON-LD sample (spec 44 R1)", () => {
+    // Only slug == id pages: the live check could only fail, after publishing.
+    const io = memoryIO({
+      [P.treks]: JSON.stringify([TREKS[0]]),
+      [`${P.contentDir}/about.md`]: ABOUT,
+    });
+    io.writeFile(`${P.outDir}/skandagiri/index.html`, "GOOD PREVIOUS BUILD");
+    expect(() => runBuildPages(io, ROOT, ["about.md"], "2026-09-19")).toThrow(
+      /no page qualifies for the JSON-LD sample/,
+    );
+    expect(io.files.get(`${P.outDir}/skandagiri/index.html`)).toBe("GOOD PREVIOUS BUILD");
+  });
+
+  it("says when the JSON-LD sample is missing a kind, rather than shrinking silently", () => {
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-09-19");
+    expect(io.logs.join("\n")).toContain("the JSON-LD sample has no d12- page");
+  });
+
   it("a malformed RECORD cannot half-wipe dist/t either", () => {
     // renderTrekPage reaches trek.lat.toFixed(4) unguarded, and `npm run
     // build` never runs validateDataset — validate:data is a separate CI job.

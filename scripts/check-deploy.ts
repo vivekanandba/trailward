@@ -11,7 +11,7 @@
 import { pathToFileURL } from "node:url";
 import { request } from "undici";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
-import { absoluteUrl } from "../src/lib/seo";
+import { SITE_URL } from "../src/lib/seo";
 import {
   DEPLOY_SURFACE,
   checkDeployedVersion,
@@ -139,13 +139,14 @@ async function checkJsonLdSample(
   if (!versionOk) return summary("not run — the site is not serving the build just made");
   const sample = sampleFromVersion(versionBody);
   if (!sample) return summary("version.json lists no jsonLdSample");
-  const out: PageResult[] = [];
-  for (const path of sample) {
-    // The canonical must be the PRODUCTION url of this page — that is what
-    // search engines are told — whatever host this check was pointed at.
-    out.push(await fetchAndJudge(deps, base, sha, path, absoluteUrl(path)));
-  }
-  return out;
+  // The canonical must be the PRODUCTION url of this page — what search
+  // engines are told — whatever host this check was pointed at. Spelled out
+  // from SITE_URL, not built with absoluteUrl as the renderer does: reusing it
+  // would compare the renderer with itself. In parallel: five pages, each with
+  // a retry, must not stretch the deploy gate five-fold; order is kept.
+  return Promise.all(
+    sample.map((path) => fetchAndJudge(deps, base, sha, path, `${SITE_URL}/${path}`)),
+  );
 }
 
 /** Statuses worth one more try: the CDN mid-turnover, or rate limiting. */
@@ -164,7 +165,7 @@ async function fetchAndJudge(
   path: string,
   expectedUrl: string,
 ): Promise<PageResult> {
-  let last: PageResult = { path, status: 0, ok: false, detail: "JSON-LD sample: never fetched" };
+  let last!: PageResult; // assigned on the first attempt, by either branch
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const { status, body } = await deps.get(`${base}${path}?cb=${sha}-${attempt}`);

@@ -199,27 +199,35 @@ export interface SampleCandidate {
   tier: string;
 }
 
+/** The kinds of page the live sample covers, each named so a gap can be reported. */
+const SAMPLE_KINDS: { kind: string; is: (p: SampleCandidate) => boolean }[] = [
+  { kind: "curated", is: (p) => p.tier === "curated" },
+  { kind: "collision-suffixed", is: (p) => p.slug.endsWith(`-${p.id}`) },
+  { kind: "gn-", is: (p) => p.id.startsWith("gn-") },
+  { kind: "d12-", is: (p) => p.id.startsWith("d12-") },
+  { kind: "osm-", is: (p) => p.id.startsWith("osm-") }, // not osmx-, a separate source
+];
+
 /**
  * The live check's sample: one page of each KIND whose slug differs from its
  * id, the only pages this defect can show on. A sample drawn from the head of
  * the sitemap is always the same few curated pages, so a regression limited to
  * generated or collision-suffixed pages would pass it. Deterministic: the first
- * of each kind in build order.
+ * of each kind in build order. A kind with no page has `path` undefined, so the
+ * build can say the sample shrank rather than shrink it silently.
  */
+export function sampleByKind(pages: SampleCandidate[]): { kind: string; path?: string }[] {
+  const taken = new Set<string>();
+  return SAMPLE_KINDS.map(({ kind, is }) => {
+    const hit = pages.find((p) => p.slug !== p.id && is(p) && !taken.has(p.slug));
+    if (!hit) return { kind };
+    taken.add(hit.slug);
+    return { kind, path: `t/${hit.slug}/` };
+  });
+}
+
 export function pickJsonLdSample(pages: SampleCandidate[]): string[] {
-  const kinds: ((p: SampleCandidate) => boolean)[] = [
-    (p) => p.tier === "curated",
-    (p) => p.slug.endsWith(`-${p.id}`), // a name collision's suffixed page
-    (p) => p.id.startsWith("gn-"),
-    (p) => p.id.startsWith("d12-"),
-    (p) => p.id.startsWith("osm"),
-  ];
-  const out: string[] = [];
-  for (const kind of kinds) {
-    const hit = pages.find((p) => p.slug !== p.id && kind(p) && !out.includes(`t/${p.slug}/`));
-    if (hit) out.push(`t/${hit.slug}/`);
-  }
-  return out;
+  return sampleByKind(pages).flatMap((k) => (k.path ? [k.path] : []));
 }
 
 /** The sample a deployed version.json lists, or null when it lists none. */

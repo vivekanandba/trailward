@@ -99,6 +99,12 @@ The e2e jobs share this VM with every other project's CI, so load is normal, not
   kept its position for five reads in a row, 100 ms apart. A detail screenshot also waits for
   the stubbed photo's failed state (the image removed), which is what the baseline shows.
   `settledCount()` likewise reads a count until it is stable across three reads.
+- **Clock waits that remain, named so they are not forgotten.** `visual.spec.ts` still sleeps
+  before three screenshots: 400 ms for the mobile filters sheet, 300 ms before the palette and
+  500 ms before the half-snap sheet. They passed every run on 2026-10-10 at load averages up to
+  18, but they are the same class of wait as the 600 ms map sleep that did not. Each should
+  become a state wait (a sheet's settled transform), and until then they are the first suspect
+  for a visual failure that appears only under load.
 - **Act only once the app is listening.** A journey pressed ⌘K straight after `goto`, before the
   effect that attaches the shortcut had run. The key was lost and the palette never opened, so
   no timeout could have saved it. Tests that drive the app by keyboard wait for

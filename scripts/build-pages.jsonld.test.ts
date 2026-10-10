@@ -19,7 +19,10 @@ const { runBuildPages, pagePathsFor } = await import("./build-pages");
 const { memoryIO } = await import("./lib/buildIO");
 
 describe("build-pages refuses a page whose JSON-LD url is not its own (spec 44 R1)", () => {
-  it("refuses BEFORE writing, so the previous build survives", () => {
+  it("refuses before writing anything, so nothing deploys", () => {
+    // Within build-pages the previous files are untouched; inside `npm run
+    // build` vite has already emptied dist/, so what this protects is the
+    // deploy, not the old files (spec 44 R1).
     const P = pagePathsFor("/repo");
     const io = memoryIO({
       [P.treks]: JSON.stringify([

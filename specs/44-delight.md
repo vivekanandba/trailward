@@ -94,13 +94,14 @@ that implements each one names its check. R1 is enforced by the tests named unde
     - collision-suffixed (`<slug>-<id>`);
     - GeoNames (`gn-`);
     - terrain-detected (`d12-`);
-    - OpenStreetMap (`osm`).
+    - OpenStreetMap (`osm-`, not `osmx-`, a separate source).
 
     A sample from the head of the sitemap would always be the same few curated pages, and would
-    pass a regression limited to generated pages.
+    pass a regression limited to generated pages. The build **refuses** when no page qualifies,
+    because the live check could then only fail after publishing. It **logs a warning** for each
+    kind it has no page of, so the sample never shrinks silently.
 
-  - `check-deploy` reads that sample only from the `version.json` it has just verified as this
-    build's, fetched cache-busted. So the sample can never come from a different build than the
+  - `check-deploy` reads that sample only from the `version.json` it has just verified as this build's, and fetches the pages in parallel. It spells out each expected URL from `SITE_URL`, as the build does, rather than reusing the renderer's `absoluteUrl`. `version.json` is itself fetched cache-busted, so the sample can never come from a different build than the
     pages it checks: a stale sitemap or a CDN-cached old page cannot be mistaken for this
     defect (CON-VER-005). If the site is not serving the build just made, the sample reports
     "not run". If `version.json` lists no sample, the check fails, because a build that chose
@@ -182,7 +183,8 @@ npx vitest run src/lib/seo.test.ts                  # R1: trekJsonLd uses the ur
 npx vitest run scripts/lib/trekPage.test.ts         # R1: slug ≠ id, JSON-LD url == canonical
 npx vitest run scripts/build-pages.test.ts scripts/build-pages.jsonld.test.ts  # R1: wiring, and the refusal
 npm run build:pages                                 # R1 on every real page (refuses on a defect)
-npx vitest run scripts/lib/deploycheck.test.ts scripts/check-deploy.test.ts  # R1 live backstop
+npx vitest run scripts/lib/deploycheck.test.ts scripts/check-deploy.test.ts  # R1 live check
+npm run e2e:static                                  # R1 on the sampled pages, as served
 npm run check:deploy                                # R1 against the live site, after deploy
 ```
 

@@ -23,7 +23,7 @@ import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
-import { jsonLdProblem, parseTrekPage, pickJsonLdSample, versionFile } from "./lib/deploycheck";
+import { jsonLdProblem, parseTrekPage, sampleByKind, versionFile } from "./lib/deploycheck";
 import { SITE_URL } from "../src/lib/seo";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -147,6 +147,18 @@ export function runBuildPages(
     nav,
   );
 
+  // Spec 44 R1: the live check's sample, chosen here because only the build
+  // knows which slugs differ from their ids. An empty sample would publish a
+  // site whose live check can only fail; a shrunken one is reported.
+  const byKind = sampleByKind(
+    pages.map((t) => ({ id: t.id, slug: slugs.get(t.id)!, tier: t.tier })),
+  );
+  const sample = byKind.flatMap((k) => (k.path ? [k.path] : []));
+  if (sample.length === 0) throw new Error("[pages] no page qualifies for the JSON-LD sample");
+  for (const { kind } of byKind.filter((k) => !k.path)) {
+    io.log(`[pages] warning: the JSON-LD sample has no ${kind} page`);
+  }
+
   // ---- Everything above can refuse. Everything below only writes. ----
   io.removeDir(paths.outDir, repoRoot);
   for (const { path, html } of trekPages) io.writeFile(path, html);
@@ -163,9 +175,6 @@ export function runBuildPages(
   // The stamp the post-deploy check compares against (spec 42 §B). Written
   // here because build-pages is the last step of `npm run build`, so a
   // version.json that exists is a build that finished.
-  const sample = pickJsonLdSample(
-    pages.map((t) => ({ id: t.id, slug: slugs.get(t.id)!, tier: t.tier })),
-  );
   io.writeFile(`${paths.distDir}/version.json`, versionFile(buildSha, buildTime, sample));
   io.log(`[pages] wrote content page(s): ${written.join(", ")}`);
   return { treks: pages.length, content: written };
