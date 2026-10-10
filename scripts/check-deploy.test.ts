@@ -2,25 +2,25 @@ import { describe, it, expect } from "vitest";
 import { runDeployCheck, type Fetched } from "./check-deploy";
 import { memoryIO } from "./lib/buildIO";
 import { SITE_URL } from "../src/lib/seo";
+import { versionFile, DEPLOY_SURFACE } from "./lib/deploycheck";
 
 /** The production url, spelled out as the code under test spells it. */
-const absoluteUrl = (path: string): string => `${SITE_URL}/${path}`;
-import { versionFile, DEPLOY_SURFACE } from "./lib/deploycheck";
+const prodUrl = (path: string): string => `${SITE_URL}/${path}`;
 
 const SHA = "a".repeat(40);
 const PREV = "b".repeat(40);
 const BASE = "https://example.test/trailward/";
 
 /** A generated trek page as build-pages writes it, with the given JSON-LD url. */
-function trekPage(slug: string, id: string, jsonLdUrl = absoluteUrl(`t/${slug}/`)): Fetched {
+function trekPage(slug: string, id: string, jsonLdUrl = prodUrl(`t/${slug}/`)): Fetched {
   // Canonicals are PRODUCTION urls whatever host serves the page — that is what
   // build-pages writes and what search engines are told.
   return {
     status: 200,
     contentType: "text/html; charset=utf-8",
     body: [
-      `<link rel="canonical" href="${absoluteUrl(`t/${slug}/`)}" />`,
-      `<script type="application/ld+json">{"url":"${jsonLdUrl}"}</script>`,
+      `<link rel="canonical" href="${prodUrl(`t/${slug}/`)}" />`,
+      `<script type="application/ld+json">{"@type":"TouristAttraction","url":"${jsonLdUrl}"}</script>`,
       `<h1>Skandagiri</h1><a class="cta" href="/trailward/?sel=${id}">Open on the map</a>`,
     ].join("\n"),
   };
@@ -271,9 +271,9 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     expect(out.ok).toBe(false);
     expect(out.results[0].detail).toMatch(/ENOTFOUND/);
     // The surface was still checked — one flaky endpoint must not hide the rest.
-    // version + the surface + ONE "not run" for the structured-data sample: it
-    // never runs against a site not serving this build (spec 44 R1).
-    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1 + 1);
+    // version + the surface; the structured-data sample is not run against a
+    // site not serving this build, and adds no row (spec 44 R1).
+    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1);
   });
 
   it("FAILS on a missing version.json rather than skipping the check", async () => {
@@ -367,7 +367,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       pages["t/virapuli/"] = trekPage(
         "virapuli",
         "d12-2928-1951-105-136",
-        absoluteUrl("t/d12-2928-1951-105-136/"),
+        prodUrl("t/d12-2928-1951-105-136/"),
       );
       const out = await run(pages);
       expect(out.ok).toBe(false);
@@ -378,11 +378,11 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
 
     it("FAILS a page whose canonical and JSON-LD agree on the wrong url", async () => {
       const pages = healthySite(SHA);
-      const wrong = absoluteUrl("t/gn-11022928/");
+      const wrong = prodUrl("t/gn-11022928/");
       pages["t/kumara-parvatha/"] = {
         status: 200,
         contentType: "text/html",
-        body: `<link rel="canonical" href="${wrong}" /><script type="application/ld+json">{"url":"${wrong}"}</script>`,
+        body: `<link rel="canonical" href="${wrong}" /><script type="application/ld+json">{"@type":"TouristAttraction","url":"${wrong}"}</script>`,
       };
       const out = await run(pages);
       expect(out.results.find((r) => r.path === "t/kumara-parvatha/")?.detail).toMatch(
@@ -398,7 +398,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
         [
           {
             status: 200,
-            body: `<link rel="canonical" href="${absoluteUrl("t/virapuli/")}" />`,
+            body: `<link rel="canonical" href="${prodUrl("t/virapuli/")}" />`,
             contentType: "text/html",
           },
           /no JSON-LD url/,
@@ -423,21 +423,22 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       };
       const out = await run(pages);
       expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "version.json lists no jsonLdSample",
+        "version.json lists no valid jsonLdSample",
       );
       expect(out.ok).toBe(false);
     });
 
     it("does not run against a site that is not serving the build just made", async () => {
+      const io = memoryIO();
       const { get, asked } = serve(healthySite("c".repeat(40)));
       const out = await runDeployCheck(
-        memoryIO(),
+        io,
         { get, wait: noWait },
         { sha: SHA, base: BASE, attempts: 1 },
       );
-      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "not run — the site is not serving the build just made",
-      );
+      // Not evaluated is not failed: no sample row, a log line saying why.
+      expect(out.results.some((r) => r.path === "JSON-LD sample")).toBe(false);
+      expect(io.logs.join("\n")).toContain("JSON-LD sample: not run");
       expect(asked.some((u) => SAMPLE_PATHS.some((p) => u.includes(`/${p}`)))).toBe(false);
     });
 

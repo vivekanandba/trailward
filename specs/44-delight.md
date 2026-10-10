@@ -103,9 +103,9 @@ that implements each one names its check. R1 is enforced by the tests named unde
 
   - `check-deploy` reads that sample only from the `version.json` it has just verified as this build's, and fetches the pages in parallel. It spells out each expected URL from `SITE_URL`, as the build does, rather than reusing the renderer's `absoluteUrl`. `version.json` is itself fetched cache-busted, so the sample can never come from a different build than the
     pages it checks: a stale sitemap or a CDN-cached old page cannot be mistaken for this
-    defect (CON-VER-005). If the site is not serving the build just made, the sample reports
-    "not run". If `version.json` lists no sample, the check fails, because a build that chose
-    none has verified nothing.
+    defect (CON-VER-005). If the site is not serving the build just made, the sample is not run, and is logged as
+    such rather than reported as a failure; the version check already fails the deploy. If `version.json` lists no valid sample, the check fails, because a build that
+    chose none has verified nothing.
   - Each sampled page is fetched cache-busted. A thrown request, 5xx, 408 or 429 is retried once,
     as CDN turnover or rate limiting; a 404 or a wrong url is judged at once. A page that cannot
     be read fails, naming what is missing.
@@ -166,8 +166,9 @@ that specifies each piece starts from them.
 - **A slug that equals the id** (71 pages today: 15 curated, 56 generated `osm` pages whose name
   has no ASCII letters). These cannot show this defect, so the build never puts them in the
   sample.
-- **A dataset with no page of some kind.** The sample simply has no page of that kind. If it has
-  none at all, the live check fails (R1).
+- **A dataset with no page of some kind.** The build logs a warning naming the kind, and the
+  sample has no page of it. If **no** page qualifies, the build refuses (R1), so a deploy never
+  ships an empty sample.
 
 ## Out of scope / not done
 

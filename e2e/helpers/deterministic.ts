@@ -74,7 +74,8 @@ export async function deterministicPage(page: Page): Promise<void> {
  * when idle (CON-VER-008). `aria-busy="false"` on #results exists only after
  * the list rendered AND loading ended, so it cannot be satisfied early. The
  * timeout bounds a hang; it is not a speed assertion. It sits under the 60 s
- * per-test timeout so a hang reports THIS wait, not a generic test timeout.
+ * per-test timeout, but a test that spends long in other waits too can still
+ * end on the generic test timeout — that names the test, not this wait.
  */
 export async function resultsLoaded(page: Page): Promise<void> {
   await page.locator('#results[aria-busy="false"]').waitFor({ state: "attached", timeout: 50_000 });

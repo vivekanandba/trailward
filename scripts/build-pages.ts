@@ -23,7 +23,13 @@ import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
-import { jsonLdProblem, parseTrekPage, sampleByKind, versionFile } from "./lib/deploycheck";
+import {
+  jsonLdProblem,
+  parseTrekPage,
+  pickJsonLdSample,
+  sampleByKind,
+  versionFile,
+} from "./lib/deploycheck";
 import { SITE_URL } from "../src/lib/seo";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -150,12 +156,10 @@ export function runBuildPages(
   // Spec 44 R1: the live check's sample, chosen here because only the build
   // knows which slugs differ from their ids. An empty sample would publish a
   // site whose live check can only fail; a shrunken one is reported.
-  const byKind = sampleByKind(
-    pages.map((t) => ({ id: t.id, slug: slugs.get(t.id)!, tier: t.tier })),
-  );
-  const sample = byKind.flatMap((k) => (k.path ? [k.path] : []));
+  const candidates = pages.map((t) => ({ id: t.id, slug: slugs.get(t.id)!, tier: t.tier }));
+  const sample = pickJsonLdSample(candidates);
   if (sample.length === 0) throw new Error("[pages] no page qualifies for the JSON-LD sample");
-  for (const { kind } of byKind.filter((k) => !k.path)) {
+  for (const { kind } of sampleByKind(candidates).filter((k) => !k.path)) {
     io.log(`[pages] warning: the JSON-LD sample has no ${kind} page`);
   }
 

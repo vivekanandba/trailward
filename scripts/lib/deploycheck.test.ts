@@ -142,7 +142,7 @@ describe("parseTrekPage (spec 44 R1)", () => {
   it("reads the canonical and the JSON-LD url from the page", () => {
     const html = [
       '<link rel="canonical" href="https://x.test/trailward/t/abapuri-hill/" />',
-      '<script type="application/ld+json">{"name":"A \\u003c B","url":"https://x.test/trailward/t/abapuri-hill/"}</script>',
+      '<script type="application/ld+json">{"@type":"TouristAttraction","name":"A \\u003c B","url":"https://x.test/trailward/t/abapuri-hill/"}</script>',
     ].join("\n");
     expect(parseTrekPage(html)).toEqual({
       canonical: "https://x.test/trailward/t/abapuri-hill/",
@@ -157,6 +157,19 @@ describe("parseTrekPage (spec 44 R1)", () => {
   it("treats unparseable JSON-LD as absent rather than throwing", () => {
     const broken = '<script type="application/ld+json">{not json</script>';
     expect(parseTrekPage(broken).jsonLdUrl).toBeUndefined();
+  });
+
+  it("finds the canonical in any attribute order, and the TouristAttraction among several blocks", () => {
+    // A harmless renderer change must not read as "no canonical" (CON-VER-005).
+    const html = [
+      '<link href="https://x.test/t/a/" rel="canonical" />',
+      '<script type="application/ld+json">{"@type":"BreadcrumbList","url":"https://x.test/"}</script>',
+      '<script type="application/ld+json">{"@type":"TouristAttraction","url":"https://x.test/t/a/"}</script>',
+    ].join("");
+    expect(parseTrekPage(html)).toEqual({
+      canonical: "https://x.test/t/a/",
+      jsonLdUrl: "https://x.test/t/a/",
+    });
   });
 
   it("unescapes the canonical with esc's inverse", () => {
@@ -230,6 +243,9 @@ describe("sampleFromVersion (spec 44 R1)", () => {
     expect(sampleFromVersion('{"sha":"x"}')).toBeNull();
     expect(sampleFromVersion(versionFile(SHA, "x", []))).toBeNull();
     expect(sampleFromVersion('{"jsonLdSample":[1]}')).toBeNull();
+    // An entry that is not a trek page path would fetch the wrong page.
+    expect(sampleFromVersion('{"jsonLdSample":[""]}')).toBeNull();
+    expect(sampleFromVersion('{"jsonLdSample":["about/"]}')).toBeNull();
     expect(sampleFromVersion("<html>")).toBeNull();
   });
 });

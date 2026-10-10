@@ -160,13 +160,17 @@ export interface TrekPageFacts {
  * unescaped with its exact inverse.
  */
 export function parseTrekPage(html: string): TrekPageFacts {
-  const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
+  // Any attribute order: a renderer that writes href before rel is not a page
+  // without a canonical, and must not be reported as one (CON-VER-005).
+  const link = /<link\b[^>]*\brel="canonical"[^>]*>/.exec(html)?.[0];
+  const canonical = link ? /\bhref="([^"]+)"/.exec(link)?.[1] : undefined;
+  // Every ld+json block, not only the first: a BreadcrumbList placed ahead of
+  // the TouristAttraction is not a page without one.
   let jsonLdUrl: string | undefined;
-  const ld = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1];
-  if (ld) {
+  for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
     try {
-      const url = (JSON.parse(ld) as { url?: unknown }).url;
-      if (typeof url === "string") jsonLdUrl = url;
+      const ld = JSON.parse(m[1]) as { "@type"?: unknown; url?: unknown };
+      if (ld["@type"] === "TouristAttraction" && typeof ld.url === "string") jsonLdUrl = ld.url;
     } catch {
       // Unparseable structured data is absent structured data.
     }
@@ -234,7 +238,11 @@ export function pickJsonLdSample(pages: SampleCandidate[]): string[] {
 export function sampleFromVersion(body: string): string[] | null {
   try {
     const sample = (JSON.parse(body) as { jsonLdSample?: unknown }).jsonLdSample;
-    return Array.isArray(sample) && sample.length > 0 && sample.every((p) => typeof p === "string")
+    // Each entry must be a trek page path. An empty string would fetch the
+    // site root and be judged as a page with no JSON-LD — the wrong diagnosis.
+    return Array.isArray(sample) &&
+      sample.length > 0 &&
+      sample.every((p) => typeof p === "string" && /^t\/[^/]+\/$/.test(p))
       ? (sample as string[])
       : null;
   } catch {

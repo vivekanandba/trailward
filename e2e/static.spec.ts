@@ -49,11 +49,16 @@ test("every sampled page's JSON-LD url is its own canonical, as served (spec 44 
   };
   expect(version.jsonLdSample.length).toBeGreaterThan(0);
   for (const path of version.jsonLdSample) {
-    await page.goto(path);
-    const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
-    expect(canonical, path).toBe(`https://vivekanandba.github.io/trailward/${path}`);
+    const res = await page.goto(path);
+    // A missing page falls back to the SPA shell with a 200, so the status
+    // alone proves nothing — but a non-200 is reported as what it is.
+    expect(res?.status(), path).toBe(200);
+    const expected = `https://vivekanandba.github.io/trailward/${path}`;
+    // toHaveAttribute fails in the expect timeout naming the canonical, rather
+    // than waiting out the whole test on a page that has none.
+    await expect(page.locator('link[rel="canonical"]'), path).toHaveAttribute("href", expected);
     const raw = await page.locator('script[type="application/ld+json"]').innerText();
-    expect((JSON.parse(raw) as { url: string }).url, path).toBe(canonical);
+    expect((JSON.parse(raw) as { url: string }).url, path).toBe(expected);
   }
 });
 

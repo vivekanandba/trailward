@@ -22,7 +22,7 @@ import {
   type PageResult,
 } from "./lib/deploycheck";
 
-const SITE = "https://vivekanandba.github.io/trailward/";
+const SITE = `${SITE_URL}/`; // one definition of the production url
 const UA = "TrailwardBot/0.1 (+https://github.com/vivekanandba/trailward; deploy check)";
 
 export interface Fetched {
@@ -118,7 +118,14 @@ export async function runDeployCheck(
   //    it could never see a JSON-LD url built from the id. The build lists one
   //    page of each kind whose slug differs, in the version.json just verified —
   //    so the sample is from this build, and only ever from it.
-  results.push(...(await checkJsonLdSample(deps, base, opts.sha, versionOk, versionBody)));
+  // Against an older build the sample is not run at all, and is not reported
+  // as a failure: it was never evaluated, and the version row already fails
+  // the deploy for the real reason (CON-DATA-002, CON-VER-005).
+  if (versionOk) {
+    results.push(...(await checkJsonLdSample(deps, base, opts.sha, versionBody)));
+  } else {
+    io.log("[deploy] JSON-LD sample: not run — the site is not serving the build just made");
+  }
 
   const { failed, text } = summariseDeploy(results);
   io.log(text);
@@ -129,16 +136,13 @@ async function checkJsonLdSample(
   deps: DeployDeps,
   base: string,
   sha: string,
-  versionOk: boolean,
   versionBody: string,
 ): Promise<PageResult[]> {
   const summary = (detail: string): PageResult[] => [
     { path: "JSON-LD sample", status: 0, ok: false, detail },
   ];
-  // Pages from an older build would report THAT build's defects as this one's.
-  if (!versionOk) return summary("not run — the site is not serving the build just made");
   const sample = sampleFromVersion(versionBody);
-  if (!sample) return summary("version.json lists no jsonLdSample");
+  if (!sample) return summary("version.json lists no valid jsonLdSample");
   // The canonical must be the PRODUCTION url of this page — what search
   // engines are told — whatever host this check was pointed at. Spelled out
   // from SITE_URL, not built with absoluteUrl as the renderer does: reusing it
