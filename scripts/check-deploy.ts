@@ -17,6 +17,7 @@ import {
   JSONLD_WALK_LIMIT,
   checkDeployedVersion,
   checkJsonLdPage,
+  type JsonLdVerdict,
   checkPage,
   sitemapTrekPaths,
   summariseDeploy,
@@ -98,11 +99,18 @@ export async function runDeployCheck(
   //    page and the content pages. A 200 is not enough — each must carry
   //    something proving it is the page and not the SPA shell served as a
   //    soft 404.
+  // The sitemap is fetched once, here, and its body reused for the sample —
+  // a second fetch could disagree with the first, and costs a ~3,900-entry
+  // download for nothing.
+  let sitemap: { body?: string; failure?: string } = { failure: "sitemap.xml was not fetched" };
   for (const expectation of DEPLOY_SURFACE) {
     const url = `${base}${expectation.path}`;
     try {
       const { status, body, contentType } = await deps.get(url);
       results.push(checkPage(expectation, status, body, contentType));
+      if (expectation.path === "sitemap.xml") {
+        sitemap = status === 200 ? { body } : { failure: `sitemap.xml returned HTTP ${status}` };
+      }
     } catch (err) {
       results.push({
         path: expectation.path || "/",
@@ -110,6 +118,9 @@ export async function runDeployCheck(
         ok: false,
         detail: (err as Error).message,
       });
+      if (expectation.path === "sitemap.xml") {
+        sitemap = { failure: `sitemap.xml request failed: ${(err as Error).message}` };
+      }
     }
   }
 
@@ -117,45 +128,50 @@ export async function runDeployCheck(
   //    it could never see a JSON-LD url built from the id. Walk the sitemap
   //    instead, reading each page's own ?sel= id, and check the first pages
   //    whose slug differs — the only ones that can show the defect.
-  results.push(...(await sampleJsonLd(deps, base)));
+  results.push(...(await sampleJsonLd(deps, base, opts.sha, sitemap)));
 
   const { failed, text } = summariseDeploy(results);
   io.log(text);
   return { ok: failed.length === 0, results };
 }
 
-async function sampleJsonLd(deps: DeployDeps, base: string): Promise<PageResult[]> {
+async function sampleJsonLd(
+  deps: DeployDeps,
+  base: string,
+  sha: string,
+  sitemap: { body?: string; failure?: string },
+): Promise<PageResult[]> {
   const out: PageResult[] = [];
-  let paths: string[] = [];
-  try {
-    const { status, body } = await deps.get(`${base}sitemap.xml`);
-    if (status === 200) paths = sitemapTrekPaths(body);
-  } catch {
-    // An unreadable sitemap leaves nothing to walk; reported as "found 0 of 3"
-    // below. The surface check above already names the sitemap's own failure.
-  }
+  const paths = sitemap.body ? sitemapTrekPaths(sitemap.body) : [];
   let found = 0;
   for (const path of paths.slice(0, JSONLD_WALK_LIMIT)) {
     if (found === JSONLD_SAMPLE) break;
-    let verdict: PageResult | null;
+    let verdict: JsonLdVerdict;
     try {
-      const { status, body } = await deps.get(`${base}${path}`);
+      // Cache-busted like version.json: right after a deploy the CDN may still
+      // hold the previous build's page, and reporting that as a JSON-LD defect
+      // would name the wrong cause (CON-VER-005).
+      const { status, body } = await deps.get(`${base}${path}?cb=${sha}`);
       verdict = checkJsonLdPage(path, status, body);
     } catch (err) {
-      verdict = { path, status: 0, ok: false, detail: `JSON-LD sample: ${(err as Error).message}` };
+      verdict = {
+        kind: "unreadable",
+        result: { path, status: 0, ok: false, detail: `JSON-LD sample: ${(err as Error).message}` },
+      };
     }
-    if (verdict === null) continue; // slug == id: cannot show this defect
-    out.push(verdict);
-    // A page that could not be read is reported, but is not a sample — it
-    // proves nothing about the url, so it must not satisfy the count.
-    if (!/^JSON-LD sample:/.test(verdict.detail)) found++;
+    if (verdict.kind === "skip") continue; // slug == id: cannot show this defect
+    out.push(verdict.result);
+    if (verdict.kind === "checked") found++;
   }
   if (found < JSONLD_SAMPLE) {
+    // Say why there was nothing to walk when that is the reason, rather than
+    // reporting an unreadable sitemap as one with no qualifying pages.
+    const why = sitemap.failure ? ` — ${sitemap.failure}` : "";
     out.push({
       path: "JSON-LD sample",
       status: 0,
       ok: false,
-      detail: `could not find a sample (found ${found} of ${JSONLD_SAMPLE})`,
+      detail: `could not find a sample (found ${found} of ${JSONLD_SAMPLE})${why}`,
     });
   }
   return out;

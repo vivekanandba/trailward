@@ -157,6 +157,10 @@ const unescapeHtml = (s: string): string =>
 /**
  * Read the three facts R1 compares out of a page's HTML. Each is undefined when
  * the page lacks it — never a guess — so the caller can say WHICH is missing.
+ *
+ * The exact inverse of what renderTrekPage writes: attribute values are
+ * HTML-escaped (`esc`) and NOT URL-encoded, so a value is captured up to its
+ * closing quote and only HTML-unescaped.
  */
 export function parseTrekPage(html: string): TrekPageFacts {
   const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
@@ -170,12 +174,36 @@ export function parseTrekPage(html: string): TrekPageFacts {
       // Unparseable structured data is absent structured data.
     }
   }
-  const sel = /[?&]sel=([^"&#]+)/.exec(html)?.[1];
+  const sel = /\?sel=([^"]+)"/.exec(html)?.[1];
   return {
     canonical: canonical === undefined ? undefined : unescapeHtml(canonical),
     jsonLdUrl,
-    selId: sel === undefined ? undefined : decodeURIComponent(unescapeHtml(sel)),
+    selId: sel === undefined ? undefined : unescapeHtml(sel),
   };
+}
+
+/**
+ * R1's judgement, shared by the build (every page, every build) and the live
+ * backstop. A page served at `path` must name `path` as its canonical, and its
+ * JSON-LD url must be that canonical. Checking only that the two agree would
+ * pass a page whose canonical AND JSON-LD both name a url that 404s.
+ */
+export function jsonLdProblem(path: string, page: TrekPageFacts): string | null {
+  if (!page.canonical) return "no canonical";
+  if (!page.jsonLdUrl) return "no JSON-LD url";
+  let canonicalPath: string;
+  try {
+    canonicalPath = new URL(page.canonical).pathname;
+  } catch {
+    return `canonical ${page.canonical} is not a url`;
+  }
+  if (!canonicalPath.endsWith(`/${path}`)) {
+    return `canonical ${page.canonical} is not this page's url (${path})`;
+  }
+  if (page.jsonLdUrl !== page.canonical) {
+    return `JSON-LD url ${page.jsonLdUrl} is not the canonical ${page.canonical}`;
+  }
+  return null;
 }
 
 /** The `/t/<slug>/` pages a sitemap lists, as base-relative paths, in order. */
@@ -190,26 +218,31 @@ export const JSONLD_SAMPLE = 3;
 export const JSONLD_WALK_LIMIT = 50;
 
 /**
- * Judge one sampled page. `null` means the page cannot show the defect (its
- * slug equals its id) and is walked past — the ONLY case that is not a result.
- * Anything unreadable is a failure naming what is missing, never a skip: a
- * skip would make the sample look smaller than it is.
+ * One sampled page, judged. `skip` means the page cannot show the defect (its
+ * slug equals its id). `unreadable` is reported as a failure but proves nothing
+ * about the url, so it never counts toward the sample. Only `checked` does.
+ * The kind is structural, never inferred from the wording of a message.
  */
-export function checkJsonLdPage(path: string, status: number, body: string): PageResult | null {
-  if (status !== 200) return { path, status, ok: false, detail: `JSON-LD sample: HTTP ${status}` };
+export type JsonLdVerdict =
+  | { kind: "skip" }
+  | { kind: "unreadable"; result: PageResult }
+  | { kind: "checked"; result: PageResult };
+
+export function checkJsonLdPage(path: string, status: number, body: string): JsonLdVerdict {
+  const unreadable = (detail: string): JsonLdVerdict => ({
+    kind: "unreadable",
+    result: { path, status, ok: false, detail: `JSON-LD sample: ${detail}` },
+  });
+  if (status !== 200) return unreadable(`HTTP ${status}`);
   const page = parseTrekPage(body);
-  if (!page.selId) return { path, status, ok: false, detail: "JSON-LD sample: no ?sel= link" };
+  if (!page.selId) return unreadable("no ?sel= link");
   const slug = path.replace(/^t\//, "").replace(/\/$/, "");
-  if (page.selId === slug) return null;
-  if (!page.canonical) return { path, status, ok: false, detail: "JSON-LD sample: no canonical" };
-  if (!page.jsonLdUrl) return { path, status, ok: false, detail: "JSON-LD sample: no JSON-LD url" };
-  if (page.jsonLdUrl !== page.canonical) {
-    return {
-      path,
-      status,
-      ok: false,
-      detail: `JSON-LD url ${page.jsonLdUrl} is not the canonical ${page.canonical}`,
-    };
-  }
-  return { path, status, ok: true, detail: "JSON-LD url is the canonical" };
+  if (page.selId === slug) return { kind: "skip" };
+  const problem = jsonLdProblem(path, page);
+  return {
+    kind: "checked",
+    result: problem
+      ? { path, status, ok: false, detail: problem }
+      : { path, status, ok: true, detail: "JSON-LD url is the canonical" },
+  };
 }

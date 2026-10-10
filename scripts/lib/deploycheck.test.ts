@@ -5,6 +5,7 @@ import {
   checkPage,
   summariseDeploy,
   DEPLOY_SURFACE,
+  jsonLdProblem,
   parseTrekPage,
   sitemapTrekPaths,
   type PageResult,
@@ -159,12 +160,13 @@ describe("parseTrekPage (spec 44 R1)", () => {
     expect(parseTrekPage(broken).jsonLdUrl).toBeUndefined();
   });
 
-  it("decodes an entity-escaped canonical and a percent-encoded id", () => {
+  it("inverts exactly what renderTrekPage writes: HTML-escaped, not URL-encoded", () => {
     const page = parseTrekPage(
-      '<link rel="canonical" href="https://x.test/t/a&amp;b/" /><a href="/?sel=osm%3A1">',
+      '<link rel="canonical" href="https://x.test/t/a&amp;b/" /><a href="/?sel=a&amp;b%1">',
     );
     expect(page.canonical).toBe("https://x.test/t/a&b/");
-    expect(page.selId).toBe("osm:1");
+    // `&` is not a terminator and `%` is not decoded — no URIError, no truncation.
+    expect(page.selId).toBe("a&b%1");
   });
 });
 
@@ -183,5 +185,33 @@ describe("sitemapTrekPaths (spec 44 R1)", () => {
 
   it("returns nothing for a body that is not a sitemap", () => {
     expect(sitemapTrekPaths("<html>soft 404</html>")).toEqual([]);
+  });
+});
+
+describe("jsonLdProblem (spec 44 R1)", () => {
+  const page = (canonical?: string, jsonLdUrl?: string) => ({ canonical, jsonLdUrl });
+  const own = "https://x.test/trailward/t/abapuri-hill/";
+
+  it("passes a page whose canonical is its own url and whose JSON-LD matches", () => {
+    expect(jsonLdProblem("t/abapuri-hill/", page(own, own))).toBeNull();
+  });
+
+  it("fails a JSON-LD url that is not the canonical", () => {
+    expect(jsonLdProblem("t/abapuri-hill/", page(own, "https://x.test/trailward/t/gn-1/"))).toMatch(
+      /is not the canonical/,
+    );
+  });
+
+  it("fails when canonical AND JSON-LD agree on a url that is not this page", () => {
+    // The self-consistency check alone would pass this: both name the
+    // id-derived url, which 404s.
+    const wrong = "https://x.test/trailward/t/gn-11022928/";
+    expect(jsonLdProblem("t/abapuri-hill/", page(wrong, wrong))).toMatch(/is not this page's url/);
+  });
+
+  it("names what is missing", () => {
+    expect(jsonLdProblem("t/a/", page(undefined, own))).toBe("no canonical");
+    expect(jsonLdProblem("t/a/", page(own, undefined))).toBe("no JSON-LD url");
+    expect(jsonLdProblem("t/a/", page("not a url", "not a url"))).toMatch(/is not a url/);
   });
 });

@@ -374,7 +374,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       for (const [slug, id] of same) pages[`t/${slug}/`] = trekPage(slug, id);
       const { get, asked } = serve(pages);
       const out = await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
-      expect(asked.filter((u) => /\/t\/p\d+\/$/.test(u))).toHaveLength(50);
+      expect(asked.filter((u) => /\/t\/p\d+\/\?cb=/.test(u))).toHaveLength(50);
       expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
         "could not find a sample (found 0 of 3)",
       );
@@ -412,13 +412,42 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       );
     });
 
-    it("FAILS when the sitemap cannot be read at all", async () => {
+    it("FAILS when the sitemap cannot be read, and SAYS that was why", async () => {
       const pages = healthySite(SHA);
       pages["sitemap.xml"] = { status: 500, body: "", contentType: "text/html" };
       const out = await run(pages);
       expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "could not find a sample (found 0 of 3)",
+        "could not find a sample (found 0 of 3) — sitemap.xml returned HTTP 500",
       );
+    });
+
+    it("reads the sitemap ONCE and cache-busts every sampled page", async () => {
+      const { get, asked } = serve(healthySite(SHA));
+      await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
+      expect(asked.filter((u) => u.includes("sitemap.xml"))).toHaveLength(1);
+      // Right after a deploy the CDN may hold the previous build's page.
+      const sampled = asked.filter((u) => /\/t\/(abapuri-hill|virapuli|madhugiri-betta)\//.test(u));
+      expect(sampled).toHaveLength(3);
+      for (const u of sampled) expect(u).toContain(`?cb=${SHA}`);
+    });
+
+    it("FAILS a page whose canonical and JSON-LD agree on the wrong url", async () => {
+      const pages = healthySite(SHA);
+      const wrong = `${BASE}t/gn-11022928/`;
+      pages["t/abapuri-hill/"] = {
+        status: 200,
+        contentType: "text/html",
+        body: [
+          `<link rel="canonical" href="${wrong}" />`,
+          `<script type="application/ld+json">{"url":"${wrong}"}</script>`,
+          `<a href="/trailward/?sel=gn-11022928">`,
+        ].join(""),
+      };
+      const out = await run(pages);
+      expect(out.results.find((r) => r.path === "t/abapuri-hill/")?.detail).toMatch(
+        /is not this page's url/,
+      );
+      expect(out.ok).toBe(false);
     });
   });
 });

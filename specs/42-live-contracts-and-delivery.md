@@ -86,18 +86,20 @@ A journey test asserts the user's goal was achievable, not that a particular but
 
 ## E. The suite must be deterministic (CON-VER-008)
 
-A test that passes when the machine is idle and fails under load is a defect in the suite, and
-the gate is red. The e2e jobs share this VM with every other project's CI, so load is normal, not
-exceptional.
+The e2e jobs share this VM with every other project's CI, so load is normal, not exceptional.
 
-- **Wait for a state, never for a clock or a disappearance.** Waiting for the "Loading peaks"
-  status to detach passed before React had rendered it at all, so tests raced the cell load and
-  failed 1 run in 6 under a load average of 12–18 (2026-10-10). The result list carries
-  `aria-busy` while it loads, and `resultsLoaded()` (`e2e/helpers/deterministic.ts`) waits for
-  `aria-busy="false"`, a state that exists only after the list rendered and loading ended. Its
-  60 s timeout bounds a hang; it does not assert speed.
-- Third-party tiles are stubbed; counts are read once they are stable; the static project runs
-  in its own pass.
+- **Wait for loading by state.** Waiting for the "Loading peaks" status to detach passed before
+  React had rendered it at all, so tests raced the cell load and failed 1 run in 6 at a load
+  average of 12–18 (2026-10-10). The result list now carries `aria-busy` while it loads, and its
+  loading announcement sits outside it, because `aria-busy` holds back announcements within.
+  `resultsLoaded()` (`e2e/helpers/deterministic.ts`) waits for `aria-busy="false"`, which exists
+  only once the list has rendered and loading has ended. Its 60 s timeout bounds a hang; it does
+  not assert speed.
+- **Two clock waits remain, and are known.** `settled()` sleeps 600 ms for the map's pan and zoom
+  before a screenshot, and `settledCount()` reads a count until it is stable across three
+  250 ms reads. Neither failed in the runs of 2026-10-10 at a load average of about 15. Both are candidates for a state-based
+  replacement, and are listed here so that is not forgotten.
+- Third-party tiles are stubbed. The static project runs in its own pass.
 
 ## Edge cases & error states
 

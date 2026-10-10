@@ -23,7 +23,7 @@ import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
-import { versionFile } from "./lib/deploycheck";
+import { jsonLdProblem, parseTrekPage, versionFile } from "./lib/deploycheck";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
@@ -117,7 +117,13 @@ export function runBuildPages(
   // raw TypeError. After this point NOTHING renders: the loop below only writes.
   const trekPages = pages.map((trek) => {
     const slug = slugs.get(trek.id)!;
-    return { path: `${paths.outDir}/${slug}/index.html`, html: renderTrekPage(trek, slug) };
+    const html = renderTrekPage(trek, slug);
+    // Spec 44 R1, on EVERY real page of EVERY build: the page names its own
+    // url, and its structured data names the same one. 3,815 pages once
+    // advertised a url that 404s, and no gate looked at the real output.
+    const problem = jsonLdProblem(`t/${slug}/`, parseTrekPage(html));
+    if (problem) throw new Error(`[pages] t/${slug}/: ${problem}`);
+    return { path: `${paths.outDir}/${slug}/index.html`, html };
   });
 
   const stats = datasetStats(treks, pages.length);
