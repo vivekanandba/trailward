@@ -81,9 +81,12 @@ that implements each one names its check. R1 is enforced by the tests named unde
   full, and the JSON-LD url must equal the canonical. Self-consistency alone, or a match on the
   end of the path, would pass a canonical with an id-derived slug, a doubled base path or the
   wrong host. All of those 404.
-  - **The guarantee — every real page, every build.** `build-pages` applies `jsonLdProblem` to
-    each of the ~3,886 pages it renders, and **refuses** before writing anything, so the previous
-    build survives. A fixture test proves the wiring; the refusal is what covers the real data.
+  - **Every real page, every build.** `build-pages` applies `jsonLdProblem` to each of the
+    ~3,886 pages it renders, and **fails the build** before writing any of them, so nothing
+    deploys. (Inside `npm run build`, vite has already emptied `dist/`, so the previous build does
+    not survive on disk; what the refusal protects is the deploy.) Since `trekJsonLd` now takes
+    the canonical, the two halves agree by construction. The check exists to catch a renderer
+    regression that breaks that, on real data rather than a fixture.
   - **The live backstop.** It runs only once `version.json` shows the build just made; otherwise
     it reports "not run", because an older build's pages would report that build's defects as
     this one's (CON-VER-005). `check-deploy` reuses the `sitemap.xml` body it already fetched for
@@ -96,7 +99,7 @@ that implements each one names its check. R1 is enforced by the tests named unde
   - **The sample is exactly three, counted structurally.** A page counts only when its url was
     actually compared. If fewer than three turn up within the first **50**, the check fails with
     "could not find a sample (found N of 3)". When the sitemap could not be read, or answered 200
-    with something that is not a sitemap, the message says which. A page that cannot be read, or that has no `?sel=` link, fails naming
+    with something that is not a sitemap, the message says which, reusing the deploy surface's own verdict on the sitemap. A page that fails with a thrown request or a 5xx is retried once. After three unreadable pages in a row the walk stops and says so: a site where every page fails has one problem, not fifty lines of it. A page that cannot be read, or that has no `?sel=` link, fails naming
     what is missing. It is reported, never skipped, and never counted as a sample.
   - The fixed sample `t/skandagiri/` stays in the deploy surface for what it checks (the page
     exists and is not a soft 404). Its slug equals its id, so it could never see this defect.

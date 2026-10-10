@@ -108,14 +108,11 @@ export async function runDeployCheck(
     const url = `${base}${expectation.path}`;
     try {
       const { status, body, contentType } = await deps.get(url);
-      results.push(checkPage(expectation, status, body, contentType));
+      const verdict = checkPage(expectation, status, body, contentType);
+      results.push(verdict);
+      // One rule for "is this the sitemap": the surface's own verdict, reused.
       if (expectation.path === "sitemap.xml") {
-        sitemap =
-          status !== 200
-            ? { failure: `sitemap.xml returned HTTP ${status}` }
-            : body.includes("<urlset")
-              ? { body }
-              : { failure: "sitemap.xml is not a sitemap (no <urlset>)" };
+        sitemap = verdict.ok ? { body } : { failure: `sitemap.xml: ${verdict.detail}` };
       }
     } catch (err) {
       results.push({
@@ -125,7 +122,7 @@ export async function runDeployCheck(
         detail: (err as Error).message,
       });
       if (expectation.path === "sitemap.xml") {
-        sitemap = { failure: `sitemap.xml request failed: ${(err as Error).message}` };
+        sitemap = { failure: `sitemap.xml: ${(err as Error).message}` };
       }
     }
   }
@@ -152,6 +149,9 @@ export async function runDeployCheck(
   return { ok: failed.length === 0, results };
 }
 
+/** Consecutive unreadable pages after which the walk stops: the site is broken, not the sample. */
+const UNREADABLE_RUN_LIMIT = 3;
+
 async function sampleJsonLd(
   deps: DeployDeps,
   base: string,
@@ -161,31 +161,26 @@ async function sampleJsonLd(
   const out: PageResult[] = [];
   const paths = sitemap.body ? sitemapTrekPaths(sitemap.body) : [];
   let found = 0;
+  let unreadableRun = 0;
+  let stopped = "";
   for (const path of paths.slice(0, JSONLD_WALK_LIMIT)) {
     if (found === JSONLD_SAMPLE) break;
-    let verdict: JsonLdVerdict;
-    try {
-      // Cache-busted like version.json: right after a deploy the CDN may still
-      // hold the previous build's page, and reporting that as a JSON-LD defect
-      // would name the wrong cause (CON-VER-005).
-      const { status, body } = await deps.get(`${base}${path}?cb=${sha}`);
-      // The canonical must be the PRODUCTION url of this page — that is what
-      // search engines are told — whatever host this check was pointed at.
-      verdict = checkJsonLdPage(path, absoluteUrl(path), status, body);
-    } catch (err) {
-      verdict = {
-        kind: "unreadable",
-        result: { path, status: 0, ok: false, detail: `JSON-LD sample: ${(err as Error).message}` },
-      };
-    }
+    const verdict = await fetchAndJudge(deps, base, sha, path);
     if (verdict.kind === "skip") continue; // slug == id: cannot show this defect
     out.push(verdict.result);
-    if (verdict.kind === "checked") found++;
+    if (verdict.kind === "checked") {
+      found++;
+      unreadableRun = 0;
+    } else if (++unreadableRun === UNREADABLE_RUN_LIMIT) {
+      // Every page failing to load is one problem, not fifty lines of it.
+      stopped = ` — stopped after ${UNREADABLE_RUN_LIMIT} unreadable pages in a row`;
+      break;
+    }
   }
   if (found < JSONLD_SAMPLE) {
     // Say why there was nothing to walk when that is the reason, rather than
     // reporting an unreadable sitemap as one with no qualifying pages.
-    const why = sitemap.failure ? ` — ${sitemap.failure}` : "";
+    const why = sitemap.failure ? ` — ${sitemap.failure}` : stopped;
     out.push({
       path: "JSON-LD sample",
       status: 0,
@@ -194,6 +189,39 @@ async function sampleJsonLd(
     });
   }
   return out;
+}
+
+/**
+ * One sampled page, with one retry for a transient failure (a thrown request
+ * or a 5xx) — the same CDN turnover version.json's budget absorbs. A 404 or a
+ * wrong url is not transient and is judged at once.
+ */
+async function fetchAndJudge(
+  deps: DeployDeps,
+  base: string,
+  sha: string,
+  path: string,
+): Promise<JsonLdVerdict> {
+  let last: JsonLdVerdict = { kind: "skip" };
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      // Cache-busted like version.json: right after a deploy the CDN may still
+      // hold the previous build's page, and reporting that as a JSON-LD defect
+      // would name the wrong cause (CON-VER-005).
+      const { status, body } = await deps.get(`${base}${path}?cb=${sha}-${attempt}`);
+      // The canonical must be the PRODUCTION url of this page — that is what
+      // search engines are told — whatever host this check was pointed at.
+      last = checkJsonLdPage(path, absoluteUrl(path), status, body);
+      if (status < 500) return last;
+    } catch (err) {
+      last = {
+        kind: "unreadable",
+        result: { path, status: 0, ok: false, detail: `JSON-LD sample: ${(err as Error).message}` },
+      };
+    }
+    if (attempt === 1) await deps.wait(2_000);
+  }
+  return last;
 }
 
 async function get(url: string): Promise<Fetched> {

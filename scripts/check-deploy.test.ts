@@ -429,7 +429,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       pages["sitemap.xml"] = { status: 500, body: "", contentType: "text/html" };
       const out = await run(pages);
       expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "could not find a sample (found 0 of 3) — sitemap.xml returned HTTP 500",
+        "could not find a sample (found 0 of 3) — sitemap.xml: HTTP 500",
       );
     });
 
@@ -457,7 +457,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       };
       const out = await run(pages);
       expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
-        "could not find a sample (found 0 of 3) — sitemap.xml is not a sitemap (no <urlset>)",
+        "could not find a sample (found 0 of 3) — sitemap.xml: body does not contain <urlset",
       );
     });
 
@@ -468,7 +468,63 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       // Right after a deploy the CDN may hold the previous build's page.
       const sampled = asked.filter((u) => /\/t\/(abapuri-hill|virapuli|madhugiri-betta)\//.test(u));
       expect(sampled).toHaveLength(3);
-      for (const u of sampled) expect(u).toContain(`?cb=${SHA}`);
+      for (const u of sampled) expect(u).toContain(`?cb=${SHA}-`);
+    });
+
+    it("retries a sampled page once on a transient failure, then judges it", async () => {
+      const pages = healthySite(SHA);
+      const { get } = serve(pages);
+      let thrown = 0;
+      const flaky = async (url: string): Promise<Fetched> => {
+        if (url.includes("/t/abapuri-hill/") && thrown++ === 0) throw new Error("ECONNRESET");
+        return get(url);
+      };
+      const out = await runDeployCheck(
+        memoryIO(),
+        { get: flaky, wait: noWait },
+        { sha: SHA, base: BASE },
+      );
+      expect(thrown).toBe(2);
+      expect(out.results.find((r) => r.path === "t/abapuri-hill/")?.ok).toBe(true);
+      expect(out.ok).toBe(true);
+    });
+
+    it("retries a sampled page once on a 5xx too, then judges it", async () => {
+      const pages = healthySite(SHA);
+      const { get } = serve(pages);
+      let served = 0;
+      const flaky = async (url: string): Promise<Fetched> =>
+        url.includes("/t/abapuri-hill/") && served++ === 0
+          ? { status: 503, body: "", contentType: "text/html" }
+          : get(url);
+      const out = await runDeployCheck(
+        memoryIO(),
+        { get: flaky, wait: noWait },
+        { sha: SHA, base: BASE },
+      );
+      expect(served).toBe(2);
+      expect(out.results.find((r) => r.path === "t/abapuri-hill/")?.ok).toBe(true);
+    });
+
+    it("does NOT retry a 404 — it is not transient", async () => {
+      const pages = healthySite(SHA);
+      pages["t/abapuri-hill/"] = { status: 404, body: "", contentType: "text/html" };
+      const { get, asked } = serve(pages);
+      await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
+      expect(asked.filter((u) => u.includes("/t/abapuri-hill/"))).toHaveLength(1);
+    });
+
+    it("stops after three unreadable pages in a row and says so", async () => {
+      const pages = healthySite(SHA);
+      const many: [string, string][] = Array.from({ length: 20 }, (_, i) => [`p${i}`, `id${i}`]);
+      pages["sitemap.xml"] = { status: 200, body: sitemap(many), contentType: "application/xml" };
+      // none of the p<i> pages exist: every one is a 404
+      const { get, asked } = serve(pages);
+      const out = await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
+      expect(asked.filter((u) => /\/t\/p\d+\//.test(u))).toHaveLength(3);
+      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
+        "could not find a sample (found 0 of 3) — stopped after 3 unreadable pages in a row",
+      );
     });
 
     it("FAILS a page whose canonical and JSON-LD agree on the wrong url", async () => {

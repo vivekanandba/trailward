@@ -90,6 +90,13 @@ export async function resultsLoaded(page: Page): Promise<void> {
  * changing"), measured at whatever speed the machine runs.
  */
 export async function mapSettled(page: Page): Promise<void> {
+  // Fresh state per call: a second call in the same page must not inherit a
+  // count that already reached five, or it returns before the map recomputes.
+  await page.evaluate(() => {
+    const w = window as unknown as { __mapSig?: string; __mapStable?: number };
+    w.__mapSig = undefined;
+    w.__mapStable = 0;
+  });
   await page.waitForFunction(
     () => {
       const w = window as unknown as { __mapSig?: string; __mapStable?: number };
@@ -99,6 +106,8 @@ export async function mapSettled(page: Page): Promise<void> {
           return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)}`;
         })
         .join("|");
+      // Nothing drawn yet is not "settled": an empty map holds still too.
+      if (sig === "") return false;
       w.__mapStable = w.__mapSig === sig ? (w.__mapStable ?? 0) + 1 : 0;
       w.__mapSig = sig;
       return w.__mapStable >= 5;
