@@ -1,11 +1,36 @@
 import { describe, it, expect } from "vitest";
 import { runDeployCheck, type Fetched } from "./check-deploy";
 import { memoryIO } from "./lib/buildIO";
-import { versionFile, DEPLOY_SURFACE } from "./lib/deploycheck";
+import { versionFile, DEPLOY_SURFACE, JSONLD_SAMPLE } from "./lib/deploycheck";
 
 const SHA = "a".repeat(40);
 const PREV = "b".repeat(40);
 const BASE = "https://example.test/trailward/";
+
+/** A generated trek page as build-pages writes it, with the given JSON-LD url. */
+function trekPage(slug: string, id: string, jsonLdUrl = `${BASE}t/${slug}/`): Fetched {
+  return {
+    status: 200,
+    contentType: "text/html; charset=utf-8",
+    body: [
+      `<link rel="canonical" href="${BASE}t/${slug}/" />`,
+      `<script type="application/ld+json">{"url":"${jsonLdUrl}"}</script>`,
+      `<h1>Skandagiri</h1><a class="cta" href="/trailward/?sel=${id}">Open on the map</a>`,
+    ].join("\n"),
+  };
+}
+
+/** The sitemap's /t/ entries, in order: one slug == id page, then three that differ. */
+const TREK_PAGES: [string, string][] = [
+  ["skandagiri", "skandagiri"],
+  ["abapuri-hill", "gn-11022928"],
+  ["virapuli", "d12-2928-1951-105-136"],
+  ["madhugiri-betta", "madhugiri"],
+];
+
+function sitemap(entries: [string, string][]): string {
+  return `<urlset>${entries.map(([slug]) => `<url><loc>${BASE}t/${slug}/</loc></url>`).join("")}</urlset>`;
+}
 
 /** A site that serves everything correctly at `sha`. */
 function healthySite(sha: string): Record<string, Fetched> {
@@ -24,6 +49,12 @@ function healthySite(sha: string): Record<string, Fetched> {
             : "text/html; charset=utf-8",
     };
   }
+  pages["sitemap.xml"] = {
+    status: 200,
+    body: sitemap(TREK_PAGES),
+    contentType: "application/xml",
+  };
+  for (const [slug, id] of TREK_PAGES) pages[`t/${slug}/`] = trekPage(slug, id);
   return pages;
 }
 
@@ -223,7 +254,8 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     expect(out.ok).toBe(false);
     expect(out.results[0].detail).toMatch(/ENOTFOUND/);
     // The surface was still checked — one flaky endpoint must not hide the rest.
-    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1);
+    // version + the surface + the structured-data sample (spec 44 R1)
+    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1 + JSONLD_SAMPLE);
   });
 
   it("FAILS on a missing version.json rather than skipping the check", async () => {
@@ -274,7 +306,8 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     );
     expect(out.ok).toBe(false);
     // Every other page was still checked — one failure must not hide the rest.
-    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1);
+    // version + the surface + the structured-data sample (spec 44 R1)
+    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1 + JSONLD_SAMPLE);
   });
 
   it("cache-busts the version request so a CDN cannot answer with our own check", async () => {
@@ -291,5 +324,101 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       { sha: SHA, base: BASE.replace(/\/$/, "") },
     );
     expect(out.ok).toBe(true);
+  });
+
+  describe("structured-data sample (spec 44 R1)", () => {
+    const run = (pages: Record<string, Fetched>) =>
+      runDeployCheck(memoryIO(), { get: serve(pages).get, wait: noWait }, { sha: SHA, base: BASE });
+    const sampleResults = (out: { results: { path: string; detail: string; ok: boolean }[] }) =>
+      out.results.filter((r) => r.detail.startsWith("JSON-LD") || r.path === "JSON-LD sample");
+
+    it("checks the first three pages whose slug differs from their id", async () => {
+      const out = await run(healthySite(SHA));
+      expect(out.ok).toBe(true);
+      const checked = sampleResults(out).map((r) => r.path);
+      // skandagiri (slug == id) cannot show the defect, so it is walked past.
+      expect(checked).toEqual(["t/abapuri-hill/", "t/virapuli/", "t/madhugiri-betta/"]);
+    });
+
+    it("FAILS when a page's JSON-LD url is not its canonical — the 3,815-page defect", async () => {
+      const pages = healthySite(SHA);
+      pages["t/virapuli/"] = trekPage(
+        "virapuli",
+        "d12-2928-1951-105-136",
+        `${BASE}t/d12-2928-1951-105-136/`,
+      );
+      const out = await run(pages);
+      expect(out.ok).toBe(false);
+      const bad = out.results.find((r) => r.path === "t/virapuli/");
+      expect(bad?.ok).toBe(false);
+      expect(bad?.detail).toMatch(/JSON-LD url .* is not the canonical/);
+    });
+
+    it("FAILS with its own message when it cannot find three qualifying pages", async () => {
+      const pages = healthySite(SHA);
+      pages["sitemap.xml"] = {
+        status: 200,
+        body: sitemap(TREK_PAGES.slice(0, 2)), // skandagiri + one qualifying page
+        contentType: "application/xml",
+      };
+      const out = await run(pages);
+      expect(out.ok).toBe(false);
+      const miss = out.results.find((r) => r.path === "JSON-LD sample");
+      expect(miss?.detail).toBe("could not find a sample (found 1 of 3)");
+    });
+
+    it("walks at most 50 pages looking for a sample", async () => {
+      const same: [string, string][] = Array.from({ length: 60 }, (_, i) => [`p${i}`, `p${i}`]);
+      const pages = healthySite(SHA);
+      pages["sitemap.xml"] = { status: 200, body: sitemap(same), contentType: "application/xml" };
+      for (const [slug, id] of same) pages[`t/${slug}/`] = trekPage(slug, id);
+      const { get, asked } = serve(pages);
+      const out = await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
+      expect(asked.filter((u) => /\/t\/p\d+\/$/.test(u))).toHaveLength(50);
+      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
+        "could not find a sample (found 0 of 3)",
+      );
+    });
+
+    it("FAILS a page it cannot read, naming why, rather than skipping it", async () => {
+      for (const [page, reason] of [
+        [{ status: 404, body: "", contentType: "text/html" }, /HTTP 404/],
+        [{ ...trekPage("abapuri-hill", "gn-1"), body: "<h1>no link</h1>" }, /no \?sel= link/],
+        [{ ...trekPage("abapuri-hill", "gn-1"), body: '<a href="/?sel=gn-1">' }, /no canonical/],
+        [
+          {
+            ...trekPage("abapuri-hill", "gn-1"),
+            body: `<link rel="canonical" href="${BASE}t/abapuri-hill/" /><a href="/?sel=gn-1">`,
+          },
+          /no JSON-LD url/,
+        ],
+      ] as const) {
+        const pages = healthySite(SHA);
+        pages["t/abapuri-hill/"] = page;
+        const out = await run(pages);
+        const r = out.results.find((x) => x.path === "t/abapuri-hill/");
+        expect(r?.ok, String(reason)).toBe(false);
+        expect(r?.detail, String(reason)).toMatch(reason);
+        expect(out.ok).toBe(false);
+      }
+    });
+
+    it("does not count an unreadable page toward the three — it proves nothing", async () => {
+      const pages = healthySite(SHA);
+      pages["t/abapuri-hill/"] = { status: 404, body: "", contentType: "text/html" };
+      const out = await run(pages);
+      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
+        "could not find a sample (found 2 of 3)",
+      );
+    });
+
+    it("FAILS when the sitemap cannot be read at all", async () => {
+      const pages = healthySite(SHA);
+      pages["sitemap.xml"] = { status: 500, body: "", contentType: "text/html" };
+      const out = await run(pages);
+      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
+        "could not find a sample (found 0 of 3)",
+      );
+    });
   });
 });

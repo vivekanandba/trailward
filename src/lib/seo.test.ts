@@ -59,7 +59,7 @@ describe("canonicalFor", () => {
 
 describe("trekJsonLd (spec 35 — never fabricate a field)", () => {
   it("emits geo coordinates and the elevation the record carries", () => {
-    const ld = trekJsonLd(trek) as Record<string, never>;
+    const ld = trekJsonLd(trek, absoluteUrl("t/skandagiri/")) as Record<string, never>;
     expect(ld["@context"]).toBe("https://schema.org");
     expect(ld["@type"]).toBe("TouristAttraction");
     expect(ld.name).toBe("Skandagiri");
@@ -70,9 +70,20 @@ describe("trekJsonLd (spec 35 — never fabricate a field)", () => {
     expect(ld.url).toBe(absoluteUrl("t/skandagiri/"));
   });
 
+  it("uses the url it is given, never one rebuilt from the id (spec 44 R1)", () => {
+    // 3,815 of 3,886 pages live at a slug made from the NAME; the id-derived
+    // url they used to advertise 404s. The caller owns the url, so the page and
+    // its structured data cannot disagree.
+    const generated: Trek = { ...trek, id: "gn-11022928", name: "Abāpuri Hill" };
+    const url = absoluteUrl("t/abapuri-hill/");
+    const ld = trekJsonLd(generated, url) as { url: string };
+    expect(ld.url).toBe(url);
+    expect(ld.url).not.toContain("gn-11022928");
+  });
+
   it("omits absent fields entirely rather than guessing (CON-DATA-001)", () => {
     const bare: Trek = { ...trek, elevationM: undefined, image: undefined };
-    const ld = trekJsonLd(bare) as unknown as Record<string, unknown>;
+    const ld = trekJsonLd(bare, absoluteUrl("t/skandagiri/")) as unknown as Record<string, unknown>;
     const geo = ld.geo as Record<string, unknown>;
     expect("elevation" in geo).toBe(false);
     expect("photo" in ld).toBe(false);
@@ -110,7 +121,10 @@ describe("sitemapXml", () => {
 
 describe("jsonLdScript (spec 35 — untrusted names must not break out of <script>)", () => {
   it("neutralises a name that closes the script element", () => {
-    const evil = trekJsonLd({ ...trek, name: "</script><img src=x onerror=alert(1)>" });
+    const evil = trekJsonLd(
+      { ...trek, name: "</script><img src=x onerror=alert(1)>" },
+      absoluteUrl("t/skandagiri/"),
+    );
     const out = jsonLdScript(evil);
     expect(out).not.toContain("</script");
     expect(out).not.toContain("<img");

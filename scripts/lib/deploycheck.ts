@@ -135,3 +135,81 @@ export function summariseDeploy(results: PageResult[]): { failed: PageResult[]; 
     text: [`${results.length - failed.length}/${results.length} ok`, "", ...lines].join("\n"),
   };
 }
+
+/** What a generated trek page says about itself (spec 44 R1). */
+export interface TrekPageFacts {
+  /** `<link rel="canonical">` — where the page says it lives. */
+  canonical?: string;
+  /** The JSON-LD `url` — where the page tells search engines it lives. */
+  jsonLdUrl?: string;
+  /** The record id, from the "Open on the map" `?sel=` link. */
+  selId?: string;
+}
+
+const unescapeHtml = (s: string): string =>
+  s
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+
+/**
+ * Read the three facts R1 compares out of a page's HTML. Each is undefined when
+ * the page lacks it — never a guess — so the caller can say WHICH is missing.
+ */
+export function parseTrekPage(html: string): TrekPageFacts {
+  const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
+  let jsonLdUrl: string | undefined;
+  const ld = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  if (ld) {
+    try {
+      const url = (JSON.parse(ld) as { url?: unknown }).url;
+      if (typeof url === "string") jsonLdUrl = url;
+    } catch {
+      // Unparseable structured data is absent structured data.
+    }
+  }
+  const sel = /[?&]sel=([^"&#]+)/.exec(html)?.[1];
+  return {
+    canonical: canonical === undefined ? undefined : unescapeHtml(canonical),
+    jsonLdUrl,
+    selId: sel === undefined ? undefined : decodeURIComponent(unescapeHtml(sel)),
+  };
+}
+
+/** The `/t/<slug>/` pages a sitemap lists, as base-relative paths, in order. */
+export function sitemapTrekPaths(xml: string): string[] {
+  const out: string[] = [];
+  for (const m of xml.matchAll(/<loc>[^<]*?\/(t\/[^/<]+\/)<\/loc>/g)) out.push(m[1]);
+  return out;
+}
+
+/** How many qualifying pages the live backstop checks, and how far it looks. */
+export const JSONLD_SAMPLE = 3;
+export const JSONLD_WALK_LIMIT = 50;
+
+/**
+ * Judge one sampled page. `null` means the page cannot show the defect (its
+ * slug equals its id) and is walked past — the ONLY case that is not a result.
+ * Anything unreadable is a failure naming what is missing, never a skip: a
+ * skip would make the sample look smaller than it is.
+ */
+export function checkJsonLdPage(path: string, status: number, body: string): PageResult | null {
+  if (status !== 200) return { path, status, ok: false, detail: `JSON-LD sample: HTTP ${status}` };
+  const page = parseTrekPage(body);
+  if (!page.selId) return { path, status, ok: false, detail: "JSON-LD sample: no ?sel= link" };
+  const slug = path.replace(/^t\//, "").replace(/\/$/, "");
+  if (page.selId === slug) return null;
+  if (!page.canonical) return { path, status, ok: false, detail: "JSON-LD sample: no canonical" };
+  if (!page.jsonLdUrl) return { path, status, ok: false, detail: "JSON-LD sample: no JSON-LD url" };
+  if (page.jsonLdUrl !== page.canonical) {
+    return {
+      path,
+      status,
+      ok: false,
+      detail: `JSON-LD url ${page.jsonLdUrl} is not the canonical ${page.canonical}`,
+    };
+  }
+  return { path, status, ok: true, detail: "JSON-LD url is the canonical" };
+}

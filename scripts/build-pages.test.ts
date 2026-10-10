@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { runBuildPages, pagePathsFor } from "./build-pages";
 import { memoryIO } from "./lib/buildIO";
+import { parseTrekPage } from "./lib/deploycheck";
 import type { Trek } from "../src/lib/trek";
 
 const trek = (over: Partial<Trek> & Pick<Trek, "id" | "name">): Trek => ({
@@ -53,6 +54,19 @@ describe("build-pages run (spec 35/36/40)", () => {
     expect(io.files.has(`${P.outDir}/kumara-parvatha/index.html`)).toBe(true);
     expect([...io.files.keys()].some((k) => k.includes("unnamed"))).toBe(false);
     expect(out.treks).toBe(2);
+  });
+
+  it("every written trek page's JSON-LD url is its own canonical (spec 44 R1)", () => {
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-09-19");
+    const pages = [...io.files.keys()].filter((k) => k.startsWith(`${P.outDir}/`));
+    // gn-1 lives at kumara-parvatha/ — the case that was wrong on 3,815 pages.
+    expect(pages).toContain(`${P.outDir}/kumara-parvatha/index.html`);
+    for (const path of pages) {
+      const page = parseTrekPage(io.files.get(path)!);
+      expect(page.canonical, path).toBeDefined();
+      expect(page.jsonLdUrl, path).toBe(page.canonical);
+    }
   });
 
   it("renders the authored content page AND the generated data page", () => {

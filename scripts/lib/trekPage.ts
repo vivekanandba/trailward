@@ -115,7 +115,7 @@ export function renderTrekPage(trek: Trek, slug: string): string {
     <meta property="og:image" content="${esc(absoluteUrl("icons/og.png"))}" />
     <meta name="twitter:card" content="summary_large_image" />
     <style>${STYLE}</style>
-    <script type="application/ld+json">${jsonLdScript(trekJsonLd(trek))}</script>
+    <script type="application/ld+json">${jsonLdScript(trekJsonLd(trek, canonical))}</script>
   </head>
   <body>
     <main class="wrap">

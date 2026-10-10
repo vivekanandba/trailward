@@ -5,6 +5,8 @@ import {
   checkPage,
   summariseDeploy,
   DEPLOY_SURFACE,
+  parseTrekPage,
+  sitemapTrekPaths,
   type PageResult,
 } from "./deploycheck";
 
@@ -126,5 +128,60 @@ describe("summariseDeploy", () => {
     expect(s.failed.map((r) => r.path)).toEqual(["sitemap.xml"]);
     expect(s.text).toContain("1/2 ok");
     expect(s.text).toContain("sitemap.xml");
+  });
+});
+
+describe("parseTrekPage (spec 44 R1)", () => {
+  const html = [
+    '<link rel="canonical" href="https://x.test/trailward/t/abapuri-hill/" />',
+    '<script type="application/ld+json">{"name":"A \\u003c B","url":"https://x.test/trailward/t/abapuri-hill/"}</script>',
+    '<a class="cta" href="/trailward/?sel=gn-11022928">Open on the map →</a>',
+  ].join("\n");
+
+  it("reads the canonical, the JSON-LD url and the ?sel= id from the page", () => {
+    expect(parseTrekPage(html)).toEqual({
+      canonical: "https://x.test/trailward/t/abapuri-hill/",
+      jsonLdUrl: "https://x.test/trailward/t/abapuri-hill/",
+      selId: "gn-11022928",
+    });
+  });
+
+  it("reports each missing piece as undefined, never as a guess", () => {
+    expect(parseTrekPage("<html></html>")).toEqual({
+      canonical: undefined,
+      jsonLdUrl: undefined,
+      selId: undefined,
+    });
+  });
+
+  it("treats unparseable JSON-LD as absent rather than throwing", () => {
+    const broken = '<script type="application/ld+json">{not json</script>';
+    expect(parseTrekPage(broken).jsonLdUrl).toBeUndefined();
+  });
+
+  it("decodes an entity-escaped canonical and a percent-encoded id", () => {
+    const page = parseTrekPage(
+      '<link rel="canonical" href="https://x.test/t/a&amp;b/" /><a href="/?sel=osm%3A1">',
+    );
+    expect(page.canonical).toBe("https://x.test/t/a&b/");
+    expect(page.selId).toBe("osm:1");
+  });
+});
+
+describe("sitemapTrekPaths (spec 44 R1)", () => {
+  it("returns the /t/ pages as base-relative paths, in sitemap order", () => {
+    const xml = [
+      "<urlset>",
+      "<url><loc>https://x.test/trailward/</loc></url>",
+      "<url><loc>https://x.test/trailward/t/skandagiri/</loc></url>",
+      "<url><loc>https://x.test/trailward/about/</loc></url>",
+      "<url><loc>https://x.test/trailward/t/abapuri-hill/</loc></url>",
+      "</urlset>",
+    ].join("");
+    expect(sitemapTrekPaths(xml)).toEqual(["t/skandagiri/", "t/abapuri-hill/"]);
+  });
+
+  it("returns nothing for a body that is not a sitemap", () => {
+    expect(sitemapTrekPaths("<html>soft 404</html>")).toEqual([]);
   });
 });

@@ -13,8 +13,12 @@ import { request } from "undici";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
 import {
   DEPLOY_SURFACE,
+  JSONLD_SAMPLE,
+  JSONLD_WALK_LIMIT,
   checkDeployedVersion,
+  checkJsonLdPage,
   checkPage,
+  sitemapTrekPaths,
   summariseDeploy,
   type PageResult,
 } from "./lib/deploycheck";
@@ -109,9 +113,52 @@ export async function runDeployCheck(
     }
   }
 
+  // 3. Structured data (spec 44 R1). The fixed sample above has slug == id, so
+  //    it could never see a JSON-LD url built from the id. Walk the sitemap
+  //    instead, reading each page's own ?sel= id, and check the first pages
+  //    whose slug differs — the only ones that can show the defect.
+  results.push(...(await sampleJsonLd(deps, base)));
+
   const { failed, text } = summariseDeploy(results);
   io.log(text);
   return { ok: failed.length === 0, results };
+}
+
+async function sampleJsonLd(deps: DeployDeps, base: string): Promise<PageResult[]> {
+  const out: PageResult[] = [];
+  let paths: string[] = [];
+  try {
+    const { status, body } = await deps.get(`${base}sitemap.xml`);
+    if (status === 200) paths = sitemapTrekPaths(body);
+  } catch {
+    // An unreadable sitemap leaves nothing to walk; reported as "found 0 of 3"
+    // below. The surface check above already names the sitemap's own failure.
+  }
+  let found = 0;
+  for (const path of paths.slice(0, JSONLD_WALK_LIMIT)) {
+    if (found === JSONLD_SAMPLE) break;
+    let verdict: PageResult | null;
+    try {
+      const { status, body } = await deps.get(`${base}${path}`);
+      verdict = checkJsonLdPage(path, status, body);
+    } catch (err) {
+      verdict = { path, status: 0, ok: false, detail: `JSON-LD sample: ${(err as Error).message}` };
+    }
+    if (verdict === null) continue; // slug == id: cannot show this defect
+    out.push(verdict);
+    // A page that could not be read is reported, but is not a sample — it
+    // proves nothing about the url, so it must not satisfy the count.
+    if (!/^JSON-LD sample:/.test(verdict.detail)) found++;
+  }
+  if (found < JSONLD_SAMPLE) {
+    out.push({
+      path: "JSON-LD sample",
+      status: 0,
+      ok: false,
+      detail: `could not find a sample (found ${found} of ${JSONLD_SAMPLE})`,
+    });
+  }
+  return out;
 }
 
 async function get(url: string): Promise<Fetched> {
