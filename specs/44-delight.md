@@ -77,22 +77,26 @@ that implements each one names its check. R1 is enforced by the tests named unde
 - **R1.** A static trek page names its own URL as its canonical, and its JSON-LD `url` is that
   canonical. `trekJsonLd` takes the page's URL as an argument instead of deriving one from the id.
   One pure judgement, `jsonLdProblem()` (`scripts/lib/deploycheck.ts`), decides both checks
-  below. It fails a page whose JSON-LD url differs from its canonical, and also one whose
-  canonical and JSON-LD agree on a URL that is not the page's own. Self-consistency alone would
-  pass that second case.
+  below. The canonical must **equal** the page's production URL, `absoluteUrl("t/<slug>/")`, in
+  full, and the JSON-LD url must equal the canonical. Self-consistency alone, or a match on the
+  end of the path, would pass a canonical with an id-derived slug, a doubled base path or the
+  wrong host. All of those 404.
   - **The guarantee — every real page, every build.** `build-pages` applies `jsonLdProblem` to
     each of the ~3,886 pages it renders, and **refuses** before writing anything, so the previous
     build survives. A fixture test proves the wiring; the refusal is what covers the real data.
-  - **The live backstop.** `check-deploy` reuses the `sitemap.xml` body it already fetched for
+  - **The live backstop.** It runs only once `version.json` shows the build just made; otherwise
+    it reports "not run", because an older build's pages would report that build's defects as
+    this one's (CON-VER-005). `check-deploy` reuses the `sitemap.xml` body it already fetched for
     the deploy surface, and walks its `/t/` pages. For each it reads the record id from the
-    "Open on the map" link (`?sel=<id>`), and checks the pages whose slug differs from their id,
+    "Open on the map" link (`?sel=<id>`, read from that link only, because the description
+    above it carries untrusted prose), and checks the pages whose slug differs from their id,
     because only those can show this defect. It checks the first **three** such pages. Each
     request is cache-busted with the deployed sha, because right after a deploy the CDN may
     still hold the previous build's page, and that is not this defect (CON-VER-005).
   - **The sample is exactly three, counted structurally.** A page counts only when its url was
     actually compared. If fewer than three turn up within the first **50**, the check fails with
-    "could not find a sample (found N of 3)". When the sitemap itself could not be read, the
-    message says that too. A page that cannot be read, or that has no `?sel=` link, fails naming
+    "could not find a sample (found N of 3)". When the sitemap could not be read, or answered 200
+    with something that is not a sitemap, the message says which. A page that cannot be read, or that has no `?sel=` link, fails naming
     what is missing. It is reported, never skipped, and never counted as a sample.
   - The fixed sample `t/skandagiri/` stays in the deploy surface for what it checks (the page
     exists and is not a soft 404). Its slug equals its id, so it could never see this defect.

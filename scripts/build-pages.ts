@@ -24,6 +24,7 @@ import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
 import { jsonLdProblem, parseTrekPage, versionFile } from "./lib/deploycheck";
+import { absoluteUrl } from "../src/lib/seo";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
@@ -121,7 +122,7 @@ export function runBuildPages(
     // Spec 44 R1, on EVERY real page of EVERY build: the page names its own
     // url, and its structured data names the same one. 3,815 pages once
     // advertised a url that 404s, and no gate looked at the real output.
-    const problem = jsonLdProblem(`t/${slug}/`, parseTrekPage(html));
+    const problem = jsonLdProblem(absoluteUrl(`t/${slug}/`), parseTrekPage(html));
     if (problem) throw new Error(`[pages] t/${slug}/: ${problem}`);
     return { path: `${paths.outDir}/${slug}/index.html`, html };
   });

@@ -73,8 +73,37 @@ export async function deterministicPage(page: Page): Promise<void> {
  * test went on to race the cell load — failing under machine load, passing
  * when idle (CON-VER-008). `aria-busy="false"` on #results exists only after
  * the list rendered AND loading ended, so it cannot be satisfied early. The
- * timeout bounds a hang; it is not a speed assertion.
+ * timeout bounds a hang; it is not a speed assertion. It sits under the 30 s
+ * per-test timeout so a hang reports THIS wait, not a generic test timeout.
  */
 export async function resultsLoaded(page: Page): Promise<void> {
-  await page.locator('#results[aria-busy="false"]').waitFor({ state: "attached", timeout: 60_000 });
+  await page.locator('#results[aria-busy="false"]').waitFor({ state: "attached", timeout: 25_000 });
+}
+
+/**
+ * Wait until the map's pins and clusters stop moving (spec 42 §E).
+ *
+ * This replaces a fixed 600 ms sleep, which a screenshot under load could beat:
+ * clusters were captured mid-recompute (2026-10-10, mobile detail baseline).
+ * It reads the on-screen position of every pin and cluster each 100 ms and
+ * returns once five reads in a row are identical — a state ("stopped
+ * changing"), measured at whatever speed the machine runs.
+ */
+export async function mapSettled(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const w = window as unknown as { __mapSig?: string; __mapStable?: number };
+      const sig = [...document.querySelectorAll(".trek-cluster, path.leaflet-interactive")]
+        .map((e) => {
+          const r = e.getBoundingClientRect();
+          return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)}`;
+        })
+        .join("|");
+      w.__mapStable = w.__mapSig === sig ? (w.__mapStable ?? 0) + 1 : 0;
+      w.__mapSig = sig;
+      return w.__mapStable >= 5;
+    },
+    undefined,
+    { polling: 100, timeout: 20_000 },
+  );
 }

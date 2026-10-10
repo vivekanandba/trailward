@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { runDeployCheck, type Fetched } from "./check-deploy";
 import { memoryIO } from "./lib/buildIO";
+import { absoluteUrl } from "../src/lib/seo";
 import { versionFile, DEPLOY_SURFACE, JSONLD_SAMPLE } from "./lib/deploycheck";
 
 const SHA = "a".repeat(40);
@@ -8,12 +9,14 @@ const PREV = "b".repeat(40);
 const BASE = "https://example.test/trailward/";
 
 /** A generated trek page as build-pages writes it, with the given JSON-LD url. */
-function trekPage(slug: string, id: string, jsonLdUrl = `${BASE}t/${slug}/`): Fetched {
+function trekPage(slug: string, id: string, jsonLdUrl = absoluteUrl(`t/${slug}/`)): Fetched {
+  // Canonicals are PRODUCTION urls whatever host serves the page — that is what
+  // build-pages writes and what search engines are told.
   return {
     status: 200,
     contentType: "text/html; charset=utf-8",
     body: [
-      `<link rel="canonical" href="${BASE}t/${slug}/" />`,
+      `<link rel="canonical" href="${absoluteUrl(`t/${slug}/`)}" />`,
       `<script type="application/ld+json">{"url":"${jsonLdUrl}"}</script>`,
       `<h1>Skandagiri</h1><a class="cta" href="/trailward/?sel=${id}">Open on the map</a>`,
     ].join("\n"),
@@ -254,8 +257,9 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
     expect(out.ok).toBe(false);
     expect(out.results[0].detail).toMatch(/ENOTFOUND/);
     // The surface was still checked — one flaky endpoint must not hide the rest.
-    // version + the surface + the structured-data sample (spec 44 R1)
-    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1 + JSONLD_SAMPLE);
+    // version + the surface + ONE "not run" for the structured-data sample: it
+    // never runs against a site not serving this build (spec 44 R1).
+    expect(out.results.length).toBe(DEPLOY_SURFACE.length + 1 + 1);
   });
 
   it("FAILS on a missing version.json rather than skipping the check", async () => {
@@ -329,8 +333,13 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
   describe("structured-data sample (spec 44 R1)", () => {
     const run = (pages: Record<string, Fetched>) =>
       runDeployCheck(memoryIO(), { get: serve(pages).get, wait: noWait }, { sha: SHA, base: BASE });
+    // Structural, like the code: a trek page that is not the surface's fixed
+    // sample, or the sample summary — never inferred from a message's wording.
     const sampleResults = (out: { results: { path: string; detail: string; ok: boolean }[] }) =>
-      out.results.filter((r) => r.detail.startsWith("JSON-LD") || r.path === "JSON-LD sample");
+      out.results.filter(
+        (r) =>
+          (r.path.startsWith("t/") && r.path !== "t/skandagiri/") || r.path === "JSON-LD sample",
+      );
 
     it("checks the first three pages whose slug differs from their id", async () => {
       const out = await run(healthySite(SHA));
@@ -384,11 +393,14 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       for (const [page, reason] of [
         [{ status: 404, body: "", contentType: "text/html" }, /HTTP 404/],
         [{ ...trekPage("abapuri-hill", "gn-1"), body: "<h1>no link</h1>" }, /no \?sel= link/],
-        [{ ...trekPage("abapuri-hill", "gn-1"), body: '<a href="/?sel=gn-1">' }, /no canonical/],
+        [
+          { ...trekPage("abapuri-hill", "gn-1"), body: '<a class="cta" href="/?sel=gn-1">' },
+          /no canonical/,
+        ],
         [
           {
             ...trekPage("abapuri-hill", "gn-1"),
-            body: `<link rel="canonical" href="${BASE}t/abapuri-hill/" /><a href="/?sel=gn-1">`,
+            body: `<link rel="canonical" href="${absoluteUrl("t/abapuri-hill/")}" /><a class="cta" href="/?sel=gn-1">`,
           },
           /no JSON-LD url/,
         ],
@@ -421,6 +433,34 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
       );
     });
 
+    it("does not run against a site that is not serving the build just made", async () => {
+      // Pages from an older build would report THAT build's defects as this one's.
+      const pages = healthySite("c".repeat(40));
+      const { get, asked } = serve(pages);
+      const out = await runDeployCheck(
+        memoryIO(),
+        { get, wait: noWait },
+        { sha: SHA, base: BASE, attempts: 1 },
+      );
+      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
+        "not run — the site is not serving the build just made",
+      );
+      expect(asked.some((u) => u.includes("/t/abapuri-hill/"))).toBe(false);
+    });
+
+    it("says when the sitemap answered 200 with something that is not a sitemap", async () => {
+      const pages = healthySite(SHA);
+      pages["sitemap.xml"] = {
+        status: 200,
+        body: '<div id="root"></div>',
+        contentType: "application/xml",
+      };
+      const out = await run(pages);
+      expect(out.results.find((r) => r.path === "JSON-LD sample")?.detail).toBe(
+        "could not find a sample (found 0 of 3) — sitemap.xml is not a sitemap (no <urlset>)",
+      );
+    });
+
     it("reads the sitemap ONCE and cache-busts every sampled page", async () => {
       const { get, asked } = serve(healthySite(SHA));
       await runDeployCheck(memoryIO(), { get, wait: noWait }, { sha: SHA, base: BASE });
@@ -440,7 +480,7 @@ describe("runDeployCheck (spec 42 §B / CON-COV-001)", () => {
         body: [
           `<link rel="canonical" href="${wrong}" />`,
           `<script type="application/ld+json">{"url":"${wrong}"}</script>`,
-          `<a href="/trailward/?sel=gn-11022928">`,
+          `<a class="cta" href="/trailward/?sel=gn-11022928">`,
         ].join(""),
       };
       const out = await run(pages);

@@ -11,6 +11,7 @@
 import { pathToFileURL } from "node:url";
 import { request } from "undici";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
+import { absoluteUrl } from "../src/lib/seo";
 import {
   DEPLOY_SURFACE,
   JSONLD_SAMPLE,
@@ -109,7 +110,12 @@ export async function runDeployCheck(
       const { status, body, contentType } = await deps.get(url);
       results.push(checkPage(expectation, status, body, contentType));
       if (expectation.path === "sitemap.xml") {
-        sitemap = status === 200 ? { body } : { failure: `sitemap.xml returned HTTP ${status}` };
+        sitemap =
+          status !== 200
+            ? { failure: `sitemap.xml returned HTTP ${status}` }
+            : body.includes("<urlset")
+              ? { body }
+              : { failure: "sitemap.xml is not a sitemap (no <urlset>)" };
       }
     } catch (err) {
       results.push({
@@ -128,7 +134,18 @@ export async function runDeployCheck(
   //    it could never see a JSON-LD url built from the id. Walk the sitemap
   //    instead, reading each page's own ?sel= id, and check the first pages
   //    whose slug differs — the only ones that can show the defect.
-  results.push(...(await sampleJsonLd(deps, base, opts.sha, sitemap)));
+  // Only against the build just made: pages from an older build would report
+  // that build's defects as this one's (CON-VER-005).
+  if (versionOk) {
+    results.push(...(await sampleJsonLd(deps, base, opts.sha, sitemap)));
+  } else {
+    results.push({
+      path: "JSON-LD sample",
+      status: 0,
+      ok: false,
+      detail: "not run — the site is not serving the build just made",
+    });
+  }
 
   const { failed, text } = summariseDeploy(results);
   io.log(text);
@@ -152,7 +169,9 @@ async function sampleJsonLd(
       // hold the previous build's page, and reporting that as a JSON-LD defect
       // would name the wrong cause (CON-VER-005).
       const { status, body } = await deps.get(`${base}${path}?cb=${sha}`);
-      verdict = checkJsonLdPage(path, status, body);
+      // The canonical must be the PRODUCTION url of this page — that is what
+      // search engines are told — whatever host this check was pointed at.
+      verdict = checkJsonLdPage(path, absoluteUrl(path), status, body);
     } catch (err) {
       verdict = {
         kind: "unreadable",

@@ -7,7 +7,7 @@
  * Regenerate intentionally with: npm run e2e:update
  */
 import { test, expect, type Page } from "@playwright/test";
-import { deterministicPage, resultsLoaded } from "./helpers/deterministic";
+import { deterministicPage, mapSettled, resultsLoaded } from "./helpers/deterministic";
 
 // Baselines are rendered on linux (local + CI agree); other platforms would
 // generate a second, conflicting set.
@@ -19,7 +19,7 @@ async function settled(page: Page, url: string): Promise<void> {
   await deterministicPage(page);
   await page.goto(url);
   await resultsLoaded(page);
-  await page.waitForTimeout(600); // map pan/zoom settle (animations disabled)
+  await mapSettled(page);
 }
 
 const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1440) < 1024;
@@ -38,6 +38,9 @@ test("visual: list view, dark", async ({ page }) => {
 test("visual: detail open, light", async ({ page }) => {
   await settled(page, `/?${BLR}&sel=skandagiri`);
   await expect(page.getByRole("heading", { name: "Skandagiri" })).toBeVisible();
+  // The photo host is stubbed to fail, and the baseline is the failed state:
+  // the detail removes an image that errors. Wait for that, not for a clock.
+  await expect(page.getByRole("img", { name: "Skandagiri" })).toHaveCount(0);
   await expect(page).toHaveScreenshot("detail-light.png");
 });
 
@@ -45,6 +48,9 @@ test("visual: detail open, dark", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await settled(page, `/?${BLR}&sel=skandagiri`);
   await expect(page.getByRole("heading", { name: "Skandagiri" })).toBeVisible();
+  // The photo host is stubbed to fail, and the baseline is the failed state:
+  // the detail removes an image that errors. Wait for that, not for a clock.
+  await expect(page.getByRole("img", { name: "Skandagiri" })).toHaveCount(0);
   await expect(page).toHaveScreenshot("detail-dark.png");
 });
 

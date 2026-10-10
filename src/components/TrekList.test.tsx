@@ -21,6 +21,9 @@ describe("TrekList loading state (spec 42 §E)", () => {
     // sit outside it or it is never read.
     expect(status.closest("[aria-busy]")).toBeNull();
     rerender(<TrekList {...props} loading={false} />);
+    // The live region outlives the load, so the NEXT load is a change to an
+    // existing region — the only kind most screen readers announce.
+    expect(screen.getByRole("status")).toHaveTextContent("");
     // The exact attribute value resultsLoaded() waits for.
     expect(container.querySelector("#results")?.getAttribute("aria-busy")).toBe("false");
   });

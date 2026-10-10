@@ -30,14 +30,13 @@ export default function TrekList({
 }: TrekListProps) {
   return (
     <>
-      {/* The loading announcement sits OUTSIDE the busy list: aria-busy tells
-          assistive tech to hold back updates within it, which would swallow
-          this very announcement (spec 42 §E). */}
-      {loading && (
-        <p className="sr-only" role="status">
-          Loading peaks near {originName}…
-        </p>
-      )}
+      {/* The loading announcement sits OUTSIDE the busy list (aria-busy holds
+          back updates within it), and the live region is ALWAYS present: most
+          screen readers announce only changes to a region that already
+          exists, not one created with its text in it (spec 42 §E). */}
+      <p className="sr-only" role="status">
+        {loading ? `Loading peaks near ${originName}…` : ""}
+      </p>
       <ul
         id="results"
         tabIndex={-1}
@@ -48,19 +47,16 @@ export default function TrekList({
         aria-busy={loading}
         className="flex-1 divide-y divide-trail-50 dark:divide-slate-700 focus:outline-none"
       >
-        {loading && (
-          <>
-            {Array.from({ length: 6 }, (_, i) => (
-              <li key={`skeleton-${i}`} aria-hidden className="flex items-center gap-3 px-4 py-3">
-                <div className="h-9 w-9 flex-none animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-                <div className="min-w-0 flex-1">
-                  <div className="h-4 w-1/2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-                  <div className="mt-1.5 h-3 w-3/4 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-                </div>
-              </li>
-            ))}
-          </>
-        )}
+        {loading &&
+          Array.from({ length: 6 }, (_, i) => (
+            <li key={`skeleton-${i}`} aria-hidden className="flex items-center gap-3 px-4 py-3">
+              <div className="h-9 w-9 flex-none animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+              <div className="min-w-0 flex-1">
+                <div className="h-4 w-1/2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+                <div className="mt-1.5 h-3 w-3/4 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+              </div>
+            </li>
+          ))}
         {empty && (
           <li className="px-4 py-8 text-center text-sm text-trail-500 dark:text-slate-400">
             <MountainIcon

@@ -162,11 +162,21 @@ describe("parseTrekPage (spec 44 R1)", () => {
 
   it("inverts exactly what renderTrekPage writes: HTML-escaped, not URL-encoded", () => {
     const page = parseTrekPage(
-      '<link rel="canonical" href="https://x.test/t/a&amp;b/" /><a href="/?sel=a&amp;b%1">',
+      '<link rel="canonical" href="https://x.test/t/a&amp;b/" /><a class="cta" href="/?sel=a&amp;b%1">',
     );
     expect(page.canonical).toBe("https://x.test/t/a&b/");
     // `&` is not a terminator and `%` is not decoded — no URIError, no truncation.
     expect(page.selId).toBe("a&b%1");
+  });
+});
+
+describe("parseTrekPage reads the id from the map link only (spec 44 R1)", () => {
+  it("ignores a ?sel= in the description, which carries untrusted prose", () => {
+    const page = parseTrekPage(
+      '<meta name="description" content="see ?sel=foo for more" />' +
+        '<a class="cta" href="/trailward/?sel=gn-1">Open on the map</a>',
+    );
+    expect(page.selId).toBe("gn-1");
   });
 });
 
@@ -193,25 +203,28 @@ describe("jsonLdProblem (spec 44 R1)", () => {
   const own = "https://x.test/trailward/t/abapuri-hill/";
 
   it("passes a page whose canonical is its own url and whose JSON-LD matches", () => {
-    expect(jsonLdProblem("t/abapuri-hill/", page(own, own))).toBeNull();
+    expect(jsonLdProblem(own, page(own, own))).toBeNull();
   });
 
   it("fails a JSON-LD url that is not the canonical", () => {
-    expect(jsonLdProblem("t/abapuri-hill/", page(own, "https://x.test/trailward/t/gn-1/"))).toMatch(
+    expect(jsonLdProblem(own, page(own, "https://x.test/trailward/t/gn-1/"))).toMatch(
       /is not the canonical/,
     );
   });
 
   it("fails when canonical AND JSON-LD agree on a url that is not this page", () => {
-    // The self-consistency check alone would pass this: both name the
-    // id-derived url, which 404s.
-    const wrong = "https://x.test/trailward/t/gn-11022928/";
-    expect(jsonLdProblem("t/abapuri-hill/", page(wrong, wrong))).toMatch(/is not this page's url/);
+    // Self-consistency alone passes all of these; each 404s.
+    for (const wrong of [
+      "https://x.test/trailward/t/gn-11022928/", // the id-derived url
+      "https://x.test/trailward/trailward/t/abapuri-hill/", // a doubled base path
+      "http://localhost:5173/t/abapuri-hill/", // the wrong host
+    ]) {
+      expect(jsonLdProblem(own, page(wrong, wrong)), wrong).toMatch(/is not this page's url/);
+    }
   });
 
   it("names what is missing", () => {
-    expect(jsonLdProblem("t/a/", page(undefined, own))).toBe("no canonical");
-    expect(jsonLdProblem("t/a/", page(own, undefined))).toBe("no JSON-LD url");
-    expect(jsonLdProblem("t/a/", page("not a url", "not a url"))).toMatch(/is not a url/);
+    expect(jsonLdProblem(own, page(undefined, own))).toBe("no canonical");
+    expect(jsonLdProblem(own, page(own, undefined))).toBe("no JSON-LD url");
   });
 });
