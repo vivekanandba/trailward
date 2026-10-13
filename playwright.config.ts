@@ -6,6 +6,11 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // A bound on a HANG, not a speed assertion (spec 42 §E). The e2e jobs share
+  // this VM with every other project's CI; a first test that pays for the dev
+  // server's cold compile at a load average of 13 needed more than the 30 s
+  // default, while hanging tests still fail.
+  timeout: 60_000,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",

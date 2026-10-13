@@ -20,6 +20,16 @@ export function esc(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/** The exact inverse of `esc`, kept beside it so the pair cannot drift. */
+export function unescapeHtml(s: string): string {
+  return s
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
+}
+
 const STYLE = `
 :root{color-scheme:light dark;--ink:#1c3927;--bg:#f0f7f1;--muted:#4b5f52;--card:#fff;--line:#d9e6dc}
 @media(prefers-color-scheme:dark){:root{--ink:#e6eeea;--bg:#0f172a;--muted:#9fb3a6;--card:#1e293b;--line:#334155}}
@@ -115,7 +125,7 @@ export function renderTrekPage(trek: Trek, slug: string): string {
     <meta property="og:image" content="${esc(absoluteUrl("icons/og.png"))}" />
     <meta name="twitter:card" content="summary_large_image" />
     <style>${STYLE}</style>
-    <script type="application/ld+json">${jsonLdScript(trekJsonLd(trek))}</script>
+    <script type="application/ld+json">${jsonLdScript(trekJsonLd(trek, canonical))}</script>
   </head>
   <body>
     <main class="wrap">

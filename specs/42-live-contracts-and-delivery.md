@@ -84,6 +84,33 @@ Assert the flow end to end rather than the click:
 
 A journey test asserts the user's goal was achievable, not that a particular button exists.
 
+## E. The suite must be deterministic (CON-VER-008)
+
+The e2e jobs share this VM with every other project's CI, so load is normal, not exceptional.
+
+- **Wait for loading by state.** Waiting for the "Loading peaks" status to detach passed before
+  React had rendered it at all, so tests raced the cell load and failed 1 run in 6 at a load
+  average of 12–18 (2026-10-10). The result list now carries `aria-busy` while it loads, and its
+  loading announcement sits outside it, because `aria-busy` holds back announcements within.
+  `resultsLoaded()` (`e2e/helpers/deterministic.ts`) waits for `aria-busy="false"`, which exists
+  only once the list has rendered and loading has ended. Its 50 s timeout, under the 60 s per-test limit (raised from Playwright's 30 s default after a first test paid for the dev server's cold compile at a load average of 13), bounds a hang; it does not assert speed.
+- **The map is settled by state too.** A fixed 600 ms sleep before screenshots let a capture
+  beat the cluster recompute under load. `mapSettled()` waits until every pin and cluster has
+  kept its position for five reads in a row, 100 ms apart. A detail screenshot also waits for
+  the stubbed photo's failed state (the image removed), which is what the baseline shows.
+  `settledCount()` likewise reads a count until it is stable across three reads.
+- **Clock waits that remain, named so they are not forgotten.** `visual.spec.ts` still sleeps
+  before three screenshots: 400 ms for the mobile filters sheet, 300 ms before the palette and
+  500 ms before the half-snap sheet. They passed every run on 2026-10-10 at load averages up to
+  18, but they are the same class of wait as the 600 ms map sleep that did not. Each should
+  become a state wait (a sheet's settled transform), and until then they are the first suspect
+  for a visual failure that appears only under load.
+- **Act only once the app is listening.** A journey pressed ⌘K straight after `goto`, before the
+  effect that attaches the shortcut had run. The key was lost and the palette never opened, so
+  no timeout could have saved it. Tests that drive the app by keyboard wait for
+  `resultsLoaded()` first. Waits on lazy chunks get an explicit bound under the test timeout.
+- Third-party tiles are stubbed. The static project runs in its own pass.
+
 ## Edge cases & error states
 
 - The live check runs in CI where a request may simply time out; a timeout is reported as

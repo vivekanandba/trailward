@@ -23,7 +23,14 @@ import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
-import { versionFile } from "./lib/deploycheck";
+import {
+  jsonLdProblem,
+  parseTrekPage,
+  pickJsonLdSample,
+  sampleByKind,
+  versionFile,
+} from "./lib/deploycheck";
+import { SITE_URL } from "../src/lib/seo";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
@@ -117,7 +124,16 @@ export function runBuildPages(
   // raw TypeError. After this point NOTHING renders: the loop below only writes.
   const trekPages = pages.map((trek) => {
     const slug = slugs.get(trek.id)!;
-    return { path: `${paths.outDir}/${slug}/index.html`, html: renderTrekPage(trek, slug) };
+    const html = renderTrekPage(trek, slug);
+    // Spec 44 R1, on EVERY real page of EVERY build: the page names its own
+    // url, and its structured data names the same one. 3,815 pages once
+    // advertised a url that 404s, and no gate looked at the real output.
+    // The expected url is spelled out here, NOT built with absoluteUrl as the
+    // renderer does — reusing it would compare the renderer with itself, and a
+    // bug in absoluteUrl (a doubled base path) would pass both sides.
+    const problem = jsonLdProblem(`${SITE_URL}/t/${slug}/`, parseTrekPage(html));
+    if (problem) throw new Error(`[pages] t/${slug}/: ${problem}`);
+    return { path: `${paths.outDir}/${slug}/index.html`, html };
   });
 
   const stats = datasetStats(treks, pages.length);
@@ -137,6 +153,16 @@ export function runBuildPages(
     nav,
   );
 
+  // Spec 44 R1: the live check's sample, chosen here because only the build
+  // knows which slugs differ from their ids. An empty sample would publish a
+  // site whose live check can only fail; a shrunken one is reported.
+  const candidates = pages.map((t) => ({ id: t.id, slug: slugs.get(t.id)!, tier: t.tier }));
+  const sample = pickJsonLdSample(candidates);
+  if (sample.length === 0) throw new Error("[pages] no page qualifies for the JSON-LD sample");
+  for (const { kind } of sampleByKind(candidates).filter((k) => !k.path)) {
+    io.log(`[pages] warning: the JSON-LD sample has no ${kind} page`);
+  }
+
   // ---- Everything above can refuse. Everything below only writes. ----
   io.removeDir(paths.outDir, repoRoot);
   for (const { path, html } of trekPages) io.writeFile(path, html);
@@ -153,7 +179,7 @@ export function runBuildPages(
   // The stamp the post-deploy check compares against (spec 42 §B). Written
   // here because build-pages is the last step of `npm run build`, so a
   // version.json that exists is a build that finished.
-  io.writeFile(`${paths.distDir}/version.json`, versionFile(buildSha, buildTime));
+  io.writeFile(`${paths.distDir}/version.json`, versionFile(buildSha, buildTime, sample));
   io.log(`[pages] wrote content page(s): ${written.join(", ")}`);
   return { treks: pages.length, content: written };
 }

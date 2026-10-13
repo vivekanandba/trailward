@@ -8,6 +8,7 @@
  * in the middle breaks — which is the point.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { resultsLoaded } from "./helpers/deterministic";
 
 const isMobile = (page: Page): boolean => (page.viewportSize()?.width ?? 1440) < 1024;
 
@@ -58,6 +59,10 @@ test("arrive from a search engine on a trek page, and open it on the map", async
 
 test("jump to a summit in another state without touching the map", async ({ page }) => {
   await page.goto("/");
+  // The ⌘K listener is attached in an effect after the app mounts. A key
+  // pressed before that is simply lost and the palette never opens, however
+  // long the test waits — so wait for the app to be up first (spec 42 §E).
+  await resultsLoaded(page);
 
   // The palette is how someone crosses the country. On mobile it opens from
   // the search affordance rather than a keyboard shortcut.
@@ -70,7 +75,9 @@ test("jump to a summit in another state without touching the map", async ({ page
     await page.keyboard.press("ControlOrMeta+k");
   }
   const palette = page.getByRole("dialog");
-  await expect(palette).toBeVisible();
+  // The palette is a lazy chunk (~450 KB); under load its first fetch can take
+  // longer than the 5 s default. The bound catches a hang, not slowness.
+  await expect(palette).toBeVisible({ timeout: 20_000 });
 
   await palette.getByRole("combobox").fill("Kumara");
   // A result for a summit far outside the current radius must be reachable —

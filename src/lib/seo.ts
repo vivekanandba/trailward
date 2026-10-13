@@ -124,8 +124,12 @@ export function appJsonLd(recordCount: number): unknown[] {
 /**
  * A trek's Place graph. Only fields the record actually carries are emitted —
  * an absent elevation is omitted, never guessed (CON-DATA-001).
+ *
+ * `url` is the page's own canonical URL, passed in by the page that embeds
+ * this. It used to be rebuilt from `trek.id`, but pages live at a slug made
+ * from the NAME, so 3,815 of 3,886 advertised a url that 404s (spec 44 R1).
  */
-export function trekJsonLd(trek: Trek): unknown {
+export function trekJsonLd(trek: Trek, url: string): unknown {
   const geo: Record<string, unknown> = {
     "@type": "GeoCoordinates",
     latitude: trek.lat,
@@ -137,7 +141,7 @@ export function trekJsonLd(trek: Trek): unknown {
     "@context": "https://schema.org",
     "@type": "TouristAttraction",
     name: trek.name,
-    url: absoluteUrl(`t/${trek.id}/`),
+    url,
     geo,
     isAccessibleForFree: true,
     address: { "@type": "PostalAddress", addressCountry: "IN" },

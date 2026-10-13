@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { renderTrekPage } from "./trekPage";
+import { esc, renderTrekPage, unescapeHtml } from "./trekPage";
+import { parseTrekPage } from "./deploycheck";
 import type { Trek } from "../../src/lib/trek";
 
 const full: Trek = {
@@ -98,5 +99,22 @@ describe("renderTrekPage (spec 35 — readable without JavaScript)", () => {
     expect(out).toContain('<html lang="en">');
     expect(out).toContain("viewport");
     expect((out.match(/<h1/g) ?? []).length).toBe(1);
+  });
+});
+
+describe("renderTrekPage structured data (spec 44 R1)", () => {
+  it("advertises the url the page actually lives at when slug and id differ", () => {
+    const generated: Trek = { ...full, id: "gn-11022928", name: "Abapuri Hill", tier: "discovery" };
+    const page = parseTrekPage(renderTrekPage(generated, "abapuri-hill"));
+    expect(page.canonical).toMatch(/\/t\/abapuri-hill\/$/);
+    expect(page.jsonLdUrl).toBe(page.canonical);
+  });
+});
+
+describe("esc / unescapeHtml (spec 44 R1)", () => {
+  it("round-trip every character esc rewrites, and leave the rest alone", () => {
+    const raw = `a&b<c>d"e'f — Abāpuri %20`;
+    expect(esc(raw)).not.toBe(raw);
+    expect(unescapeHtml(esc(raw))).toBe(raw);
   });
 });

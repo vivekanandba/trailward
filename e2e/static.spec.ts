@@ -38,6 +38,30 @@ test("the trek page carries TouristAttraction structured data", async ({ page })
   expect(ld.geo.latitude).toBeCloseTo(13.5021, 3);
 });
 
+test("every sampled page's JSON-LD url is its own canonical, as served (spec 44 R1)", async ({
+  page,
+}) => {
+  // t/skandagiri/ above has slug == id, so it could never show this defect,
+  // which shipped on 3,815 pages. The build lists one page of each kind whose
+  // slug differs in version.json; check them as a crawler receives them.
+  const version = (await (await page.request.get("version.json")).json()) as {
+    jsonLdSample: string[];
+  };
+  expect(version.jsonLdSample.length).toBeGreaterThan(0);
+  for (const path of version.jsonLdSample) {
+    const res = await page.goto(path);
+    // A missing page falls back to the SPA shell with a 200, so the status
+    // alone proves nothing — but a non-200 is reported as what it is.
+    expect(res?.status(), path).toBe(200);
+    const expected = `https://vivekanandba.github.io/trailward/${path}`;
+    // toHaveAttribute fails in the expect timeout naming the canonical, rather
+    // than waiting out the whole test on a page that has none.
+    await expect(page.locator('link[rel="canonical"]'), path).toHaveAttribute("href", expected);
+    const raw = await page.locator('script[type="application/ld+json"]').innerText();
+    expect((JSON.parse(raw) as { url: string }).url, path).toBe(expected);
+  }
+});
+
 test("the map link deep-links into the live app and opens that trek", async ({ page }) => {
   await page.goto("t/skandagiri/");
   await page.getByRole("link", { name: /Open on the map/ }).click();

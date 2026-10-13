@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { runBuildPages, pagePathsFor } from "./build-pages";
 import { memoryIO } from "./lib/buildIO";
+import { parseTrekPage } from "./lib/deploycheck";
 import type { Trek } from "../src/lib/trek";
 
 const trek = (over: Partial<Trek> & Pick<Trek, "id" | "name">): Trek => ({
@@ -53,6 +54,19 @@ describe("build-pages run (spec 35/36/40)", () => {
     expect(io.files.has(`${P.outDir}/kumara-parvatha/index.html`)).toBe(true);
     expect([...io.files.keys()].some((k) => k.includes("unnamed"))).toBe(false);
     expect(out.treks).toBe(2);
+  });
+
+  it("every written trek page's JSON-LD url is its own canonical (spec 44 R1)", () => {
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-09-19");
+    const pages = [...io.files.keys()].filter((k) => k.startsWith(`${P.outDir}/`));
+    // gn-1 lives at kumara-parvatha/ — the case that was wrong on 3,815 pages.
+    expect(pages).toContain(`${P.outDir}/kumara-parvatha/index.html`);
+    for (const path of pages) {
+      const page = parseTrekPage(io.files.get(path)!);
+      expect(page.canonical, path).toBeDefined();
+      expect(page.jsonLdUrl, path).toBe(page.canonical);
+    }
   });
 
   it("renders the authored content page AND the generated data page", () => {
@@ -194,6 +208,28 @@ describe("build-pages run (spec 35/36/40)", () => {
     const written = JSON.parse(io.files.get(`${P.distDir}/version.json`)!);
     expect(written.sha).toBe("abc123");
     expect(written.builtAt).toBe("2026-09-21T00:00:00.000Z");
+    // The live check's sample (spec 44 R1): gn-1 lives at kumara-parvatha/;
+    // skandagiri's slug equals its id, so it is never sampled.
+    expect(written.jsonLdSample).toEqual(["t/kumara-parvatha/"]);
+  });
+
+  it("refuses to build when no page qualifies for the JSON-LD sample (spec 44 R1)", () => {
+    // Only slug == id pages: the live check could only fail, after publishing.
+    const io = memoryIO({
+      [P.treks]: JSON.stringify([TREKS[0]]),
+      [`${P.contentDir}/about.md`]: ABOUT,
+    });
+    io.writeFile(`${P.outDir}/skandagiri/index.html`, "GOOD PREVIOUS BUILD");
+    expect(() => runBuildPages(io, ROOT, ["about.md"], "2026-09-19")).toThrow(
+      /no page qualifies for the JSON-LD sample/,
+    );
+    expect(io.files.get(`${P.outDir}/skandagiri/index.html`)).toBe("GOOD PREVIOUS BUILD");
+  });
+
+  it("says when the JSON-LD sample is missing a kind, rather than shrinking silently", () => {
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-09-19");
+    expect(io.logs.join("\n")).toContain("the JSON-LD sample has no d12- page");
   });
 
   it("a malformed RECORD cannot half-wipe dist/t either", () => {

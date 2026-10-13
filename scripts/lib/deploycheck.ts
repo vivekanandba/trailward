@@ -9,15 +9,24 @@
  * exercised by a workflow that runs after a merge.
  */
 
+import { unescapeHtml } from "./trekPage";
+
 export interface VersionFile {
   /** The commit this build came from. */
   sha: string;
   /** ISO timestamp, for a human reading the file. Never compared. */
   builtAt: string;
+  /**
+   * Pages the live structured-data check samples (spec 44 R1), chosen by the
+   * build, which knows which slugs differ from their ids. Shipped in this file
+   * because it is fetched cache-busted and pinned to the sha just built, so the
+   * sample can never come from a different build than the pages it checks.
+   */
+  jsonLdSample: string[];
 }
 
-export function versionFile(sha: string, builtAt: string): string {
-  return `${JSON.stringify({ sha, builtAt } satisfies VersionFile, null, 2)}\n`;
+export function versionFile(sha: string, builtAt: string, jsonLdSample: string[]): string {
+  return `${JSON.stringify({ sha, builtAt, jsonLdSample } satisfies VersionFile, null, 2)}\n`;
 }
 
 export type LiveCheck =
@@ -134,4 +143,123 @@ export function summariseDeploy(results: PageResult[]): { failed: PageResult[]; 
     failed,
     text: [`${results.length - failed.length}/${results.length} ok`, "", ...lines].join("\n"),
   };
+}
+
+/** What a generated trek page says about itself (spec 44 R1). */
+export interface TrekPageFacts {
+  /** `<link rel="canonical">` — where the page says it lives. */
+  canonical?: string;
+  /** The JSON-LD `url` — where the page tells search engines it lives. */
+  jsonLdUrl?: string;
+}
+
+/**
+ * Read the two facts R1 compares out of a page's HTML. Each is undefined when
+ * the page lacks it — never a guess — so the caller can say WHICH is missing.
+ * Attribute values are HTML-escaped by renderTrekPage (`esc`), so they are
+ * unescaped with its exact inverse.
+ */
+export function parseTrekPage(html: string): TrekPageFacts {
+  // Any attribute order: a renderer that writes href before rel is not a page
+  // without a canonical, and must not be reported as one (CON-VER-005).
+  const link = /<link\b[^>]*\brel="canonical"[^>]*>/.exec(html)?.[0];
+  const canonical = link ? /\bhref="([^"]+)"/.exec(link)?.[1] : undefined;
+  // Every ld+json block, not only the first: a BreadcrumbList placed ahead of
+  // the TouristAttraction is not a page without one.
+  let jsonLdUrl: string | undefined;
+  for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+    try {
+      const ld = JSON.parse(m[1]) as { "@type"?: unknown; url?: unknown };
+      if (ld["@type"] === "TouristAttraction" && typeof ld.url === "string") jsonLdUrl = ld.url;
+    } catch {
+      // Unparseable structured data is absent structured data.
+    }
+  }
+  return { canonical: canonical === undefined ? undefined : unescapeHtml(canonical), jsonLdUrl };
+}
+
+/**
+ * R1's judgement, shared by the build (every page, every build) and the live
+ * check. `expectedUrl` is the full URL the page must live at. The canonical
+ * must BE that url, not merely end in the right path: a doubled base path or a
+ * wrong host also 404s. And the JSON-LD url must be the canonical. Checking
+ * only that the two agree would pass a page where both name a url that 404s.
+ */
+export function jsonLdProblem(expectedUrl: string, page: TrekPageFacts): string | null {
+  if (!page.canonical) return "no canonical";
+  if (!page.jsonLdUrl) return "no JSON-LD url";
+  if (page.canonical !== expectedUrl) {
+    return `canonical ${page.canonical} is not this page's url ${expectedUrl}`;
+  }
+  if (page.jsonLdUrl !== page.canonical) {
+    return `JSON-LD url ${page.jsonLdUrl} is not the canonical ${page.canonical}`;
+  }
+  return null;
+}
+
+export interface SampleCandidate {
+  id: string;
+  slug: string;
+  tier: string;
+}
+
+/** The kinds of page the live sample covers, each named so a gap can be reported. */
+const SAMPLE_KINDS: { kind: string; is: (p: SampleCandidate) => boolean }[] = [
+  { kind: "curated", is: (p) => p.tier === "curated" },
+  { kind: "collision-suffixed", is: (p) => p.slug.endsWith(`-${p.id}`) },
+  { kind: "gn-", is: (p) => p.id.startsWith("gn-") },
+  { kind: "d12-", is: (p) => p.id.startsWith("d12-") },
+  { kind: "osm-", is: (p) => p.id.startsWith("osm-") }, // not osmx-, a separate source
+];
+
+/**
+ * The live check's sample: one page of each KIND whose slug differs from its
+ * id, the only pages this defect can show on. A sample drawn from the head of
+ * the sitemap is always the same few curated pages, so a regression limited to
+ * generated or collision-suffixed pages would pass it. Deterministic: the first
+ * of each kind in build order. A kind with no page has `path` undefined, so the
+ * build can say the sample shrank rather than shrink it silently.
+ */
+export function sampleByKind(pages: SampleCandidate[]): { kind: string; path?: string }[] {
+  const taken = new Set<string>();
+  return SAMPLE_KINDS.map(({ kind, is }) => {
+    const hit = pages.find((p) => p.slug !== p.id && is(p) && !taken.has(p.slug));
+    if (!hit) return { kind };
+    taken.add(hit.slug);
+    return { kind, path: `t/${hit.slug}/` };
+  });
+}
+
+export function pickJsonLdSample(pages: SampleCandidate[]): string[] {
+  return sampleByKind(pages).flatMap((k) => (k.path ? [k.path] : []));
+}
+
+/** The sample a deployed version.json lists, or null when it lists none. */
+export function sampleFromVersion(body: string): string[] | null {
+  try {
+    const sample = (JSON.parse(body) as { jsonLdSample?: unknown }).jsonLdSample;
+    // Each entry must be a trek page path. An empty string would fetch the
+    // site root and be judged as a page with no JSON-LD — the wrong diagnosis.
+    return Array.isArray(sample) &&
+      sample.length > 0 &&
+      sample.every((p) => typeof p === "string" && /^t\/[^/]+\/$/.test(p))
+      ? (sample as string[])
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Judge one sampled page against R1. */
+export function checkJsonLdPage(
+  path: string,
+  expectedUrl: string,
+  status: number,
+  body: string,
+): PageResult {
+  if (status !== 200) return { path, status, ok: false, detail: `JSON-LD sample: HTTP ${status}` };
+  const problem = jsonLdProblem(expectedUrl, parseTrekPage(body));
+  return problem
+    ? { path, status, ok: false, detail: problem }
+    : { path, status, ok: true, detail: "JSON-LD url is the canonical" };
 }

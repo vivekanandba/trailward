@@ -11,15 +11,18 @@
 import { pathToFileURL } from "node:url";
 import { request } from "undici";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
+import { SITE_URL } from "../src/lib/seo";
 import {
   DEPLOY_SURFACE,
   checkDeployedVersion,
+  checkJsonLdPage,
   checkPage,
+  sampleFromVersion,
   summariseDeploy,
   type PageResult,
 } from "./lib/deploycheck";
 
-const SITE = "https://vivekanandba.github.io/trailward/";
+const SITE = `${SITE_URL}/`; // one definition of the production url
 const UA = "TrailwardBot/0.1 (+https://github.com/vivekanandba/trailward; deploy check)";
 
 export interface Fetched {
@@ -55,6 +58,7 @@ export async function runDeployCheck(
   //    cached copy of our own check would make this assert nothing.
   let versionDetail = "never checked";
   let versionOk = false;
+  let versionBody = "";
   for (let attempt = 1; attempt <= attempts; attempt++) {
     // EVERY outcome sets `versionDetail`, including the thrown one. Leaving a
     // path that does not means the final report reads "never checked" for a
@@ -72,6 +76,7 @@ export async function runDeployCheck(
         versionDetail = verdict.detail;
         if ("ok" in verdict && verdict.ok) {
           versionOk = true;
+          versionBody = body;
           break;
         }
       }
@@ -109,9 +114,73 @@ export async function runDeployCheck(
     }
   }
 
+  // 3. Structured data (spec 44 R1). The fixed sample above has slug == id, so
+  //    it could never see a JSON-LD url built from the id. The build lists one
+  //    page of each kind whose slug differs, in the version.json just verified —
+  //    so the sample is from this build, and only ever from it.
+  // Against an older build the sample is not run at all, and is not reported
+  // as a failure: it was never evaluated, and the version row already fails
+  // the deploy for the real reason (CON-DATA-002, CON-VER-005).
+  if (versionOk) {
+    results.push(...(await checkJsonLdSample(deps, base, opts.sha, versionBody)));
+  } else {
+    io.log("[deploy] JSON-LD sample: not run — the site is not serving the build just made");
+  }
+
   const { failed, text } = summariseDeploy(results);
   io.log(text);
   return { ok: failed.length === 0, results };
+}
+
+async function checkJsonLdSample(
+  deps: DeployDeps,
+  base: string,
+  sha: string,
+  versionBody: string,
+): Promise<PageResult[]> {
+  const summary = (detail: string): PageResult[] => [
+    { path: "JSON-LD sample", status: 0, ok: false, detail },
+  ];
+  const sample = sampleFromVersion(versionBody);
+  if (!sample) return summary("version.json lists no valid jsonLdSample");
+  // The canonical must be the PRODUCTION url of this page — what search
+  // engines are told — whatever host this check was pointed at. Spelled out
+  // from SITE_URL, not built with absoluteUrl as the renderer does: reusing it
+  // would compare the renderer with itself. In parallel: five pages, each with
+  // a retry, must not stretch the deploy gate five-fold; order is kept.
+  return Promise.all(
+    sample.map((path) => fetchAndJudge(deps, base, sha, path, `${SITE_URL}/${path}`)),
+  );
+}
+
+/** Statuses worth one more try: the CDN mid-turnover, or rate limiting. */
+const TRANSIENT = (status: number): boolean => status >= 500 || status === 408 || status === 429;
+
+/**
+ * One sampled page, retried once on a transient failure (a thrown request, a
+ * 5xx, 408 or 429). A 404 or a wrong url is not transient and is judged at once.
+ * Cache-busted like version.json: right after a deploy the CDN may still hold
+ * the previous build's page, which is not this defect (CON-VER-005).
+ */
+async function fetchAndJudge(
+  deps: DeployDeps,
+  base: string,
+  sha: string,
+  path: string,
+  expectedUrl: string,
+): Promise<PageResult> {
+  let last!: PageResult; // assigned on the first attempt, by either branch
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { status, body } = await deps.get(`${base}${path}?cb=${sha}-${attempt}`);
+      last = checkJsonLdPage(path, expectedUrl, status, body);
+      if (!TRANSIENT(status)) return last;
+    } catch (err) {
+      last = { path, status: 0, ok: false, detail: `JSON-LD sample: ${(err as Error).message}` };
+    }
+    if (attempt === 1) await deps.wait(2_000);
+  }
+  return last;
 }
 
 async function get(url: string): Promise<Fetched> {

@@ -5,6 +5,11 @@ import {
   checkPage,
   summariseDeploy,
   DEPLOY_SURFACE,
+  jsonLdProblem,
+  parseTrekPage,
+  pickJsonLdSample,
+  sampleByKind,
+  sampleFromVersion,
   type PageResult,
 } from "./deploycheck";
 
@@ -13,24 +18,24 @@ const PREV = "b".repeat(40);
 
 describe("version.json (spec 42 §B)", () => {
   it("carries the sha and a build time, and round-trips", () => {
-    const parsed = JSON.parse(versionFile(SHA, "2026-09-21T00:00:00.000Z"));
+    const parsed = JSON.parse(versionFile(SHA, "2026-09-21T00:00:00.000Z", ["t/a/"]));
     expect(parsed.sha).toBe(SHA);
     expect(parsed.builtAt).toBe("2026-09-21T00:00:00.000Z");
   });
 
   it("ends in a newline, like every other committed artefact here", () => {
-    expect(versionFile(SHA, "x").endsWith("\n")).toBe(true);
+    expect(versionFile(SHA, "x", ["t/a/"]).endsWith("\n")).toBe(true);
   });
 });
 
 describe("checkDeployedVersion — 'stale' and 'wrong' are different answers", () => {
   it("passes when the live sha is the one just built", () => {
-    expect(checkDeployedVersion(versionFile(SHA, "x"), SHA)).toMatchObject({ ok: true });
+    expect(checkDeployedVersion(versionFile(SHA, "x", ["t/a/"]), SHA)).toMatchObject({ ok: true });
   });
 
   it("reports the PREVIOUS sha as stale — the CDN has not turned over yet", () => {
     // Retrying here is correct. Failing would make every deploy flaky.
-    const v = checkDeployedVersion(versionFile(PREV, "x"), SHA, PREV);
+    const v = checkDeployedVersion(versionFile(PREV, "x", ["t/a/"]), SHA, PREV);
     expect(v).toMatchObject({ stale: true });
   });
 
@@ -39,13 +44,17 @@ describe("checkDeployedVersion — 'stale' and 'wrong' are different answers", (
     // (workflow_dispatch has no `before`; a cancelled run leaves the site
     // older still), and in all those cases "a different sha" is usually CDN
     // lag. Failing on attempt one disabled the retry budget silently.
-    expect(checkDeployedVersion(versionFile("c".repeat(40), "x"), SHA, PREV)).toMatchObject({
+    expect(
+      checkDeployedVersion(versionFile("c".repeat(40), "x", ["t/a/"]), SHA, PREV),
+    ).toMatchObject({
       stale: true,
     });
   });
 
   it("retries rather than failing when NO previous sha is known", () => {
-    expect(checkDeployedVersion(versionFile(PREV, "x"), SHA)).toMatchObject({ stale: true });
+    expect(checkDeployedVersion(versionFile(PREV, "x", ["t/a/"]), SHA)).toMatchObject({
+      stale: true,
+    });
   });
 
   it("FAILS on a body that is not JSON — a 404 page, say", () => {
@@ -61,7 +70,7 @@ describe("checkDeployedVersion — 'stale' and 'wrong' are different answers", (
   });
 
   it("names both shas in its detail, so the log says what is actually served", () => {
-    const v = checkDeployedVersion(versionFile(PREV, "x"), SHA);
+    const v = checkDeployedVersion(versionFile(PREV, "x", ["t/a/"]), SHA);
     expect(v.detail).toContain(PREV.slice(0, 8));
     expect(v.detail).toContain(SHA.slice(0, 8));
   });
@@ -126,5 +135,148 @@ describe("summariseDeploy", () => {
     expect(s.failed.map((r) => r.path)).toEqual(["sitemap.xml"]);
     expect(s.text).toContain("1/2 ok");
     expect(s.text).toContain("sitemap.xml");
+  });
+});
+
+describe("parseTrekPage (spec 44 R1)", () => {
+  it("reads the canonical and the JSON-LD url from the page", () => {
+    const html = [
+      '<link rel="canonical" href="https://x.test/trailward/t/abapuri-hill/" />',
+      '<script type="application/ld+json">{"@type":"TouristAttraction","name":"A \\u003c B","url":"https://x.test/trailward/t/abapuri-hill/"}</script>',
+    ].join("\n");
+    expect(parseTrekPage(html)).toEqual({
+      canonical: "https://x.test/trailward/t/abapuri-hill/",
+      jsonLdUrl: "https://x.test/trailward/t/abapuri-hill/",
+    });
+  });
+
+  it("reports each missing piece as undefined, never as a guess", () => {
+    expect(parseTrekPage("<html></html>")).toEqual({ canonical: undefined, jsonLdUrl: undefined });
+  });
+
+  it("treats unparseable JSON-LD as absent rather than throwing", () => {
+    const broken = '<script type="application/ld+json">{not json</script>';
+    expect(parseTrekPage(broken).jsonLdUrl).toBeUndefined();
+  });
+
+  it("finds the canonical in any attribute order, and the TouristAttraction among several blocks", () => {
+    // A harmless renderer change must not read as "no canonical" (CON-VER-005).
+    const html = [
+      '<link href="https://x.test/t/a/" rel="canonical" />',
+      '<script type="application/ld+json">{"@type":"BreadcrumbList","url":"https://x.test/"}</script>',
+      '<script type="application/ld+json">{"@type":"TouristAttraction","url":"https://x.test/t/a/"}</script>',
+    ].join("");
+    expect(parseTrekPage(html)).toEqual({
+      canonical: "https://x.test/t/a/",
+      jsonLdUrl: "https://x.test/t/a/",
+    });
+  });
+
+  it("unescapes the canonical with esc's inverse", () => {
+    expect(
+      parseTrekPage('<link rel="canonical" href="https://x.test/t/a&amp;b/" />').canonical,
+    ).toBe("https://x.test/t/a&b/");
+  });
+});
+
+describe("pickJsonLdSample (spec 44 R1)", () => {
+  const p = (id: string, slug: string, tier = "discovery") => ({ id, slug, tier });
+
+  it("takes one page of each kind whose slug differs from its id, in build order", () => {
+    expect(
+      pickJsonLdSample([
+        p("skandagiri", "skandagiri", "curated"), // slug == id: cannot show the defect
+        p("madhugiri", "madhugiri-betta", "curated"),
+        p("osm-1", "nandi", "discovery"),
+        p("gn-7", "kumara-parvatha"),
+        p("gn-8", "second-gn"), // a second of a kind already taken
+        p("d12-1-2", "virapuli"),
+        p("d12-9", "nandi-hills-d12-9"), // collision-suffixed
+      ]),
+    ).toEqual([
+      "t/madhugiri-betta/",
+      "t/nandi-hills-d12-9/",
+      "t/kumara-parvatha/",
+      "t/virapuli/",
+      "t/nandi/",
+    ]);
+  });
+
+  it("never samples a page whose slug equals its id", () => {
+    expect(
+      pickJsonLdSample([p("osmx-5", "osmx-5"), p("skandagiri", "skandagiri", "curated")]),
+    ).toEqual([]);
+  });
+
+  it("never lists one page twice when it fits several kinds", () => {
+    // curated AND gn-: taken once, by the first kind that matches.
+    expect(pickJsonLdSample([p("gn-1", "kumara", "curated")])).toEqual(["t/kumara/"]);
+  });
+});
+
+describe("sampleByKind (spec 44 R1)", () => {
+  const p = (id: string, slug: string, tier = "discovery") => ({ id, slug, tier });
+
+  it("names each kind, and leaves a kind with no page without a path", () => {
+    expect(sampleByKind([p("gn-1", "kumara")])).toEqual([
+      { kind: "curated" },
+      { kind: "collision-suffixed" },
+      { kind: "gn-", path: "t/kumara/" },
+      { kind: "d12-" },
+      { kind: "osm-" },
+    ]);
+  });
+
+  it("does not count an osmx- record as the osm- kind — they are separate sources", () => {
+    expect(
+      sampleByKind([p("osmx-5", "five")]).find((k) => k.kind === "osm-")?.path,
+    ).toBeUndefined();
+  });
+});
+
+describe("sampleFromVersion (spec 44 R1)", () => {
+  it("returns the sample a version.json lists", () => {
+    expect(sampleFromVersion(versionFile(SHA, "x", ["t/a/", "t/b/"]))).toEqual(["t/a/", "t/b/"]);
+  });
+
+  it("returns null for none, an empty list, a malformed list or a body that is not JSON", () => {
+    expect(sampleFromVersion('{"sha":"x"}')).toBeNull();
+    expect(sampleFromVersion(versionFile(SHA, "x", []))).toBeNull();
+    expect(sampleFromVersion('{"jsonLdSample":[1]}')).toBeNull();
+    // An entry that is not a trek page path would fetch the wrong page.
+    expect(sampleFromVersion('{"jsonLdSample":[""]}')).toBeNull();
+    expect(sampleFromVersion('{"jsonLdSample":["about/"]}')).toBeNull();
+    expect(sampleFromVersion("<html>")).toBeNull();
+  });
+});
+
+describe("jsonLdProblem (spec 44 R1)", () => {
+  const page = (canonical?: string, jsonLdUrl?: string) => ({ canonical, jsonLdUrl });
+  const own = "https://x.test/trailward/t/abapuri-hill/";
+
+  it("passes a page whose canonical is its own url and whose JSON-LD matches", () => {
+    expect(jsonLdProblem(own, page(own, own))).toBeNull();
+  });
+
+  it("fails a JSON-LD url that is not the canonical", () => {
+    expect(jsonLdProblem(own, page(own, "https://x.test/trailward/t/gn-1/"))).toMatch(
+      /is not the canonical/,
+    );
+  });
+
+  it("fails when canonical AND JSON-LD agree on a url that is not this page", () => {
+    // Self-consistency alone passes all of these; each 404s.
+    for (const wrong of [
+      "https://x.test/trailward/t/gn-11022928/", // the id-derived url
+      "https://x.test/trailward/trailward/t/abapuri-hill/", // a doubled base path
+      "http://localhost:5173/t/abapuri-hill/", // the wrong host
+    ]) {
+      expect(jsonLdProblem(own, page(wrong, wrong)), wrong).toMatch(/is not this page's url/);
+    }
+  });
+
+  it("names what is missing", () => {
+    expect(jsonLdProblem(own, page(undefined, own))).toBe("no canonical");
+    expect(jsonLdProblem(own, page(own, undefined))).toBe("no JSON-LD url");
   });
 });
