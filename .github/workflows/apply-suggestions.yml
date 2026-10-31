@@ -39,13 +39,15 @@ jobs:
             echo "No suggestions applied."
           fi
 
-  # A red scheduled run emails only whoever last edited the cron (spec 10).
+  # A red scheduled run emails only whoever last edited the cron (spec 10):
+  # file a failure, close the issue on the next success.
   report-failure:
     needs: apply
-    if: failure()
+    if: always()
     permissions:
       contents: read
       issues: write
     uses: ./.github/workflows/report-failure.yml
     with:
       title: "Applying name suggestions is failing"
+      result: ${{ needs.apply.result }}

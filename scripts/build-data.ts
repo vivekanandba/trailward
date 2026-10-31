@@ -15,6 +15,7 @@ import type { Origin, Trek } from "../src/lib/trek";
 import { validateDataset, validateTrek } from "../src/lib/trek";
 import { distanceFrom } from "../src/lib/distance";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
+import { CARRYOVER_KM } from "./discover-precompute";
 import { mergeTrek } from "./sources/merge";
 import { BANGALORE_ORIGIN, BANGALORE_SEED } from "./seed/bangalore";
 import { fetchElevations } from "./sources/elevation";
@@ -115,7 +116,6 @@ const OWNER: Record<keyof Trek, Owner> = {
   elevationM: "run",
   difficulty: "run",
   type: "run",
-  bestSeason: "run",
   permitRequired: "run",
   entryFee: "run",
   nightTrek: "run",
@@ -124,6 +124,10 @@ const OWNER: Record<keyof Trek, Owner> = {
   trailLengthKm: "run",
   trailType: "run",
   durationHrs: "run",
+  // A seed may state it, and build:climate bakes one from rainfall onto a
+  // curated trek whose seed does not (build-climate.ts). The seed's value wins
+  // whenever it gives one; otherwise the baked value survives a refresh.
+  bestSeason: "place",
   distanceKm: "place",
   driveTimeMin: "place",
   reliefM: "place",
@@ -145,8 +149,9 @@ const OWNER: Record<keyof Trek, Owner> = {
 };
 
 // A seed whose coordinates were corrected by more than this describes a
-// different point, and nothing baked for the old one carries over.
-const SAME_PLACE_KM = 0.12;
+// different point, and nothing baked for the old one carries over. The same
+// distance discovery uses to recognise a rescanned summit (spec 27).
+const SAME_PLACE_KM = CARRYOVER_KM;
 
 const sameSources = (a: Trek, b: Trek): boolean =>
   JSON.stringify([...a.sources].sort()) === JSON.stringify([...b.sources].sort());
@@ -168,7 +173,10 @@ function inKeyOrderOf(prev: Trek, next: Record<string, unknown>): Trek {
  * seed is gone are dropped.
  */
 export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
-  const prevById = new Map(existing.filter((t) => t.tier === "curated").map((t) => [t.id, t]));
+  // Every tier: a seed that promotes a discovery pin to curated takes over
+  // that record (and what was baked for its place) rather than duplicating it.
+  const prevById = new Map(existing.map((t) => [t.id, t]));
+  const builtIds = new Set(built.map((t) => t.id));
   const curated = built.map((t) => {
     const prev = prevById.get(t.id);
     if (!prev) return t;
@@ -185,7 +193,7 @@ export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
     );
     return inKeyOrderOf(prev, { ...fresh, ...carried });
   });
-  return [...curated, ...existing.filter((t) => t.tier !== "curated")];
+  return [...curated, ...existing.filter((t) => t.tier !== "curated" && !builtIds.has(t.id))];
 }
 
 /**

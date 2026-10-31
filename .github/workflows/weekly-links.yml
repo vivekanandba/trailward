@@ -26,13 +26,15 @@ jobs:
       # see it — an advisory step that merely goes green is useless.
       - run: npm run check:links -- --all
 
-  # A red scheduled run emails only whoever last edited the cron (spec 10).
+  # A red scheduled run emails only whoever last edited the cron (spec 10):
+  # file a failure, close the issue on the next success.
   report-failure:
     needs: links
-    if: failure()
+    if: always()
     permissions:
       contents: read
       issues: write
     uses: ./.github/workflows/report-failure.yml
     with:
       title: "Weekly link check is failing"
+      result: ${{ needs.links.result }}

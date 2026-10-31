@@ -39,13 +39,15 @@ jobs:
             echo "No data changes this run."
           fi
 
-  # A red scheduled run emails only whoever last edited the cron (spec 10).
+  # A red scheduled run emails only whoever last edited the cron (spec 10):
+  # file a failure, close the issue on the next success.
   report-failure:
     needs: refresh
-    if: failure()
+    if: always()
     permissions:
       contents: read
       issues: write
     uses: ./.github/workflows/report-failure.yml
     with:
       title: "Weekly data refresh is failing"
+      result: ${{ needs.refresh.result }}
