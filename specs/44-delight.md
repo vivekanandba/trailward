@@ -52,12 +52,12 @@ that implements each one names its check. R1 is enforced by the tests named unde
 | #   | Surface                            | Today (observed)                                                                                                                                                                                                                                                               | Requirement                                                 |
 | --- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
 | 0   | Static pages' JSON-LD              | **3,815 of 3,886** pages put a `url` in their structured data that 404s live. `trekJsonLd` built it from `trek.id`, but the page lives at a slug made from the name (`slugFor`, `pages.ts:14`), plus a `-<id>` suffix on a name collision (`slugMap`, `pages.ts:77`)           | **R1, defect**                                              |
-| 1   | Focus                              | `focus-visible` is styled only in `ui/Button.tsx`; seven places set `outline-none`, and five of them add no replacement                                                                                                                                                        | later                                                       |
+| 1   | Focus                              | `focus-visible` is styled only in `ui/Button.tsx`; seven places set `outline-none`, and five of them add no replacement                                                                                                                                                        | **R3**                                                      |
 | 2   | Print                              | No `@media print` anywhere                                                                                                                                                                                                                                                     | later                                                       |
 | 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                       | later; waits for row 18                                     |
-| 4   | Size                               | No size budget. JS+CSS in `dist/assets` is 674,629 bytes, of 764,229 with fonts                                                                                                                                                                                                | later; before any other delight                             |
-| 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                 | later                                                       |
-| 6   | Motion on load                     | A `?sel=` deep link mounts the panel with `.panel-enter` (`App.tsx:84`); the mobile sheet slides on mount (`Sheet.tsx:91`); `FitToResults` animates on mount (`TrekMap.tsx:169`)                                                                                               | later                                                       |
+| 4   | Size                               | No size budget. JS+CSS in `dist/assets` is 674,629 bytes, of 764,229 with fonts                                                                                                                                                                                                | **R2**                                                      |
+| 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                 | **R4**                                                      |
+| 6   | Motion on load                     | A `?sel=` deep link mounts the panel with `.panel-enter` (`App.tsx:84`); the mobile sheet slides on mount (`Sheet.tsx:91`); `FitToResults` animates on mount (`TrekMap.tsx:169`)                                                                                               | **R4**                                                      |
 | 7   | Sparse peak detail                 | Numbers only for nearly all 120k records                                                                                                                                                                                                                                       | later                                                       |
 | 8   | Origin change                      | The map jumps                                                                                                                                                                                                                                                                  | later                                                       |
 | 9   | Region stats card                  | Accurate, reads like a dashboard                                                                                                                                                                                                                                               | later                                                       |
@@ -111,6 +111,39 @@ that implements each one names its check. R1 is enforced by the tests named unde
     be read fails, naming what is missing.
   - The fixed sample `t/skandagiri/` stays in the deploy surface for what it checks (the page
     exists and is not a soft 404). Its slug equals its id, so it could never see this defect.
+
+- **R2 — the size budget (row 4, rule D5).** `npm run check:size` (`scripts/check-size.ts`)
+  measures the build's apparent bytes in three categories and fails when any exceeds
+  `size-budget.json`:
+  - `initialJsCss`: the JS and CSS `dist/index.html` references, which the first paint waits for;
+  - `totalJsCss`: every JS and CSS asset, lazy chunks included;
+  - `fonts`: every woff2.
+
+  It also fails when the budget file is missing or lacks a category, when `index.html`
+  references no asset, or one that is not there: a measure of nothing proves nothing. It runs
+  after the build in CI (`e2e-static`) and in the deploy's build job, before upload. The budget
+  sits a little above what ships, so a small PR need not touch it; a PR that adds weight raises
+  it in review, and one that saves weight lowers it, which is how it ratchets down.
+
+- **R3 — keyboard focus is always visible (row 1, rule D4).** One `:focus-visible` rule in
+  `index.css` draws a 2 px outline on anything that does not style its own focus. No component
+  removes an outline without a visible ring in its place: the five that did (the result list,
+  the detail panel, the palette and its input, the sheet) now draw one, inset where the element
+  meets the viewport edge. `:focus-visible`, not `:focus`, so a click or a programmatic focus
+  with no keyboard behind it draws nothing: a deep-linked panel takes focus on load and shows no
+  ring.
+- **R4 — motion answers an action (rows 5 and 6, rules D2 and D3).** Every movement asks
+  `src/lib/motion.ts`:
+  - `prefersReducedMotion()` for script-driven motion, which no stylesheet reaches (Leaflet's
+    pans and fits, the sheet's transform); CSS motion is stilled by the global rule;
+  - `shouldAnimate()`, which is false until the person first presses a key or a pointer, so
+    nothing moves on load: a `?sel=` deep link shows the panel in place and the sheet at its
+    snap, the first map fit and the deep-linked pan jump. The panel's slide is decided when it
+    opens and held while it stays open, so a later press cannot replay it.
+  - The theme toggle's icon turns in (240 ms) after each press, keyed to the press count, and
+    never on load.
+  - Nothing lasts longer than 300 ms unless it is on the named allow-list in
+    `src/motion.contract.test.ts`, which is empty.
 
 ## Constraints learned in review — for the requirements still to be written
 
@@ -187,6 +220,10 @@ npm run build:pages                                 # R1 on every real page (ref
 npx vitest run scripts/lib/deploycheck.test.ts scripts/check-deploy.test.ts  # R1 live check
 npm run e2e:static                                  # R1 on the sampled pages, as served
 npm run check:deploy                                # R1 against the live site, after deploy
+npx vitest run scripts/check-size.test.ts           # R2: categories, verdicts, refusals
+npm run build && npm run check:size                 # R2 on the real build
+npx vitest run src/lib/motion.test.ts src/motion.contract.test.ts  # R3, R4 by source and helper
+npx playwright test e2e/delight.spec.ts             # R3, R4 in a browser, with motion allowed
 ```
 
 ## Revisions

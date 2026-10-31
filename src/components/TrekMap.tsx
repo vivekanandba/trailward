@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { prefersReducedMotion, shouldAnimate } from "../lib/motion";
 import {
   MapContainer,
   TileLayer,
@@ -110,13 +111,6 @@ const CLUSTER_MAX_ZOOM = 11;
 // tolerance ≈ the 44 px touch-target intent without giant overlap in dense areas.
 const HIT_RADIUS_PX = 16;
 
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-  );
-}
-
 // Leaflet caches its container size at init and only recomputes on window
 // `resize`. On mobile the container also resizes without a window resize —
 // orientation changes, the dvh viewport shifting as the address bar hides, and
@@ -143,7 +137,8 @@ function PanToSelected({ treks, selectedId }: { treks: Trek[]; selectedId?: stri
     const t = treks.find((x) => x.id === selectedId);
     if (!t) return;
     const inView = map.getBounds().pad(-0.1).contains([t.lat, t.lng]);
-    if (!inView) map.panTo([t.lat, t.lng], { animate: !prefersReducedMotion() });
+    // A `?sel=` deep link pans before anyone acted: jump, do not glide (spec 44).
+    if (!inView) map.panTo([t.lat, t.lng], { animate: shouldAnimate() });
     // Deliberately NOT reacting to treks identity — only a selection change pans.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, selectedId]);
@@ -166,7 +161,8 @@ function FitToResults({
   useEffect(() => {
     const bounds = L.latLng(origin.lat, origin.lng).toBounds(radiusKm * 2 * 1000);
     for (const t of treks) bounds.extend([t.lat, t.lng]);
-    map.fitBounds(bounds, { padding: [24, 24], animate: !prefersReducedMotion() });
+    // The first fit happens on load: it jumps; later fits answer an action (spec 44).
+    map.fitBounds(bounds, { padding: [24, 24], animate: shouldAnimate() });
     // Refit on origin/radius change and when results first appear (e.g. discovery
     // loading) — NOT on every filter tweak, which would yank the map mid-typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps

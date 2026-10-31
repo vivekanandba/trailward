@@ -11,6 +11,7 @@
  * the desktop detail panel is deliberately non-modal so clicking another pin
  * switches it, and trapping there would lie to keyboard users).
  */
+import { userHasActed } from "./motion";
 import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE =
@@ -31,7 +32,17 @@ export function useDialogFocus(
   useEffect(() => {
     const el = ref.current;
     const opener = document.activeElement as HTMLElement | null;
-    if (autoFocus) el?.focus();
+    if (autoFocus && el) {
+      // Focusing itself on load (a `?sel=` deep link) is not keyboard focus,
+      // but Chrome treats a script's focus before any interaction as
+      // :focus-visible and would ring the whole panel. Mark it quiet until it
+      // is left; keyboard focus after any press rings as usual (spec 44 R3).
+      if (!userHasActed()) {
+        el.setAttribute("data-quiet-focus", "");
+        el.addEventListener("blur", () => el.removeAttribute("data-quiet-focus"), { once: true });
+      }
+      el.focus();
+    }
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {

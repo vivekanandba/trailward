@@ -112,6 +112,9 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e -- --project=static
+      # The static project's web server ran `npm run build`, so dist/ is this
+      # PR's build: hold it to the size budget (spec 44 D5).
+      - run: npm run check:size
       - uses: actions/upload-artifact@v4
         if: always()
         with:

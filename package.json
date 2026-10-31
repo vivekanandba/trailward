@@ -42,6 +42,7 @@
     "sync:constitution": "tsx scripts/check-constitution.ts --sync",
     "check:live": "tsx scripts/check-live-apis.ts",
     "check:deploy": "tsx scripts/check-deploy.ts",
+    "check:size": "tsx scripts/check-size.ts",
     "e2e:app": "playwright test --project=chromium --project=mobile",
     "e2e:static": "playwright test --project=static"
   },
