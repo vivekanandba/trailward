@@ -83,7 +83,7 @@ test("jump to a summit in another state without touching the map", async ({ page
   // A result for a summit far outside the current radius must be reachable —
   // the whole point of the palette is that it is not radius-bound.
   const hit = palette.getByRole("option").first();
-  await expect(hit).toBeVisible({ timeout: 10_000 });
+  await expect(hit).toBeVisible({ timeout: 20_000 });
   const chosen = (await hit.innerText()).split("\n")[0].trim();
   await hit.click();
 

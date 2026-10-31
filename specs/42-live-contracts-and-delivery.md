@@ -86,7 +86,8 @@ A journey test asserts the user's goal was achievable, not that a particular but
 
 ## E. The suite must be deterministic (CON-VER-008)
 
-The e2e jobs share this VM with every other project's CI, so load is normal, not exceptional.
+Load is normal, not exceptional: the local gate runs on a VM shared with every other project's
+CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are not idle either).
 
 - **Wait for loading by state.** Waiting for the "Loading peaks" status to detach passed before
   React had rendered it at all, so tests raced the cell load and failed 1 run in 6 at a load
@@ -110,6 +111,63 @@ The e2e jobs share this VM with every other project's CI, so load is normal, not
   no timeout could have saved it. Tests that drive the app by keyboard wait for
   `resultsLoaded()` first. Waits on lazy chunks get an explicit bound under the test timeout.
 - Third-party tiles are stubbed. The static project runs in its own pass.
+- **Every Playwright job runs on one pinned image, never `ubuntu-latest`.** On 2026-10-31
+  `ubuntu-latest` had become 26.04, where Playwright 1.60 cannot install its browser
+  dependencies: every PR's e2e jobs, the deploy's e2e gate and the baseline generator failed
+  with no change in this repo. Every job of `ci.yml` and `deploy.yml` (four of them Playwright
+  jobs, plus the site build that is deployed) and the baseline generator in
+  `visual-baselines.yml` run on `ubuntu-24.04`. Each Playwright job installs browsers through one
+  composite action, `.github/actions/playwright-setup`, which keys the browser cache on the OS
+  release read from `/etc/os-release` in a step. On main the key was `playwright-${{ runner.os }}`,
+  which is `Linux` on 22.04, 24.04 and 26.04 alike, so a move restored browsers built for another
+  release; `env.ImageOS` cannot fix that, being empty in an expression, and `ImageVersion` moves
+  weekly and would discard the cache. Moving image means regenerating the baselines there in the
+  same PR.
+  - **Known limit:** `ubuntu-24.04` is a label, and GitHub updates its image weekly. A font or
+    freetype change there can still shift the baselines. The Playwright container
+    (`mcr.microsoft.com/playwright:v<lockfile>-noble`) would pin that too. It is not used yet
+    because every baseline would have to be re-rendered in it. Spec 33 measured a ~2% text
+    diff between a local container and the runner (August 2026); on this VM, on 2026-10-31, the
+    local suite passed against these CI-made baselines, so today local and CI agree within the
+    1% tolerance. That is an observation, not a guarantee, and a container would remove the
+    question. A baseline failure across every
+    screenshot at once is the first sign the image moved.
+- **The baselines lagged the app inside the tolerance.** They showed the shortcut hint as `⌘K`
+  while Linux has rendered `Ctrl K` since spec 38, and the 1% pixel tolerance hid it until an
+  unrelated text change pushed the same screenshot over. The baseline workflow could not have
+  fixed it: `--update-snapshots` defaults to `changed`, rewriting only screenshots that fail, so
+  it reported "Baselines already match" over the stale image. The workflow now passes `=all`,
+  in the suite's two passes (app projects, then the static project, which starves the dev
+  server when they share one). There is no local update command: one rewrote failing screenshots
+  with the fleet VM's rendering, and a failing local run already leaves its actual and diff
+  images in `test-results/`. Baselines come only from the workflow. The config's
+  `updateSnapshots` is `none`, so a run that is not asked to update never writes one (a new
+  screenshot run locally fails rather than taking its first baseline from this machine's fonts).
+  **Review-enforced, not gated (recorded as such so nobody assumes a gate):** a deliberate `-u` run outside the workflow.
+  Three mechanisms were built and dropped in review on #80: a package.json scan and an argument
+  parser each missed spellings or refused ordinary runs, and a `globalSetup` check runs only
+  after Playwright has cleared `test-results/` and started the servers, destroying the diff
+  images its own message points to. A worker fixture would need every spec to import a shared
+  `test`; that is a change of its own if it is ever wanted.
+  Refreshing them after each intentional UI change is **review-enforced**: no check can tell an
+  intended UI change from drift. `=all` may also commit antialiasing-only rewrites; that churn is
+  the cost of never keeping a stale baseline.
+- **CI runs the projects it says it runs.** The jobs called `npm run e2e -- --project=…`, but
+  npm appends extra arguments only to the last command of a compound script, so the "app" job
+  ran the app suite and then static mixed with the app projects in one pass, the starvation
+  above, and the static job ran the whole app suite first (since spec 42's #75). They now call
+  `npm run e2e:app` and `npm run e2e:static`. And Playwright starts every `webServer` it is
+  given whatever `--project` asked for, so each app-only pass paid for a full production build;
+  the config now starts only the servers the requested projects use
+  (`scripts/lib/playwrightServers.ts`).
+- **A flake fails the run.** CI retried a failed test twice and reported it green, so a flake
+  was invisible. CI now retries once, so the failure leaves a trace, and `failOnFlakyTests`
+  fails the run when a test passed only on retry (CON-VER-008).
+- **An assertion's wait is a bound on a hang, not a speed check.** Every assertion polls for a
+  state, but Playwright's default 5 s let "granted permission refreshes the origin" fail at a
+  load average of 14 with the app not yet mounted (2026-10-31). The default bound is 15 s; the
+  two waits on the lazy palette chunk, which had their own 10 s, are 20 s, so no explicit bound
+  is tighter than the default. All are under the 60 s per-test limit.
 
 ## Edge cases & error states
 
@@ -129,6 +187,19 @@ The e2e jobs share this VM with every other project's CI, so load is normal, not
 - `version.json` is emitted by the build and carries the SHA.
 - The post-deploy assertion fails on a mismatched SHA, on a 404, and on a missing file.
 - Journeys as above, on both desktop and mobile projects.
+
+- `scripts/workflows.test.ts`: the five Playwright jobs named exactly; each on one literal
+  `ubuntu-NN.NN` image, the same one, as is every job of `ci.yml` and `deploy.yml`; each sets up
+  browsers only through the shared action, after its checkout; the action reads `/etc/os-release` in a
+  step before every cache step and keys on its output, never `env.` or `ImageVersion`; the
+  baseline generator rewrites with `=all` in two passes; no
+  workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least
+  15 s and no `timeout:` anywhere in e2e is tighter. Each assertion was mutated and failed.
+- `scripts/lib/playwrightServers.test.ts`: the config's `updateSnapshots` is `none`. The module's project names equal the config's. Both `--project` spellings, the space spelling
+  reading every value up to the next flag; app projects start only the dev server, static only
+  the preview, all or a mix start both; any name that is not exactly a known project (case,
+  wildcard), even beside exact ones, starts both, because Playwright matches loosely and a
+  missing server fails every test.
 
 ## Out of scope
 
