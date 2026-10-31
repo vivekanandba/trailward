@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
-import { serversFor } from "./scripts/lib/playwrightServers";
+import { refuseLocalBaselines, serversFor } from "./scripts/lib/playwrightServers";
 
 const servers = serversFor(process.argv);
+const refusal = refuseLocalBaselines(process.argv, process.env);
+if (refusal) throw new Error(refusal);
 
 // E2E specs live in e2e/. They boot the Vite dev server and drive the real app.
 // visual.spec.ts additionally diffs committed linux screenshot baselines

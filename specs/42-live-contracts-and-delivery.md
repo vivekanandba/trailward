@@ -140,7 +140,9 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   in the suite's two passes (app projects, then the static project, which starves the dev
   server when they share one). There is no local update command: one rewrote failing screenshots
   with the fleet VM's rendering, and a failing local run already leaves its actual and diff
-  images in `test-results/`. Baselines come only from the workflow.
+  images in `test-results/`. Baselines come only from the workflow, and `playwright.config.ts`
+  enforces it by refusing to load an update run without `TRAILWARD_BASELINES=1` (a package.json
+  scan was tried first and missed a new spelling every review round).
   Refreshing them after each intentional UI change is **review-enforced**: no check can tell an
   intended UI change from drift. `=all` may also commit antialiasing-only rewrites; that churn is
   the cost of never keeping a stale baseline.
@@ -184,10 +186,16 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   `ubuntu-NN.NN` image, the same one, as is every job of `ci.yml` and `deploy.yml`; each sets up
   browsers only through the shared action, after its checkout; the action reads `/etc/os-release` in a
   step before every cache step and keys on its output, never `env.` or `ImageVersion`; the
-  baseline generator rewrites with `=all` in two passes; no package script updates snapshots; no
+  baseline generator rewrites with `=all` in two passes, and only its two update steps set
+  `TRAILWARD_BASELINES=1`; no
   workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least
   15 s and no `timeout:` anywhere in e2e is tighter. Each assertion was mutated and failed.
-- `scripts/lib/playwrightServers.test.ts`: both `--project` spellings, the space spelling
+- `scripts/lib/playwrightServers.test.ts`: `playwright.config.ts` refuses to load for a run
+  that would rewrite committed screenshots (`-u`, `--update-snapshots[=all|changed]`, in every
+  spelling) unless `TRAILWARD_BASELINES=1`, which only the baseline workflow sets; it is read
+  from the arguments Playwright received, so no script spelling, shell wrapper or
+  `npm run x -- -u` escapes it, and a real `playwright test --list -u` is refused. The module's
+  project names equal the config's. Both `--project` spellings, the space spelling
   reading every value up to the next flag; app projects start only the dev server, static only
   the preview, all or a mix start both; any name that is not exactly a known project (case,
   wildcard), even beside exact ones, starts both, because Playwright matches loosely and a

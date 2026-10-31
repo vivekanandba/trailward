@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { requestedProjects, serversFor } from "./playwrightServers";
+import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
+import config from "../../playwright.config";
+import {
+  KNOWN,
+  refuseLocalBaselines,
+  requestedProjects,
+  serversFor,
+  snapshotUpdateMode,
+} from "./playwrightServers";
 
 // Spec 42 §E. Playwright starts every webServer in the config whatever
 // --project asked for, so each app-only pass paid for a full production build
@@ -61,4 +70,49 @@ describe("serversFor", () => {
     ]);
     expect(serversFor(argv("--project mobile static"))).toEqual(["dev", "preview"]);
   });
+});
+
+describe("the project names this module knows", () => {
+  it("are exactly the projects playwright.config.ts defines", () => {
+    // A renamed or added project would otherwise count as inexact and start
+    // both servers, including the production build this module avoids.
+    expect((config.projects ?? []).map((p) => p.name).sort()).toEqual([...KNOWN].sort());
+  });
+});
+
+describe("snapshotUpdateMode / refuseLocalBaselines (spec 42 §E)", () => {
+  it("reads every spelling Playwright accepts", () => {
+    expect(snapshotUpdateMode(argv("e2e/x.spec.ts"))).toBeUndefined();
+    expect(snapshotUpdateMode(argv("-u"))).toBe("changed");
+    expect(snapshotUpdateMode(argv("--update-snapshots"))).toBe("changed");
+    expect(snapshotUpdateMode(argv("--update-snapshots=all"))).toBe("all");
+    expect(snapshotUpdateMode(argv("--update-snapshots none"))).toBe("none");
+    expect(snapshotUpdateMode(argv("-u all"))).toBe("all");
+    expect(snapshotUpdateMode(argv("-u e2e/x.spec.ts"))).toBe("changed"); // a file, not a mode
+  });
+
+  it("refuses a rewrite outside the baseline workflow, allows it there", () => {
+    for (const a of ["-u", "--update-snapshots=all", "-u changed"]) {
+      expect(refuseLocalBaselines(argv(a), {}), a).toMatch(/^Refusing --update-snapshots=/);
+      expect(refuseLocalBaselines(argv(a), { TRAILWARD_BASELINES: "1" }), a).toBeUndefined();
+    }
+    // These write no committed baseline over another: missing is the default.
+    for (const a of ["", "--update-snapshots=none", "-u missing"]) {
+      expect(refuseLocalBaselines(argv(a), {}), a).toBeUndefined();
+    }
+  });
+
+  it("playwright.config.ts applies it to the arguments Playwright actually got", () => {
+    // `--list` loads the config without starting a server or a browser.
+    const root = resolve(__dirname, "../..");
+    const env = { ...process.env, CI: "", TRAILWARD_BASELINES: "" };
+    const run = (args: string[]) =>
+      execFileSync("npx", ["playwright", "test", "--list", ...args], {
+        cwd: root,
+        env,
+        stdio: "pipe",
+      });
+    expect(() => run(["-u"])).toThrow(/Refusing --update-snapshots=changed/);
+    expect(() => run([])).not.toThrow();
+  }, 60_000);
 });

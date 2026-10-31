@@ -13,8 +13,9 @@ validates and all tests pass**.
 
 ## Acceptance criteria
 
-- **Given** a push to `main`, **when** CI runs, **then** jobs `validate-data`, `test` (typecheck +
-  unit), and `e2e` run; the `build` + `deploy` jobs run **only if all three pass**.
+- **Given** a push to `main`, **when** CI runs, **then** jobs `quality`, `validate-data`, `test`
+  (typecheck + unit with coverage), `e2e` and `e2e-static` run; the `build` + `deploy` jobs run
+  **only if all five pass**, and `verify-deploy` then reads the live site back.
 - **Given** the build, **when** assets are emitted, **then** Vite `base: '/trailward/'` makes JS,
   CSS, and Leaflet marker images resolve at `https://<user>.github.io/trailward/`.
 - **Given** a deep link is refreshed on Pages, **when** there's no server route, **then** the app

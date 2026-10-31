@@ -22,7 +22,7 @@ export function requestedProjects(argv: string[]): string[] {
 
 const APP = ["chromium", "mobile"];
 const STATIC = "static";
-const KNOWN = [...APP, STATIC];
+export const KNOWN = [...APP, STATIC];
 
 /**
  * The app projects run against the dev server; static against `vite preview`. Playwright matches `--project` case-insensitively and
@@ -37,4 +37,45 @@ export function serversFor(argv: string[]): ("dev" | "preview")[] {
   if (asked.some((p) => APP.includes(p))) servers.push("dev");
   if (asked.includes(STATIC)) servers.push("preview");
   return servers;
+}
+
+/** Set only by the "Update visual baselines" workflow, which renders on the pinned image. */
+export const BASELINES_ENV = "TRAILWARD_BASELINES";
+
+const MODES = ["all", "changed", "missing", "none"];
+
+/**
+ * The snapshot update mode the arguments ask for, as Playwright reads
+ * `-u` / `--update-snapshots [mode]`; undefined when neither is given
+ * (Playwright then writes only missing snapshots). A bare flag means "changed".
+ */
+export function snapshotUpdateMode(argv: string[]): string | undefined {
+  let mode: string | undefined;
+  argv.forEach((a, i) => {
+    const m = /^(-u|--update-snapshots)(?:=(.*))?$/.exec(a);
+    if (!m) return;
+    if (m[2] !== undefined) mode = m[2];
+    else mode = MODES.includes(argv[i + 1]) ? argv[i + 1] : "changed";
+  });
+  return mode;
+}
+
+/**
+ * Why this run must not start, or undefined. A run that rewrites committed
+ * screenshots anywhere but the baseline workflow writes this machine's font
+ * rendering into them (spec 42 §E). Read from the arguments Playwright got,
+ * so no spelling in a script, a shell wrapper or `npm run x -- -u` escapes it.
+ */
+export function refuseLocalBaselines(
+  argv: string[],
+  env: Record<string, string | undefined>,
+): string | undefined {
+  const mode = snapshotUpdateMode(argv);
+  if (mode !== "all" && mode !== "changed") return undefined;
+  if (env[BASELINES_ENV] === "1") return undefined;
+  return (
+    `Refusing --update-snapshots=${mode}: baselines come only from the "Update visual ` +
+    `baselines" workflow, on the pinned CI image (spec 42 §E). A failing run leaves its ` +
+    `actual and diff images in test-results/.`
+  );
 }

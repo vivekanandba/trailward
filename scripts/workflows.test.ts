@@ -11,7 +11,13 @@ const dir = resolve(__dirname, "../.github/workflows");
 
 interface Job {
   "runs-on"?: unknown;
-  steps?: { id?: string; run?: string; uses?: string; with?: Record<string, unknown> }[];
+  steps?: {
+    id?: string;
+    run?: string;
+    uses?: string;
+    with?: Record<string, unknown>;
+    env?: Record<string, string>;
+  }[];
 }
 
 const jobs = readdirSync(dir)
@@ -37,17 +43,6 @@ const playwrightJobs = jobs.filter((j) => usesPlaywright(j.job));
 const action = load(
   readFileSync(resolve(__dirname, "../.github/actions/playwright-setup/action.yml"), "utf8"),
 ) as { runs: { steps: NonNullable<Job["steps"]> } };
-
-// A Playwright test command that rewrites snapshots, judged per command of a
-// compound script: vitest's own -u, or `git push -u`, is not this.
-const updatesBaselines = (script: string): boolean =>
-  script
-    .split(/&&|\|\||;|\|/)
-    .some(
-      (cmd) =>
-        /\bplaywright(@\S+)?\s+test\b/.test(cmd) &&
-        /(--update-snapshots(?!=none)|\s-u)(\s|=|$)/.test(cmd),
-    );
 
 describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
   it("are exactly the five it is about, so none drops out unnoticed", () => {
@@ -134,25 +129,16 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     expect(runs.find((r) => /--project=static/.test(r))).not.toMatch(/--project=(chromium|mobile)/);
   });
 
-  it("there is no local update command: baselines come only from the CI workflow", () => {
-    // A local update rewrites failing screenshots with the fleet VM's rendering;
-    // a failing run already leaves its actual and diff images in test-results/.
-    const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8")) as {
-      scripts: Record<string, string>;
-    };
-    const updating = Object.entries(pkg.scripts).filter(([, cmd]) => updatesBaselines(cmd));
-    expect(updating.map(([name]) => name)).toEqual([]);
-  });
-
-  it("flags only a Playwright snapshot update, not another tool's -u", () => {
-    expect(updatesBaselines("playwright test -u")).toBe(true);
-    expect(updatesBaselines("playwright test --update-snapshots=all")).toBe(true);
-    expect(updatesBaselines("vitest run -u")).toBe(false);
-    expect(updatesBaselines("git push -u origin main")).toBe(false);
-    expect(updatesBaselines("npx playwright@1.60.0 test -u")).toBe(true);
-    expect(updatesBaselines("playwright  test --update-snapshots")).toBe(true);
-    expect(updatesBaselines("vitest run -u && playwright test --project=static")).toBe(false);
-    expect(updatesBaselines("playwright test --update-snapshots=none")).toBe(false);
+  it("only the baseline workflow's update steps carry the permission to rewrite", () => {
+    // playwright.config.ts refuses an update run without TRAILWARD_BASELINES=1.
+    const gen = playwrightJobs.find((j) => j.id === "visual-baselines.yml:baselines")!;
+    const steps = (gen.job.steps ?? []).filter((st) => /playwright test/.test(st.run ?? ""));
+    expect(steps).toHaveLength(2);
+    for (const st of steps) expect(st.env?.TRAILWARD_BASELINES).toBe("1");
+    for (const f of readdirSync(dir).filter((n) => n !== "visual-baselines.yml")) {
+      if (!/\.ya?ml$/.test(f)) continue;
+      expect(readFileSync(resolve(dir, f), "utf8"), f).not.toContain("TRAILWARD_BASELINES");
+    }
   });
 
   it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {
