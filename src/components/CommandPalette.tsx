@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { searchIndex, type IndexEntry } from "../lib/search";
+import { nearestNames } from "../lib/nearest";
 import { useDialogFocus } from "../lib/useDialogFocus";
 import { Scrim } from "./ui/Scrim";
 
@@ -91,11 +92,24 @@ export default function CommandPalette({
     }
   };
 
+  // Nothing matched: offer the nearest names, never a guess (spec 44 R12).
+  // Computed only when there are no results, over the named entries.
+  const near =
+    index && query.trim() && results.length === 0
+      ? nearestNames(
+          query,
+          index.filter((e) => !e.name.startsWith("Unnamed")).map((e) => e.name),
+        )
+          .map((name) => index.find((e) => e.name === name)!)
+          .filter(Boolean)
+      : [];
   const message = failed
     ? "Couldn't load the search index — check your connection."
-    : query.trim() && index && results.length === 0
-      ? "Nothing matches — try a name like 'Savandurga' or 'Kumara'."
-      : "";
+    : near.length > 0
+      ? "Nothing matches exactly. Did you mean:"
+      : query.trim() && index && results.length === 0
+        ? "Nothing matches — try a name like 'Savandurga' or 'Kumara'."
+        : "";
 
   return (
     <>
@@ -153,6 +167,21 @@ export default function CommandPalette({
           <p role="status" className="px-4 py-3 text-sm text-trail-500 dark:text-slate-400">
             {message}
           </p>
+        )}
+        {near.length > 0 && (
+          <ul className="px-4 pb-3">
+            {near.map((e) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => onChoose(e)}
+                  className="w-full rounded px-2 py-1.5 text-left text-sm font-medium text-trail-800 hover:bg-trail-50 dark:text-slate-100 dark:hover:bg-slate-800"
+                >
+                  {e.name}
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
         <p className="border-t border-trail-100 px-4 py-2 text-xs text-trail-400 dark:border-slate-700 dark:text-slate-500">
           ↑↓ navigate · enter open · esc close

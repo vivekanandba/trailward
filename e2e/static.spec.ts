@@ -192,3 +192,31 @@ test("a trek page prints as a field card (spec 44 R5)", async ({ page }) => {
   await expect(page.getByText(/^Data as of \d{4}-\d{2}-\d{2}\.$/)).toBeVisible();
   await expect(page.getByRole("cell", { name: /\d+°\d{2}′\d{2}″N/ })).toBeVisible();
 });
+
+// Spec 44 R10. vite preview never serves 404.html for a missing path, so the
+// test serves the BUILT page at a missing URL, as GitHub Pages does.
+async function servedAs404(page: import("@playwright/test").Page, url: RegExp) {
+  const body = await (await page.request.get("404.html")).text();
+  await page.route(url, (route) => route.fulfill({ status: 404, contentType: "text/html", body }));
+}
+
+test("a mistyped trek URL says so and offers the page that was meant (spec 44 R10)", async ({
+  page,
+}) => {
+  await servedAs404(page, /\/t\/kumara-parvata\/$/);
+  await page.goto("t/kumara-parvata/");
+  await expect(
+    page.getByRole("heading", { name: "There is no trek page at this address." }),
+  ).toBeVisible();
+  const link = page.getByRole("status").getByRole("link");
+  await expect(link).toHaveAttribute("href", "/trailward/t/kumara-parvatha/");
+});
+
+test("any other missing path opens the app with its query (spec 44 R10)", async ({ page }) => {
+  await servedAs404(page, /\/old\/path/);
+  await page.goto("old/path?r=50#here");
+  // The 404 page's job ends at handing the app its query: the app then writes
+  // its own canonical state into the URL (urlState), keeping the radius.
+  await expect(page).toHaveURL(/\/trailward\/\?(.*&)?r=50\b/);
+  await expect(page).not.toHaveURL(/old\/path/);
+});

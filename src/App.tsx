@@ -15,7 +15,7 @@ import { loadTheme, saveTheme, applyTheme, printInLight, type Theme } from "./li
 import { regionStats, type RegionStats } from "./lib/regionStats";
 import { regionSentence } from "./lib/voice";
 import { feedbackUrl } from "./lib/github";
-import { loadTreksAround } from "./lib/cells";
+import { loadCellsReport } from "./lib/cells";
 import { difficultyColor } from "./lib/difficulty";
 import { FilterIcon, MountainIcon, SearchIcon } from "./components/icons";
 import TrekList from "./components/TrekList";
@@ -28,6 +28,8 @@ import CommandPalette from "./components/CommandPalette";
 import { GUIDED_PATHS, applyPath } from "./lib/paths";
 import type { IndexEntry } from "./lib/search";
 import UpdateBanner from "./components/UpdateBanner";
+import OfflineNote from "./components/OfflineNote";
+import { greetOnce } from "./lib/greeting";
 import { browserEnvironment, registerServiceWorker } from "./lib/serviceWorker";
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
@@ -96,6 +98,8 @@ export default function App() {
 
   // Light/dark theme (spec 08). The initial class is set pre-paint by an inline
   // script in index.html; here we own the runtime toggle + persistence.
+  // A line for whoever opens the console (spec 44 R15).
+  useEffect(() => greetOnce(), []);
   const [theme, setTheme] = useState<Theme>(loadTheme);
   // Motion answers an action, never a page load (spec 44 register row 6).
   // Listening starts before the first paint can be pressed.
@@ -158,19 +162,30 @@ export default function App() {
   // presets — cached per session, streamed in behind a loading state.
   const [nearbyTreks, setNearbyTreks] = useState<Trek[] | null>(null);
   const [loadingCells, setLoadingCells] = useState(true);
+  // Cells that failed this load (spec 44 R11): an empty list is then not a
+  // fact about the radius. `retry` re-runs the load on request.
+  const [missingCells, setMissingCells] = useState(0);
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
     setLoadingCells(true);
-    loadTreksAround(origin.lat, origin.lng, filters.radiusKm)
-      .then((t) => {
-        if (active) setNearbyTreks(t);
+    loadCellsReport(origin.lat, origin.lng, filters.radiusKm)
+      .then((r) => {
+        if (!active) return;
+        setNearbyTreks(r.treks);
+        setMissingCells(r.missing);
       })
-      .catch(() => active && setNearbyTreks([]))
+      .catch(() => {
+        if (!active) return;
+        // The index itself failed: nothing of this area is known.
+        setNearbyTreks([]);
+        setMissingCells(1);
+      })
       .finally(() => active && setLoadingCells(false));
     return () => {
       active = false;
     };
-  }, [origin.lat, origin.lng, filters.radiusKm]);
+  }, [origin.lat, origin.lng, filters.radiusKm, retry]);
 
   // Mirror origin/filters/selection into the URL so the view is shareable and
   // survives reload. Opening the detail panel pushes a history entry (so Back
@@ -527,6 +542,13 @@ export default function App() {
       overflow={overflow}
       empty={!loadingCells && visible.length === 0}
       onClearFilters={() => setFilters(DEFAULT_FILTERS)}
+      // Spec 44 R11: a control that does what the advice says.
+      widenTo={
+        filters.radiusKm < maxRadiusKm ? Math.min(maxRadiusKm, filters.radiusKm * 2) : undefined
+      }
+      onWiden={(km) => setFilters((f) => ({ ...f, radiusKm: km }))}
+      missingCells={missingCells}
+      onRetry={() => setRetry((n) => n + 1)}
     />
   );
 
@@ -546,6 +568,7 @@ export default function App() {
   return (
     <div className="flex h-full flex-col">
       <UpdateBanner onApply={applyUpdate} onDismiss={() => setApplyUpdate(undefined)} />
+      <OfflineNote />
       {/* Skip link (spec 37): first in tab order, revealed on focus. On a map
           app the alternative is tabbing through map controls forever. */}
       <a

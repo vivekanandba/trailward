@@ -46,6 +46,9 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      // The 404 page is built, not copied from public/, so its matcher is the
+      // tested src/notFound.ts rather than an inline copy (spec 44 R10).
+      input: { main: "index.html", notFound: "404.html" },
       output: {
         // One stable vendor chunk (react + leaflet stacks): app-code edits no
         // longer invalidate the ~300 KB of rarely-changing dependencies in
