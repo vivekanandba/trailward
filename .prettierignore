@@ -14,6 +14,8 @@ scripts/geonames/india-summits.json
 # Generated data artifacts (compact JSON by design).
 public/data/
 scripts/detected/india-detected.json
+# The slug registry: one entry per line by design (scripts/lib/slugs.ts).
+scripts/pages/slugs.json
 
 # The pinned constitution is a verbatim copy of a remote artifact — formatting
 # it changes its hash and breaks the pin (spec 39).

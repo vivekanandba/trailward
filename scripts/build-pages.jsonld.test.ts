@@ -16,7 +16,7 @@ vi.mock("./lib/trekPage", async (orig) => {
 });
 
 const { runBuildPages, pagePathsFor } = await import("./build-pages");
-const { memoryIO } = await import("./lib/buildIO");
+const { memoryIOWithSlugs: memoryIO } = await import("./lib/testIO");
 
 describe("build-pages refuses a page whose JSON-LD url is not its own (spec 44 R1)", () => {
   it("refuses before writing anything, so nothing deploys", () => {
