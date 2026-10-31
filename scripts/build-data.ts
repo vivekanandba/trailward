@@ -61,8 +61,6 @@ export async function buildDataset(
   seeds: Trek[],
   origin: Origin,
   enrichers: Enrichers = {},
-  /** Filled with the ids whose article lookup answered, photo or not. */
-  articleAnswered: Set<string> = new Set(),
 ): Promise<Trek[]> {
   const treks: Trek[] = [];
 
@@ -70,12 +68,7 @@ export async function buildDataset(
     const parts: Partial<Trek>[] = [seed]; // manual seed wins every conflict
 
     const wiki = await safe(enrichers.wiki?.(seed), `wiki(${seed.id})`);
-    // A disambiguation page is not an answer about this summit, so a photo
-    // carried from the article it used to be is not contradicted by it.
-    if (wiki && !wiki.disambiguation) {
-      articleAnswered.add(seed.id);
-      parts.push({ highlights: wiki.summary, image: wiki.image });
-    }
+    if (wiki) parts.push({ highlights: wiki.summary, image: wiki.image });
 
     const scraped = await safe(enrichers.scrape?.(seed), `scrape(${seed.id})`);
     if (scraped) parts.push(scraped);
@@ -118,10 +111,11 @@ export async function buildDataset(
  *   NOT here: it is a fact about the route from the origin, so it is `run`,
  *   and the drift guard refuses a refresh that lost it wholesale.
  * - `sources`: the photo, taken from the article the seed cites. Kept only
- *   while the place AND the cited sources are unchanged, and only when this
- *   run's lookup could not say: a failed fetch or a title that is now a
- *   disambiguation page is unknown, but an article that answered with no
- *   usable photo (removed, relicensed) has none (CON-DATA-002).
+ *   while the place AND the cited sources are unchanged. A lookup that came
+ *   back without one is not evidence the photo is gone: that is how six were
+ *   lost when the source changed shape (spec 10). A photo whose article
+ *   dropped it stays until a curator changes the seed's sources; a dead
+ *   image URL is the weekly link check's to find.
  */
 type Owner = "run" | "place" | "sources";
 const OWNER: Record<keyof Trek, Owner> = {
@@ -194,11 +188,7 @@ function inKeyOrderOf(prev: Trek, next: Record<string, unknown>): Trek {
  * run did not produce, under the conditions in OWNER. Curated records whose
  * seed is gone are dropped.
  */
-export function foldCurated(
-  built: Trek[],
-  existing: Trek[],
-  articleAnswered: ReadonlySet<string> = new Set(),
-): Trek[] {
+export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
   // Every tier: a seed that promotes a discovery pin to curated takes over
   // that record (and what was baked for its place) rather than duplicating it.
   const prevById = new Map(existing.map((t) => [t.id, t]));
@@ -214,7 +204,7 @@ export function foldCurated(
       const owner = OWNER[k as keyof Trek];
       if (owner === "place") return samePlace;
       if (owner === "sources") {
-        return samePlace && sameSources(prev, t) && !articleAnswered.has(t.id);
+        return samePlace && sameSources(prev, t);
       }
       return false; // "run", or a key Trek does not declare
     };
@@ -252,15 +242,13 @@ export async function runBuildData(
     }
   }
   if (!Array.isArray(parsed)) refuse("is not an array of treks");
-  const entries = parsed as unknown[];
-  const bad = entries.findIndex(
-    (t) => typeof t !== "object" || t === null || typeof (t as Trek).id !== "string",
-  );
-  if (bad >= 0) refuse(`has an entry at index ${bad} that is not a trek with an id`);
-  const existing = entries as Trek[];
-  const answered = new Set<string>();
-  const treks = await buildDataset(seeds, origin, enrichers, answered);
-  const ds = validateDataset(foldCurated(treks, existing, answered));
+  // The whole committed file, validated as the build validates it, so any bad
+  // record is refused here rather than after the enrichment.
+  const committed = validateDataset(parsed as Trek[]);
+  if (!committed.ok) refuse(`is not a valid dataset (${committed.error})`);
+  const existing = parsed as Trek[];
+  const treks = await buildDataset(seeds, origin, enrichers);
+  const ds = validateDataset(foldCurated(treks, existing));
   if (!ds.ok) throw new Error(`[build-data] dataset invalid: ${ds.error}`);
   io.writeFile(file, JSON.stringify(ds.treks) + "\n");
   io.log(

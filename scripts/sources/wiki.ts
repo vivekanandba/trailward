@@ -10,8 +10,6 @@ import { fetchJson } from "./http";
 export interface WikiInfo {
   summary?: string;
   image?: TrekImage;
-  /** The title now lists other articles: it says nothing about this trek, either way. */
-  disambiguation?: true;
 }
 
 interface WikiSummaryResponse {
@@ -62,7 +60,7 @@ export function parseWikiSummary(json: unknown): WikiInfo {
   const info: WikiInfo = {};
   // A disambiguation page lists other articles; nothing on it describes this
   // trek (the client refuses it too, src/lib/enrich.ts).
-  if (data.type === "disambiguation") return { disambiguation: true };
+  if (data.type === "disambiguation") return info;
   if (typeof data.extract === "string" && data.extract.trim()) {
     info.summary = data.extract.trim();
   }
