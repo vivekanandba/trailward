@@ -20,9 +20,11 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - **Given** `workflow_dispatch`, **when** triggered manually, **then** the same refresh runs.
 - **Given** any scheduled workflow (refresh, name suggestions, link check, live API check),
   **when** its work job ends, **then** a separate `report-failure` job reports the result: a
-  **failure** opens, or comments on, the one open issue with exactly that workflow's title; a
-  later **success** closes it, naming the run that recovered; a cancelled or skipped run changes
-  nothing. A failed refresh commits no data. In refresh-data and weekly-links the work job holds
+  **failure** opens, or comments on, the one open issue with exactly that workflow's title,
+  saying only that the run failed (what it changed before failing is not known there); a later
+  **success** closes it, naming the run that recovered; a cancelled or skipped run changes
+  nothing; a missing result fails the reporter job rather than being reported as a failure.
+  Only runs on `main` report, so a dispatch on a branch neither files nor closes the issue. A failed refresh commits no data. In refresh-data and weekly-links the work job holds
   no issues-write token; apply-suggestions and weekly-live-apis hold one for their own work
   (closing suggestion issues, filing drift).
 - **Given** the committed dataset, **when** `build:data` runs, **then** it replaces only the
@@ -31,13 +33,16 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - **Given** a curated record, **then** each field is decided by its owner (`OWNER` in
   `scripts/build-data.ts`, a record over every key of `Trek`, so a new field does not compile
   until it is classified):
-  - **`run`** fields (what the seed may state, including `highlights`, `elevationM` and
-    `permitRequired`, which an enricher may also fill) come from this run alone: the seed, then
-    this run's enrichers. One removed from the seed is removed.
-  - **`place`** fields (terrain, land cover, gazetteer, hill features, road distance and drive
-    time, and `bestSeason`, which `build:climate` bakes onto a seed that states none) keep their
-    previous value when this run produced none, **while the seed is within 120 m of where it
-    was** (`CARRYOVER_KM`, the distance discovery uses for a rescanned summit).
+  - **`run`** fields come from this run alone: the seed, then this run's enrichers. That covers
+    what the seed may state (including `highlights`, `elevationM` and `permitRequired`, which an
+    enricher may also fill), `bestSeason` (the seed's, else derived this run from the committed
+    rainfall grid, as `build:climate` does), the road distance and drive time (facts about the
+    route from the origin, not the summit), and the discovery-only signals `discoveryScore` and
+    `estimatedDifficulty`. One removed from the seed, or not produced this run, is gone.
+  - **`place`** fields (terrain, land cover, gazetteer, hill features, trail, POIs, gallery)
+    keep their previous value when this run produced none, **while the seed is within 120 m of
+    where it was** (`CARRYOVER_KM`, `scripts/lib/carryover.ts`, the distance discovery uses for a
+    rescanned summit).
   - **`sources`** (the photo) is kept on the same condition **and** only while the seed cites
     the same sources. A failed or changed lookup is not evidence the photo is gone; a different
     article is.
@@ -96,9 +101,14 @@ of treks.json`.
   the exact-title match, ignores a title that merely contains the words, closes the issue on a
   later success, does nothing on success with none open or for a cancelled or skipped run,
   narrows the lookup with an `in:title` search, refuses no title.
-- `scripts/build-data.test.ts` also: a best season `build:climate` baked survives; a seed that
-  promotes a discovery pin replaces it; key order holds even when the built record's keys come
-  in a different order.
+- `scripts/build-data.test.ts` also: a best season deleted from the seed is gone; a seed with
+  none gets the rainfall-derived one this run, and the live enricher reads the committed grid; a
+  promoted pin replaces the discovery record without its discovery score or estimated
+  difficulty; a road distance this run did not measure is not carried; key order holds even
+  when the built record's keys come in a different order.
+- `scripts/report-failure.test.ts` also: the message says only "failed"; a missing result is
+  refused with nothing posted; the four callers report only on `main`; the test names `jq` when
+  it is missing.
 - After merge: dispatch the refresh and read back a green run (CON-VER-003).
 
 ## Out of scope

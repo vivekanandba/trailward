@@ -14,8 +14,11 @@
 set -euo pipefail
 
 title="${1:-}"
-result="${2:-failure}"
+result="${2:-}"
 [ -n "$title" ] || { echo "report-failure: a title is required" >&2; exit 2; }
+# An empty result means the caller could not name the work job's outcome (a
+# renamed job, say). That is not a failure, and saying so would be wrong.
+[ -n "$result" ] || { echo "report-failure: no result given; cannot tell what happened" >&2; exit 2; }
 : "${GH_REPO:?report-failure: GH_REPO is required}"
 run="${RUN_URL:-(run URL unknown)}"
 
@@ -33,7 +36,7 @@ if [ "$result" = "success" ]; then
   [ -n "$number" ] || exit 0
   gh issue close "$number" --comment "Recovered: this scheduled run succeeded: $run"
 elif [ -n "$number" ]; then
-  gh issue comment "$number" --body "This scheduled run failed and changed nothing: $run"
+  gh issue comment "$number" --body "This scheduled run failed: $run"
 else
-  gh issue create --title "$title" --body "This scheduled run failed and changed nothing: $run"
+  gh issue create --title "$title" --body "This scheduled run failed: $run"
 fi

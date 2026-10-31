@@ -15,7 +15,9 @@ import type { Origin, Trek } from "../src/lib/trek";
 import { validateDataset, validateTrek } from "../src/lib/trek";
 import { distanceFrom } from "../src/lib/distance";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
-import { CARRYOVER_KM } from "./discover-precompute";
+import { CARRYOVER_KM } from "./lib/carryover";
+import { bestSeasonFrom, climateCellKey, type MonthlyRain } from "../src/lib/climate";
+import climateGrid from "../src/data/climate.json";
 import { mergeTrek } from "./sources/merge";
 import { BANGALORE_ORIGIN, BANGALORE_SEED } from "./seed/bangalore";
 import { fetchElevations } from "./sources/elevation";
@@ -35,6 +37,8 @@ export interface Enrichers {
   wiki?(seed: Trek): Promise<WikiInfo | undefined>;
   /** Scraped difficulty/permit/fee from an allowlisted page. */
   scrape?(seed: Trek): Promise<Partial<Trek>>;
+  /** Best season from the committed rainfall grid, for a seed that states none. */
+  season?(seed: Trek): string | undefined;
 }
 
 async function safe<T>(p: Promise<T> | undefined, label: string): Promise<T | undefined> {
@@ -74,6 +78,11 @@ export async function buildDataset(
 
     const elevation = await safe(enrichers.elevation?.(seed), `elevation(${seed.id})`);
     if (elevation !== undefined) parts.push({ elevationM: elevation });
+
+    // Derived this run, as build:climate would, so bestSeason stays a `run`
+    // field; the seed's own season wins by its precedence in `parts`.
+    const season = enrichers.season?.(seed);
+    if (season) parts.push({ bestSeason: season });
 
     const merged = mergeTrek(parts);
     const res = validateTrek(merged);
@@ -124,18 +133,21 @@ const OWNER: Record<keyof Trek, Owner> = {
   trailLengthKm: "run",
   trailType: "run",
   durationHrs: "run",
-  // A seed may state it, and build:climate bakes one from rainfall onto a
-  // curated trek whose seed does not (build-climate.ts). The seed's value wins
-  // whenever it gives one; otherwise the baked value survives a refresh.
-  bestSeason: "place",
-  distanceKm: "place",
-  driveTimeMin: "place",
+  // Discovery-tier signals; a curated record has a curator's difficulty and
+  // is not a "hidden gem", so a promoted pin's must not follow it.
+  discoveryScore: "run",
+  estimatedDifficulty: "run",
+  // The seed's, else derived this run from the committed rainfall grid, so a
+  // season the curator deleted is gone and a seed with none still gets one.
+  bestSeason: "run",
+  // Facts about the route from the origin, not about the summit: a stale one
+  // must not outlive the run that could not measure it.
+  distanceKm: "run",
+  driveTimeMin: "run",
   reliefM: "place",
   prominenceProxyM: "place",
   meanSlopeDeg: "place",
   terrainConfidence: "place",
-  discoveryScore: "place",
-  estimatedDifficulty: "place",
   trail: "place",
   pois: "place",
   gallery: "place",
@@ -230,6 +242,12 @@ export function liveEnrichers(): Enrichers {
       return m;
     },
     route: (origin, seed) => fetchRoute(origin, { lat: seed.lat, lng: seed.lng }),
+    season: (seed) => {
+      const monthly = (climateGrid as Record<string, MonthlyRain>)[
+        climateCellKey(seed.lat, seed.lng)
+      ];
+      return monthly ? bestSeasonFrom(monthly) : undefined;
+    },
     wiki: async (seed) => {
       const title = seed.sources.map(titleFromWikiUrl).find((t): t is string => Boolean(t));
       return title ? fetchWiki(title) : undefined;
