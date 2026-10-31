@@ -43,7 +43,12 @@ describe("serversFor", () => {
 
   it("starts both for a project name it does not recognise exactly", () => {
     // Playwright matches --project case-insensitively and by wildcard.
-    for (const a of ["--project=Chromium", "--project=chrom*", "--project=STATIC"]) {
+    for (const a of [
+      "--project=Chromium",
+      "--project=chrom*",
+      "--project=STATIC",
+      "--project=static --project=Chromium", // one loose name beside an exact one
+    ]) {
       expect(serversFor(argv(a)), a).toEqual(["dev", "preview"]);
     }
   });

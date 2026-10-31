@@ -26,10 +26,13 @@ validates and all tests pass**.
 
 - `.github/workflows/deploy.yml`:
   - `validate-data`: `npm ci && npm run validate:data`
-  - `test`: `npm ci && npm run typecheck && npm test`
+  - `quality`: `npm ci`, `npm run check:constitution` (spec 39), `npm run lint`, `npm run format:check`
+  - `test`: `npm ci && npm run typecheck && npm run coverage` (the coverage floors gate here)
   - `e2e`: `npm ci`, the shared Playwright setup action, then `npm run e2e:app` (both Chromium-based projects: desktop + Pixel-7 mobile; includes the spec-33 visual diffs; `test-results/` uploaded as an artifact on every outcome)
+  - `e2e-static`: the same setup, then `npm run e2e:static` against the production build (spec 42 §E)
   - `build`: `needs: [quality, validate-data, test, e2e, e2e-static]` → `npm run build` → upload Pages artifact
   - `deploy`: `needs: build` → `actions/deploy-pages`
+  - `verify-deploy`: `needs: deploy` → `npm run check:deploy -- --sha "$GITHUB_SHA" --previous …`, which reads the live site back (spec 42)
 - Pages source = **GitHub Actions** (set once in repo Settings → Pages).
 
 ## Edge cases & error states

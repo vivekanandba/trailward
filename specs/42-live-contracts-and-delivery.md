@@ -187,8 +187,11 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   baseline generator rewrites with `=all` in two passes; no package script updates snapshots; no
   workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least
   15 s and no `timeout:` anywhere in e2e is tighter. Each assertion was mutated and failed.
-- `scripts/lib/playwrightServers.test.ts`: both `--project` spellings; app projects start only
-  the dev server, static only the preview, all or a mix start both.
+- `scripts/lib/playwrightServers.test.ts`: both `--project` spellings, the space spelling
+  reading every value up to the next flag; app projects start only the dev server, static only
+  the preview, all or a mix start both; any name that is not exactly a known project (case,
+  wildcard), even beside exact ones, starts both, because Playwright matches loosely and a
+  missing server fails every test.
 
 ## Out of scope
 

@@ -38,9 +38,16 @@ const action = load(
   readFileSync(resolve(__dirname, "../.github/actions/playwright-setup/action.yml"), "utf8"),
 ) as { runs: { steps: NonNullable<Job["steps"]> } };
 
-// Only a Playwright command: vitest's own -u, or `git push -u`, is not this.
-const updatesBaselines = (cmd: string): boolean =>
-  /playwright test/.test(cmd) && /--update-snapshots|\s-u\b/.test(cmd);
+// A Playwright test command that rewrites snapshots, judged per command of a
+// compound script: vitest's own -u, or `git push -u`, is not this.
+const updatesBaselines = (script: string): boolean =>
+  script
+    .split(/&&|\|\||;|\|/)
+    .some(
+      (cmd) =>
+        /\bplaywright(@\S+)?\s+test\b/.test(cmd) &&
+        /(--update-snapshots(?!=none)|\s-u)(\s|=|$)/.test(cmd),
+    );
 
 describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
   it("are exactly the five it is about, so none drops out unnoticed", () => {
@@ -142,6 +149,10 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     expect(updatesBaselines("playwright test --update-snapshots=all")).toBe(true);
     expect(updatesBaselines("vitest run -u")).toBe(false);
     expect(updatesBaselines("git push -u origin main")).toBe(false);
+    expect(updatesBaselines("npx playwright@1.60.0 test -u")).toBe(true);
+    expect(updatesBaselines("playwright  test --update-snapshots")).toBe(true);
+    expect(updatesBaselines("vitest run -u && playwright test --project=static")).toBe(false);
+    expect(updatesBaselines("playwright test --update-snapshots=none")).toBe(false);
   });
 
   it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {

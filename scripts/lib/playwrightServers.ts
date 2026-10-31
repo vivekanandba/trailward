@@ -21,6 +21,8 @@ export function requestedProjects(argv: string[]): string[] {
 }
 
 const APP = ["chromium", "mobile"];
+const STATIC = "static";
+const KNOWN = [...APP, STATIC];
 
 /**
  * The app projects run against the dev server; static against `vite preview`. Playwright matches `--project` case-insensitively and
@@ -29,10 +31,10 @@ const APP = ["chromium", "mobile"];
  */
 export function serversFor(argv: string[]): ("dev" | "preview")[] {
   const asked = requestedProjects(argv);
-  const exact = asked.length > 0 && asked.every((p) => [...APP, "static"].includes(p));
+  const exact = asked.length > 0 && asked.every((p) => KNOWN.includes(p));
   if (!exact) return ["dev", "preview"];
   const servers: ("dev" | "preview")[] = [];
   if (asked.some((p) => APP.includes(p))) servers.push("dev");
-  if (asked.includes("static")) servers.push("preview");
+  if (asked.includes(STATIC)) servers.push("preview");
   return servers;
 }
