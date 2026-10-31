@@ -27,43 +27,42 @@ const FIELDS = [
 const TOLERANCE = 0.02; // fraction each count may drop before this fails
 
 export function fieldCounts(treks: Trek[]): Record<string, number> {
-  const counts: Record<string, number> = { records: treks.length, curatedImage: 0 };
+  const counts: Record<string, number> = { records: treks.length };
   for (const f of FIELDS) counts[f] = 0;
   for (const t of treks) {
     for (const f of FIELDS) {
       if (f === "name" ? !t.name.startsWith("Unnamed") : t[f] !== undefined) counts[f]++;
     }
-    // A curated photo lost to a source that changed shape (spec 10). Only the
-    // curated tier: discovery re-fetches its photos best-effort every run, and
-    // that churn is not this incident.
-    if (t.tier === "curated" && t.image !== undefined) counts.curatedImage++;
   }
   return counts;
 }
 
 /**
- * Curated records missing a road distance or drive time, by id, naming which.
- * These are `run` fields, never carried stale (spec 10), so a route-service
- * hiccup drops them outright. Compared per record, not as a total: one record
- * routed this run must not hide another that lost its route.
+ * Fields a weekly refresh never legitimately removes from a curated record:
+ * the road distance and drive time (`run` fields, never carried stale, so a
+ * route-service hiccup drops them outright) and the photo (carried unless the
+ * seed's sources change, which happens in a reviewed PR, not in a refresh;
+ * six were once lost to a source that changed shape). Spec 10.
  */
-export function missingRouteFacts(treks: Trek[]): Map<string, string[]> {
-  const out = new Map<string, string[]>();
-  for (const t of treks) {
-    if (t.tier !== "curated") continue;
-    const gone = (["distanceKm", "driveTimeMin"] as const).filter((f) => t[f] === undefined);
-    if (gone.length > 0) out.set(t.id, gone);
+const CURATED_KEPT = ["distanceKm", "driveTimeMin", "image"] as const;
+
+/**
+ * One line per curated field that the committed record had and this one
+ * lacks, compared per record and per field with no tolerance: there are only
+ * 16, and a count would let one record's gain hide another's loss. A record
+ * new to the file or to the curated tier, or a field it never had, is not a loss.
+ */
+export function curatedLosses(head: Trek[], now: Trek[]): string[] {
+  const before = new Map(head.map((t) => [t.id, t]));
+  const out: string[] = [];
+  for (const t of now) {
+    const prev = before.get(t.id);
+    // Curated then and now: a pin promoted this run never had curated facts.
+    if (t.tier !== "curated" || prev?.tier !== "curated") continue;
+    const lost = CURATED_KEPT.filter((f) => prev[f] !== undefined && t[f] === undefined);
+    if (lost.length > 0) out.push(`${t.id}: lost ${lost.join(" and ")}`);
   }
   return out;
-}
-
-/** One line per curated record that had both route facts and now lacks one. */
-export function routeLosses(head: Trek[], now: Trek[]): string[] {
-  const before = missingRouteFacts(head);
-  const headIds = new Set(head.map((t) => t.id));
-  return [...missingRouteFacts(now)]
-    .filter(([id]) => headIds.has(id) && !before.has(id))
-    .map(([id, gone]) => `${id}: lost ${gone.join(" and ")}`);
 }
 
 // Hand-curated fields have tiny counts (heritage: 2) where one record moving
@@ -106,9 +105,9 @@ async function main(): Promise<void> {
     console.log(`[drift] ${field}: ${baseline[field]} → ${n}`);
   }
   const violations = driftViolations(baseline, current);
-  const lost = routeLosses(head, now);
-  console.log(`[drift] curated records that lost a route fact: ${lost.length}`);
-  for (const l of lost) violations.push(`curated route fact ${l}`);
+  const lost = curatedLosses(head, now);
+  console.log(`[drift] curated records that lost a kept field: ${lost.length}`);
+  for (const l of lost) violations.push(`curated ${l}`);
   if (violations.length > 0) {
     console.error(`[drift] enrichment dropped:`);
     for (const v of violations) console.error(`  ${v}`);

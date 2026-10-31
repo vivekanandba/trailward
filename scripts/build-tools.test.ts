@@ -3,12 +3,7 @@ import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown, buildIndiaMask, inIndia, isPlausibleSummit } from "./build-detect";
 import { isImplausibleTrek } from "./scrub-implausible";
-import {
-  fieldCounts,
-  driftViolations,
-  missingRouteFacts,
-  routeLosses,
-} from "./check-enrichment-drift";
+import { fieldCounts, driftViolations, curatedLosses } from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -223,40 +218,51 @@ describe("enrichment drift guard (spec 31)", () => {
     expect(bad[0]).toContain("bestSeason: 1000 → 400");
   });
 
-  it("counts curated photos only, so discovery's per-run photo churn is not an outage", () => {
+  it("names, per record and field, each curated route fact or photo that was lost", () => {
     const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
-    const counts = fieldCounts([
-      trek({ name: "A", tier: "curated", image: img }),
-      trek({ name: "B", tier: "discovery", image: img }),
-      trek({ name: "C", tier: "curated" }),
-    ]);
-    expect(counts.curatedImage).toBe(1);
-    expect(counts).not.toHaveProperty("image");
-    // All 13 curated photos lost, the incident, trips the guard.
-    expect(driftViolations({ curatedImage: 13 }, { curatedImage: 0 })).toHaveLength(1);
-  });
-
-  it("names, per record, each curated record that lost a route fact", () => {
-    // `run` fields are never carried stale (spec 10): one OSRM miss drops one record's.
     const c = (id: string, over: Record<string, unknown> = {}) =>
-      trek({ id, name: id, tier: "curated", distanceKm: 60, driveTimeMin: 90, ...over });
-    const never = c("never", { distanceKm: undefined }); // had none before either: not a loss
+      trek({
+        id,
+        name: id,
+        tier: "curated",
+        distanceKm: 60,
+        driveTimeMin: 90,
+        image: img,
+        ...over,
+      });
     const head = [
-      c("a", { distanceKm: undefined, driveTimeMin: undefined }),
-      c("b"),
+      c("a", { distanceKm: undefined, driveTimeMin: undefined }), // routed this run
+      c("b"), // loses its drive time: the totals match, the guard must not
+      c("half", { driveTimeMin: undefined }), // already short one; now loses the other
+      c("never", { distanceKm: undefined }), // never had one: not a loss
+      c("photo"),
+      trek({ id: "pin", name: "pin", tier: "discovery", image: img }), // promoted this run
       c("gone"),
-      never,
+      c("demoted"), // seed removed; discovery found the summit again
     ];
-    // a is routed this run and b loses its drive time: the totals match, the guard must not.
     const now = [
       c("a"),
       c("b", { driveTimeMin: undefined }),
+      c("half", { distanceKm: undefined, driveTimeMin: undefined }),
+      c("never", { distanceKm: undefined }),
+      c("photo", { image: undefined }),
+      c("pin", { distanceKm: undefined, driveTimeMin: undefined, image: undefined }),
       c("new", { distanceKm: undefined }),
-      never,
+      trek({ id: "demoted", name: "demoted", tier: "discovery" }),
     ];
-    expect(routeLosses(head, now)).toEqual(["b: lost driveTimeMin"]);
-    expect(missingRouteFacts([c("x", { distanceKm: undefined })]).get("x")).toEqual(["distanceKm"]);
-    expect(missingRouteFacts([trek({ id: "d", name: "D", tier: "discovery" })]).size).toBe(0);
+    expect(curatedLosses(head, now)).toEqual([
+      "b: lost driveTimeMin",
+      "half: lost distanceKm",
+      "photo: lost image",
+    ]);
+  });
+
+  it("does not count discovery photos, whose per-run churn is not an outage", () => {
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const d = (over: Record<string, unknown> = {}) =>
+      trek({ id: "d", name: "D", tier: "discovery", image: img, ...over });
+    expect(curatedLosses([d()], [d({ image: undefined })])).toEqual([]);
+    expect(fieldCounts([d()])).not.toHaveProperty("image");
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {

@@ -44,9 +44,10 @@ pipeline, commits changes, and lets the gated deploy publish them.
     route from the origin, not the summit), and the discovery-only signals `discoveryScore` and
     `estimatedDifficulty`. One removed from the seed, or not produced this run, is gone. A
     route-service hiccup would therefore drop road distances; the drift guard refuses a
-    refresh in which **any** curated record that had a road distance and drive time lacks
-    either (`routeLosses`, compared per record by id), since there are only 16 and a tolerance
-    would let five go. A new seed whose route failed is not a loss; it ships without one.
+    refresh in which **any** record curated before and after lacks a road distance, drive time
+    or photo it had (`curatedLosses`, per record and per field, no tolerance: there are only 16,
+    and a count would let one record's gain hide another's loss). A new seed or a pin promoted
+    this run is not a loss; one whose route failed ships without it.
   - **`place`** fields (terrain, land cover, gazetteer, hill features, trail, POIs, gallery)
     keep their previous value when this run produced none, **while the seed is within 120 m of
     where it was** (`CARRYOVER_KM`, `scripts/lib/carryover.ts`, the distance discovery uses for a
@@ -63,8 +64,10 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - **Given** a Wikipedia title that is now a disambiguation page, **when** the build reads it,
   **then** it takes nothing from it.
 - **Given** a committed `treks.json` that is not JSON, not an array, or has an entry that is
-  fails the dataset validation, **then** `build:data` refuses it naming the file, before any
-  network enrichment.
+  not an object with an id, **then** `build:data` refuses it naming the file and the entry's
+  index, before any network enrichment. A record that is merely invalid is not refused there:
+  the fold replaces or drops curated records, which is how `build:data` repairs one a tightened
+  rule rejects, and the folded output is validated in full before it is written.
 
 ## Interfaces & data contracts
 
@@ -95,8 +98,7 @@ of treks.json`.
   whoever last edited the cron, so the data simply stopped refreshing. Hence the fold, and the
   issue on failure. The same rerun also showed six curated photos vanishing because their
   Wikipedia lookups stopped returning one (Nandi Hills became a disambiguation page), which the
-  guard did not count. The fold now keeps them, and the guard counts curated photos
-  (`curatedImage`) so a bulk loss is caught (it tolerates up to 5 records, like every field).
+  guard did not count. The fold now keeps them, and the guard refuses any curated photo lost.
   Only curated ones: `build:discovery` re-fetches the other 181 photos best-effort every run,
   and that churn would turn the guard red weekly for no outage.
 
@@ -108,23 +110,25 @@ of treks.json`.
 - A forced validation failure causes a non-zero exit before any commit.
 - `scripts/build-data.test.ts` → `foldCurated`: non-curated records kept exactly; `place` fields
   carried; nothing carried across a corrected position; the photo dropped when the cited article
-  changes, and kept when the lookup answered without one; a `run` field (`permitRequired`) dropped when no longer given;
+  changes, and kept when the lookup answered without one or failed; a `run` field
+  (`permitRequired`) dropped when no longer given;
   key order kept; a removed seed dropped. `runBuildData`: the written file keeps every discovery
-  record; a non-JSON file, a non-array, a `null` entry and an incomplete record are each refused
-  by name before any enricher runs.
+  record; a non-JSON file, a non-array, and a `null` or id-less entry are each refused by name
+  and index before any enricher runs; a committed curated record the validator rejects is
+  repaired by the fold, not refused.
 - `scripts/sources/parsers.test.ts`: a disambiguation page yields nothing.
-- `scripts/build-tools.test.ts`: the drift guard counts curated photos only, fails on a bulk
-  curated photo loss, and `routeLosses` names each curated record that had both route facts and
-  now lacks one, per record, so a record routed this run cannot hide another that lost its
-  route.
+- `scripts/build-tools.test.ts`: `curatedLosses` names each route fact or photo a curated record
+  lost, per record and field: a record routed this run does not hide another's loss, one already
+  short a fact is caught losing the other, and a never-held field, a new record and a promoted
+  pin are not losses; discovery photos are not counted.
 - `scripts/report-failure.test.ts` (fake `gh`): opens an issue when none matches, comments on
   the exact-title match, ignores a title that merely contains the words, closes the issue on a
   later success, does nothing on success with none open or for a skipped run, files a cancelled
   run saying it was cancelled (not "failed"),
   reads every open issue through the paginated REST list (not the lagging search index),
-  ignores a pull request with the same title and an issue a person filed with it, closes every
-  duplicate on success, refuses no
-  title.
+  ignores a pull request with the same title and an issue a person filed with it (its own carry
+  a body marker, not a login nothing could confirm), closes every duplicate on success, refuses
+  no title.
 - `scripts/build-data.test.ts` also: a best season deleted from the seed is gone; a seed with
   none gets the rainfall-derived one this run, and the live enricher reads the committed grid; a
   promoted pin replaces the discovery record without its discovery score or estimated
