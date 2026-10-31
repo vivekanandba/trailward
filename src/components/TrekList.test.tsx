@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import TrekList from "./TrekList";
 
 const props = {
@@ -26,5 +26,39 @@ describe("TrekList loading state (spec 42 §E)", () => {
     expect(screen.getByRole("status")).toHaveTextContent("");
     // The exact attribute value resultsLoaded() waits for.
     expect(container.querySelector("#results")?.getAttribute("aria-busy")).toBe("false");
+  });
+});
+
+describe("TrekList empty state (spec 44 R11)", () => {
+  it("offers a button that widens the radius, as the advice says", () => {
+    const onWiden = vi.fn();
+    render(<TrekList {...props} loading={false} empty widenTo={200} onWiden={onWiden} />);
+    fireEvent.click(screen.getByRole("button", { name: "Widen to 200 km" }));
+    expect(onWiden).toHaveBeenCalledWith(200);
+  });
+
+  it("offers no widening at the largest radius", () => {
+    render(<TrekList {...props} loading={false} empty />);
+    expect(screen.queryByRole("button", { name: /^Widen to/ })).not.toBeInTheDocument();
+  });
+
+  it("does not claim the radius is empty when part of it failed to load", () => {
+    const onRetry = vi.fn();
+    render(
+      <TrekList
+        {...props}
+        loading={false}
+        empty
+        missingCells={2}
+        widenTo={200}
+        onRetry={onRetry}
+      />,
+    );
+    expect(screen.queryByText(/No treks match/)).not.toBeInTheDocument();
+    expect(screen.getByText(/2 parts of this area could not load/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(onRetry).toHaveBeenCalled();
+    // Widening would load MORE of what is failing; it is not offered here.
+    expect(screen.queryByRole("button", { name: /^Widen to/ })).not.toBeInTheDocument();
   });
 });

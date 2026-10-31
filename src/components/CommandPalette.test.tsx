@@ -88,4 +88,22 @@ describe("CommandPalette (spec 38)", () => {
     fireEvent.change(await screen.findByRole("combobox"), { target: { value: "zzzzz" } });
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/nothing matches/i));
   });
+
+  it("offers the nearest names as buttons when nothing matches (spec 44 R12)", async () => {
+    const { onChoose } = setup();
+    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "skandagri" } });
+    const near = await screen.findByRole("button", { name: "Skandagiri" });
+    expect(screen.getByRole("status")).toHaveTextContent(/did you mean/i);
+    fireEvent.click(near);
+    expect(onChoose).toHaveBeenCalledWith(INDEX[1]);
+  });
+
+  it("offers none when nothing is close: a guess is not an answer", async () => {
+    setup();
+    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "zzzzz" } });
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/nothing matches/i));
+    expect(
+      screen.queryByRole("button", { name: /Skandagiri|Nandi|Kumara/ }),
+    ).not.toBeInTheDocument();
+  });
 });

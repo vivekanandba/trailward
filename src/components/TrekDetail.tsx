@@ -304,6 +304,21 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
           >
             {trek.name}
           </h2>
+          {/^unnamed\b/i.test(trek.name) && (
+            // An invitation, not a gap (spec 44 R13): the naming flow of
+            // specs 28/29, offered where the missing name is noticed.
+            <p className="mt-1 text-xs text-trail-600 dark:text-slate-400">
+              No one has given this summit a name we know of yet.{" "}
+              <a
+                href={nameSuggestionUrl(trek)}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium underline"
+              >
+                Name this summit
+              </a>
+            </p>
+          )}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span
               className="rounded-full px-2 py-0.5 text-xs font-medium text-white"

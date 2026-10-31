@@ -16,6 +16,12 @@ interface TrekListProps {
   overflow: number;
   empty: boolean; // true when filters matched nothing (and not loading)
   onClearFilters(): void;
+  /** The next radius to offer when the list is empty; none at the largest. */
+  widenTo?: number;
+  onWiden?(km: number): void;
+  /** Map cells of this area that failed to load (spec 44 R11). */
+  missingCells?: number;
+  onRetry?(): void;
 }
 
 export default function TrekList({
@@ -27,6 +33,10 @@ export default function TrekList({
   overflow,
   empty,
   onClearFilters,
+  widenTo,
+  onWiden,
+  missingCells = 0,
+  onRetry,
 }: TrekListProps) {
   return (
     <>
@@ -57,13 +67,37 @@ export default function TrekList({
               </div>
             </li>
           ))}
-        {empty && (
+        {empty && missingCells > 0 && (
+          // An empty list after a failed fetch is not proof the radius is
+          // empty (spec 44 R11): say what happened instead.
+          <li className="px-4 py-8 text-center text-sm text-trail-500 dark:text-slate-400">
+            {missingCells === 1 ? "1 part" : `${missingCells} parts`} of this area could not load,
+            so this list may be missing peaks. Check your connection.
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-3 block w-full font-medium text-trail-700 underline hover:text-trail-900 dark:text-slate-300 dark:hover:text-slate-100"
+            >
+              Try again
+            </button>
+          </li>
+        )}
+        {empty && missingCells === 0 && (
           <li className="px-4 py-8 text-center text-sm text-trail-500 dark:text-slate-400">
             <MountainIcon
               className="mx-auto mb-2 text-3xl text-trail-300 dark:text-slate-600"
               aria-hidden
             />
             No treks match. Try widening the radius or clearing filters.
+            {widenTo !== undefined && onWiden && (
+              <button
+                type="button"
+                onClick={() => onWiden(widenTo)}
+                className="mt-3 block w-full font-medium text-trail-700 underline hover:text-trail-900 dark:text-slate-300 dark:hover:text-slate-100"
+              >
+                Widen to {widenTo} km
+              </button>
+            )}
             <button
               type="button"
               onClick={onClearFilters}

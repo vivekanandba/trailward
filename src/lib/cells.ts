@@ -58,18 +58,27 @@ const base = (): string => {
   return `${env?.BASE_URL ?? "/"}data/cells`;
 };
 
+export interface CellsReport {
+  treks: Trek[];
+  /** Index-listed cells this origin+radius needs. */
+  wanted: number;
+  /** Of those, how many could not be fetched this time. */
+  missing: number;
+}
+
 /**
  * Load every trek within reach of the origin+radius: index once, then the
  * intersecting non-empty cells in parallel. A cell that fails to fetch is
- * retried on the next call (it just isn't cached). Returns a flat list —
+ * retried on the next call (it just isn't cached), and is COUNTED: an empty
+ * list after a failed fetch is not proof the radius is empty (spec 44 R11).
  * `applyFilters` still does the exact radius cut.
  */
-export async function loadTreksAround(
+export async function loadCellsReport(
   lat: number,
   lng: number,
   radiusKm: number,
   getJson: FetchJson = defaultFetch,
-): Promise<Trek[]> {
+): Promise<CellsReport> {
   if (!indexCache) {
     indexCache = (await getJson(`${base()}/index.json`)) as CellIndex;
   }
@@ -83,14 +92,27 @@ export async function loadTreksAround(
         try {
           cellCache.set(k, (await getJson(`${base()}/${k}.json`)) as Trek[]);
         } catch {
-          // leave uncached → retried next call
+          // leave uncached → retried next call, and counted as missing below
         }
       }),
   );
-  return wanted.flatMap((k) => cellCache.get(k) ?? []);
+  return {
+    treks: wanted.flatMap((k) => cellCache.get(k) ?? []),
+    wanted: wanted.length,
+    missing: wanted.filter((k) => !cellCache.has(k)).length,
+  };
 }
 
-/** Test hook: drop session caches. */
+/** The treks alone, for callers that do not report gaps. */
+export async function loadTreksAround(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+  getJson: FetchJson = defaultFetch,
+): Promise<Trek[]> {
+  return (await loadCellsReport(lat, lng, radiusKm, getJson)).treks;
+}
+
 export function resetCellCache(): void {
   indexCache = null;
   cellCache.clear();
