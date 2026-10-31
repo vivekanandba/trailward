@@ -224,6 +224,16 @@ that implements each one names its check. R1 is enforced by the tests named unde
   one `console.info` naming the open data and the repository, with no counts that could
   disagree with what loaded; the app logs nothing else on load.
 
+- **R16 — "Been there" (row 19), approved with the instruction to finish spec 44.** A toggle
+  under a trek's title ticks it as climbed, on this device only: `src/lib/climbed.ts` keeps id →
+  the day first ticked in `localStorage`, with no account, no server and nothing shared. Every
+  read and write is guarded: missing, blocked, full or corrupt storage reads as nothing climbed,
+  and a write that was not kept says "Couldn't save that on this device" instead of pretending.
+  Re-ticking keeps the first day. The tick celebrates in answer to the press (600 ms, on the named
+  allow-list, stilled under reduced motion) with a 20 ms vibration where motion is not reduced;
+  reopening a ticked peak shows it ticked without the celebration. "Peaks I've been to" filters
+  the list and map to the ticked peaks, carried in the URL as `mine=1`.
+
 ## Constraints learned in review — for the requirements still to be written
 
 Not requirements. These are facts about today's code that review established, recorded so the PR
@@ -318,6 +328,10 @@ npx vitest run src/lib/cells.test.ts src/components/TrekList.test.tsx   # R11
 npx vitest run src/components/CommandPalette.test.tsx src/components/TrekDetail.test.tsx  # R12, R13
 npx vitest run src/components/OfflineNote.test.tsx src/lib/greeting.test.ts  # R14, R15
 npx playwright test e2e/blank.spec.ts && npm run e2e:static  # R10, R11, R14, R15 in a browser
+
+npx vitest run src/lib/climbed.test.ts src/lib/filters.test.ts src/lib/urlState.test.ts  # R16
+npx vitest run src/components/TrekDetail.test.tsx    # R16: the toggle, its date, its failure
+npx playwright test e2e/delight.spec.ts              # R16: survives a reload, the filter finds it
 ```
 
 ## Revisions

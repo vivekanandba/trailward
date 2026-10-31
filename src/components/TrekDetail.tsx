@@ -13,6 +13,7 @@ import { climateCellKey, driestMonths, wettestMonth, MONTHS } from "../lib/clima
 import { ExternalLinkIcon, XIcon } from "./icons";
 import { sunTimes, type SunTimes } from "../lib/sun";
 import { seasonSentence, sunSentence } from "../lib/voice";
+import { prefersReducedMotion } from "../lib/motion";
 
 // Mean monthly rainfall keyed by climate cell (spec 20) — stored once per cell
 // rather than duplicated onto every trek.
@@ -22,6 +23,70 @@ interface TrekDetailProps {
   trek: Trek;
   origin: Origin;
   onClose(): void;
+  /** The day this peak was ticked on this device, if it was (spec 44 R16). */
+  climbedOn?: string;
+  /** Tick or untick; returns whether this device kept the change. */
+  onToggleClimbed?(on: boolean): boolean;
+}
+
+/** "31 Oct 2026" from "2026-10-31". */
+function longDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+// "Been there" (spec 44 R16): a toggle kept on this device only. The tick
+// celebrates in answer to a press (600 ms, allowed by name in the motion
+// contract), with a short vibration where the person has not asked for less
+// motion; reopening a ticked peak shows it ticked, without the celebration.
+function BeenThere({
+  climbedOn,
+  onToggle,
+}: {
+  climbedOn?: string;
+  onToggle(on: boolean): boolean;
+}) {
+  const [celebrate, setCelebrate] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const on = climbedOn !== undefined;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        aria-pressed={on}
+        onClick={() => {
+          const kept = onToggle(!on);
+          setFailed(!kept);
+          if (kept && !on) {
+            setCelebrate((n) => n + 1);
+            if (!prefersReducedMotion()) navigator.vibrate?.(20);
+          }
+        }}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium ${
+          on
+            ? "border-trail-600 bg-trail-600 text-white"
+            : "border-trail-300 text-trail-700 hover:bg-trail-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+        }`}
+      >
+        <span key={celebrate} aria-hidden className={celebrate > 0 && on ? "climbed-in" : ""}>
+          {on ? "✓" : "○"}
+        </span>
+        Been there
+      </button>
+      {on && (
+        <span className="text-xs text-trail-600 dark:text-slate-400">
+          Ticked on {longDate(climbedOn)}, on this device.
+        </span>
+      )}
+      <span role="status" className="text-xs text-amber-800 dark:text-amber-200">
+        {failed ? "Couldn't save that on this device." : ""}
+      </span>
+    </div>
+  );
 }
 
 // Readable labels for the OSM-derived summit features (spec 22).
@@ -285,7 +350,13 @@ function printDate(): string {
   });
 }
 
-export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
+export default function TrekDetail({
+  trek,
+  origin,
+  onClose,
+  climbedOn,
+  onToggleClimbed,
+}: TrekDetailProps) {
   const [weather, setWeather] = useState<WeatherNow | null>(null);
   const [weatherFailed, setWeatherFailed] = useState(false);
   // Hide the hero if the image URL 404s so a dead photo never leaves a gap.
@@ -414,6 +485,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
               </a>
             </p>
           )}
+          {onToggleClimbed && <BeenThere climbedOn={climbedOn} onToggle={onToggleClimbed} />}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span
               className="rounded-full px-2 py-0.5 text-xs font-medium text-white"

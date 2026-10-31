@@ -438,3 +438,71 @@ describe("TrekDetail sun and season (spec 44 R6, R7)", () => {
     expect(screen.queryByText(/^Now is/)).not.toBeInTheDocument();
   });
 });
+
+describe("TrekDetail been there (spec 44 R16)", () => {
+  it("offers a toggle that is off for a peak not yet ticked", () => {
+    render(
+      <TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} onToggleClimbed={vi.fn()} />,
+    );
+    expect(screen.getByRole("button", { name: "Been there" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("says when it was ticked, and celebrates only in answer to the press", () => {
+    const onToggle = vi.fn(() => true);
+    const { rerender } = render(
+      <TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} onToggleClimbed={onToggle} />,
+    );
+    expect(document.querySelector(".climbed-in")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Been there" }));
+    expect(onToggle).toHaveBeenCalledWith(true);
+    rerender(
+      <TrekDetail
+        trek={baseTrek}
+        origin={origin}
+        onClose={vi.fn()}
+        onToggleClimbed={onToggle}
+        climbedOn="2026-10-31"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Been there" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Ticked on 31 Oct 2026, on this device.")).toBeInTheDocument();
+    expect(document.querySelector(".climbed-in")).not.toBeNull();
+  });
+
+  it("does not celebrate a peak that was already ticked when the panel opened", () => {
+    render(
+      <TrekDetail
+        trek={baseTrek}
+        origin={origin}
+        onClose={vi.fn()}
+        onToggleClimbed={vi.fn()}
+        climbedOn="2026-01-02"
+      />,
+    );
+    expect(document.querySelector(".climbed-in")).toBeNull();
+  });
+
+  it("says so when the device would not keep it, instead of pretending", () => {
+    render(
+      <TrekDetail
+        trek={baseTrek}
+        origin={origin}
+        onClose={vi.fn()}
+        onToggleClimbed={() => false}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Been there" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Couldn't save that on this device.");
+  });
+
+  it("offers no toggle where nothing can keep it", () => {
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Been there" })).not.toBeInTheDocument();
+  });
+});

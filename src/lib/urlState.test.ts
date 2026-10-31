@@ -31,6 +31,7 @@ describe("urlState", () => {
       nightOnly: true,
       hiddenGemsOnly: true,
       namedOnly: true,
+      climbedOnly: true,
       minReliefM: 150,
       query: "hill",
     };

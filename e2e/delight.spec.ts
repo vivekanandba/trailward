@@ -123,3 +123,18 @@ test("a new origin flies there and settles on its peaks (spec 44 R9)", async ({ 
   // Where the motion ends, not the motion: the area card speaks of Pune.
   await expect(page.getByTestId("region-sentence")).toContainText("around Pune");
 });
+
+test("been there: a tick survives a reload and the filter finds it (spec 44 R16)", async ({
+  page,
+}) => {
+  await page.goto("/?sel=skandagiri");
+  const toggle = page.getByRole("button", { name: "Been there" });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText(/^Ticked on .*, on this device\.$/)).toBeVisible();
+
+  await page.goto("/?mine=1");
+  await resultsLoaded(page);
+  await expect(page.locator("#results").getByText("Skandagiri")).toBeVisible();
+  await expect(page.locator("#results li button")).toHaveCount(1);
+});
