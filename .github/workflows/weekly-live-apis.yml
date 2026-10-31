@@ -49,13 +49,15 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # A red scheduled run emails only whoever last edited the cron (spec 10).
+  # A red scheduled run emails only whoever last edited the cron (spec 10):
+  # file a failure, close the issue on the next success.
   report-failure:
     needs: live
-    if: failure()
+    if: always()
     permissions:
       contents: read
       issues: write
     uses: ./.github/workflows/report-failure.yml
     with:
       title: "Weekly live API check is failing"
+      result: ${{ needs.live.result }}

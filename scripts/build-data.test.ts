@@ -177,11 +177,40 @@ describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)
   });
 
   it("keeps each record's key order, so a refresh does not rewrite unchanged records", () => {
-    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [prevCurated]);
-    expect(Object.keys(out[0]).slice(0, 2)).toEqual(["id", "name"]);
-    expect(Object.keys(out[0]).filter((k) => k in prevCurated)).toEqual(
-      Object.keys(prevCurated).filter((k) => k in out[0]),
-    );
+    // mergeTrek emits enricher keys in its own order: put them BEFORE the seed
+    // keys here, so a plain spread would visibly reorder the record.
+    const { id, name, ...rest } = BANGALORE_SEED[0];
+    const built = {
+      image: { url: "u", attribution: "a" },
+      distanceKm: 61,
+      id,
+      name,
+      ...rest,
+    } as Trek;
+    const prev = { ...prevCurated, image: { url: "u", attribution: "a" }, distanceKm: 60 };
+    const out = foldCurated([built], [prev]);
+    const shared = Object.keys(prev).filter((k) => k in out[0]);
+    expect(Object.keys(out[0]).slice(0, shared.length)).toEqual(shared);
+  });
+
+  it("keeps a best season build:climate baked onto a seed that states none", () => {
+    const { bestSeason: _drop, ...seed } = BANGALORE_SEED[0];
+    void _drop;
+    const out = foldCurated([seed as Trek], [{ ...prevCurated, bestSeason: "Nov–Feb" }]);
+    expect(out[0].bestSeason).toBe("Nov–Feb");
+  });
+
+  it("takes over a discovery pin a new seed promotes, instead of duplicating its id", () => {
+    const pin = {
+      ...discovery,
+      id: BANGALORE_SEED[0].id,
+      lat: BANGALORE_SEED[0].lat,
+      lng: BANGALORE_SEED[0].lng,
+    };
+    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [pin]);
+    expect(out.filter((t) => t.id === pin.id)).toHaveLength(1);
+    expect(out[0].tier).toBe("curated");
+    expect(out[0].landCover).toBe("Grassland"); // baked for the same place
   });
 
   it("drops a curated record whose seed was removed, and adds a new one", () => {

@@ -1,8 +1,8 @@
-name: Report a failed scheduled run
+name: Report a scheduled run's outcome
 
-# Called by every scheduled workflow, as its own job that runs only when the
-# work failed (spec 10). It is a separate job so only this one holds an
-# issues-write token: the work's `npm ci` lifecycle scripts never see it.
+# Called by every scheduled workflow, as its own job after the work (spec 10):
+# a failure opens or comments on one issue, a later success closes it. It is a
+# separate job so the work job need not hold an issues-write token for this.
 on:
   workflow_call:
     inputs:
@@ -10,8 +10,13 @@ on:
         description: The issue title; matched exactly.
         required: true
         type: string
+      result:
+        description: The work job's result (needs.<job>.result).
+        required: true
+        type: string
 
 permissions:
+  contents: read # this job's own checkout of the script
   issues: write
 
 jobs:
@@ -22,9 +27,12 @@ jobs:
         with:
           sparse-checkout: scripts/report-failure.sh
           sparse-checkout-cone-mode: false
-      - name: Open or update the issue
+      - name: Open, update or close the issue
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: bash scripts/report-failure.sh "${{ inputs.title }}"
+          # Through env, never spliced into the script text.
+          TITLE: ${{ inputs.title }}
+          RESULT: ${{ inputs.result }}
+        run: bash scripts/report-failure.sh "$TITLE" "$RESULT"

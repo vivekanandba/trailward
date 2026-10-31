@@ -18,25 +18,31 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - **Given** a commit happens, **when** pushed to `main`, **then** the gated deploy workflow (09)
   runs and republishes only if data + tests pass.
 - **Given** `workflow_dispatch`, **when** triggered manually, **then** the same refresh runs.
-- **Given** a pipeline failure in any scheduled workflow (refresh, name suggestions, link check,
-  live API check), **when** the run ends, **then** it fails visibly, a separate job **opens or
-  comments on the one open issue with exactly that workflow's title**, and **no broken data is
-  committed**. Only that job holds an issues-write token.
+- **Given** any scheduled workflow (refresh, name suggestions, link check, live API check),
+  **when** its work job ends, **then** a separate `report-failure` job reports the result: a
+  **failure** opens, or comments on, the one open issue with exactly that workflow's title; a
+  later **success** closes it, naming the run that recovered; a cancelled or skipped run changes
+  nothing. A failed refresh commits no data. In refresh-data and weekly-links the work job holds
+  no issues-write token; apply-suggestions and weekly-live-apis hold one for their own work
+  (closing suggestion issues, filing drift).
 - **Given** the committed dataset, **when** `build:data` runs, **then** it replaces only the
   curated tier and keeps every other record exactly, because `build:discovery` reads that file
   as the previous dataset to preserve enrichment from.
 - **Given** a curated record, **then** each field is decided by its owner (`OWNER` in
   `scripts/build-data.ts`, a record over every key of `Trek`, so a new field does not compile
   until it is classified):
-  - **`run`** fields (everything the seed may state, including `highlights`, `elevationM` and
+  - **`run`** fields (what the seed may state, including `highlights`, `elevationM` and
     `permitRequired`, which an enricher may also fill) come from this run alone: the seed, then
     this run's enrichers. One removed from the seed is removed.
   - **`place`** fields (terrain, land cover, gazetteer, hill features, road distance and drive
-    time) keep their previous value when this run produced none, **while the seed is within
-    120 m of where it was**.
+    time, and `bestSeason`, which `build:climate` bakes onto a seed that states none) keep their
+    previous value when this run produced none, **while the seed is within 120 m of where it
+    was** (`CARRYOVER_KM`, the distance discovery uses for a rescanned summit).
   - **`sources`** (the photo) is kept on the same condition **and** only while the seed cites
     the same sources. A failed or changed lookup is not evidence the photo is gone; a different
     article is.
+- **Given** a new seed with the id of an existing discovery pin, **then** the curated record
+  replaces the pin, taking what was baked for that place, rather than duplicating the id.
 - **Given** a curated record, **then** its keys keep their previous order, so a refresh that
   changed nothing rewrites nothing.
 - **Given** a Wikipedia title that is now a disambiguation page, **when** the build reads it,
@@ -47,10 +53,13 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - `.github/workflows/refresh-data.yml` (`permissions: contents: write`): checkout → setup-node →
   `npm ci` → `npm run build:data` → `npm run build:discovery` → `npm run validate:data` → the
   drift guard (`check-enrichment-drift.ts`, spec 31) → `build:chunks` → commit-if-changed.
-- Every scheduled workflow ends with a `report-failure` job (`needs:` the work, `if: failure()`,
-  job-level `issues: write`) that calls `.github/workflows/report-failure.yml`, which runs
-  `scripts/report-failure.sh "<title>"` with `GH_REPO` set, so it works even when the failed step
-  was the checkout.
+- Commits authored by the bot identity `trailward-bot` with message `chore(data): weekly refresh
+of treks.json`.
+- Every scheduled workflow ends with a `report-failure` job (`needs:` the work, `if: always()`,
+  job-level `contents: read, issues: write`) that calls `.github/workflows/report-failure.yml`
+  with the work job's result. It runs `scripts/report-failure.sh "<title>" <result>` with
+  `GH_REPO` set, so it names the repo without relying on the work job's checkout, and passes the
+  title through `env`.
 - `runBuildData(io, file, seeds, origin, enrichers)` is the whole `build:data` run against a
   filesystem; `foldCurated(built, existing)` is its pure fold.
 
@@ -84,7 +93,12 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - `scripts/sources/parsers.test.ts`: a disambiguation page yields nothing.
 - `scripts/build-tools.test.ts`: the drift guard counts `image` and fails on a bulk photo loss.
 - `scripts/report-failure.test.ts` (fake `gh`): opens an issue when none matches, comments on
-  the exact-title match, ignores a title that merely contains the words, refuses no title.
+  the exact-title match, ignores a title that merely contains the words, closes the issue on a
+  later success, does nothing on success with none open or for a cancelled or skipped run,
+  narrows the lookup with an `in:title` search, refuses no title.
+- `scripts/build-data.test.ts` also: a best season `build:climate` baked survives; a seed that
+  promotes a discovery pin replaces it; key order holds even when the built record's keys come
+  in a different order.
 - After merge: dispatch the refresh and read back a green run (CON-VER-003).
 
 ## Out of scope

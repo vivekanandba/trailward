@@ -17,6 +17,7 @@ function fakeGh(openIssues: { number: number; title: string }[]): void {
     join(dir, "gh"),
     `#!/usr/bin/env bash
 if [ "$1 $2" = "issue list" ]; then
+  printf '%s\\n' "$*" > "${dir}/list-args"
   # Apply the --jq filter the script passes, as gh would.
   for ((i=1; i<=$#; i++)); do if [ "\${!i}" = "--jq" ]; then j=$((i+1)); q="\${!j}"; fi; done
   jq -r "$q" "${dir}/issues.json"
@@ -28,8 +29,8 @@ printf '%s\\n' "$*" >> "${dir}/calls"
   chmodSync(join(dir, "gh"), 0o755);
 }
 
-function run(title: string): string {
-  execFileSync("bash", [script, title], {
+function run(title: string, result = "failure"): string {
+  execFileSync("bash", [script, title, result], {
     env: {
       ...process.env,
       PATH: `${dir}:${process.env.PATH}`,
@@ -65,6 +66,30 @@ describe("report-failure.sh", () => {
   it("does not comment on an issue whose title merely contains the words", () => {
     fakeGh([{ number: 3, title: "Weekly data refresh is failing for Mysore pins" }]);
     expect(run("Weekly data refresh is failing")).toMatch(/^issue create /);
+  });
+
+  it("closes the open issue when a later run succeeds", () => {
+    fakeGh([{ number: 7, title: "Weekly data refresh is failing" }]);
+    expect(run("Weekly data refresh is failing", "success")).toMatch(/^issue close 7 --comment /);
+  });
+
+  it("does nothing on success when no issue is open", () => {
+    fakeGh([]);
+    expect(run("Weekly data refresh is failing", "success")).toBe("");
+  });
+
+  it("does nothing for a cancelled or skipped run, which is not a verdict", () => {
+    fakeGh([{ number: 7, title: "Weekly data refresh is failing" }]);
+    expect(run("Weekly data refresh is failing", "cancelled")).toBe("");
+    expect(run("Weekly data refresh is failing", "skipped")).toBe("");
+  });
+
+  it("narrows the lookup with a title search, so it is not limited to the newest 200 issues", () => {
+    fakeGh([]);
+    run("Weekly data refresh is failing");
+    expect(readFileSync(join(dir, "list-args"), "utf8")).toContain(
+      'in:title "Weekly data refresh is failing"',
+    );
   });
 
   it("refuses to run without a title", () => {
