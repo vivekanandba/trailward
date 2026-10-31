@@ -218,6 +218,11 @@ describe("enrichment drift guard (spec 31)", () => {
     expect(bad[0]).toContain("bestSeason: 1000 → 400");
   });
 
+  it("counts photos, so a refresh that drops them is caught", () => {
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    expect(fieldCounts([trek({ name: "A", image: img }), trek({ name: "B" })]).image).toBe(1);
+  });
+
   it("tolerates single-record wobble on tiny hand-curated fields", () => {
     // heritage 2 → 1 is a 50% relative drop but only one record — not a failure.
     expect(driftViolations({ heritage: 2 }, { heritage: 1 })).toEqual([]);
