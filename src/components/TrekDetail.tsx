@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { HillFeature, Origin, Trek } from "../lib/trek";
-import { distanceFrom } from "../lib/distance";
+import { distanceFrom, formatTrip, tripDistance } from "../lib/distance";
 import { difficultyColor, difficultyLabel } from "../lib/difficulty";
 import { googleMapsDirectionsUrl } from "../lib/directions";
 import { getWeather, type WeatherNow } from "../lib/weather";
@@ -265,7 +265,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   const highlights = trek.highlights ?? live.highlights;
   const nearestTown = trek.nearestTown ?? live.nearestTown;
 
-  const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
+  const trip = formatTrip(tripDistance(origin, trek));
   // For discovery peaks with no curated difficulty, colour + label by the
   // terrain-estimated difficulty (kept honest with an "est." prefix).
   const shownDifficulty = trek.difficulty ?? trek.estimatedDifficulty;
@@ -437,7 +437,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
         )}
 
         <dl className="mt-3 divide-y divide-trail-50 dark:divide-slate-700">
-          <Fact label={`Distance from ${origin.name}`} value={`~${km} km`} />
+          <Fact label={`Distance from ${origin.name}`} value={trip} />
           <Fact label="Elevation" value={trek.elevationM ? `${trek.elevationM} m` : undefined} />
           <Fact label="Best season" value={trek.bestSeason} />
           <Fact

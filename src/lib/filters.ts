@@ -1,6 +1,6 @@
 // Pure, framework-free filtering core (spec 05). The map, list, and count all
 // derive from applyFilters so they can never disagree.
-import { distanceFrom } from "./distance";
+import { tripDistance } from "./distance";
 import type { Difficulty, Origin, Trek, TrekType } from "./trek";
 
 export interface FilterState {
@@ -31,10 +31,10 @@ export const DEFAULT_FILTERS: FilterState = {
   namedOnly: false,
 };
 
-// Distance from the origin: prefer the precomputed road distance, fall back to
-// straight-line haversine when the pipeline didn't supply one (e.g. discovery).
+// Distance from the origin: the road distance only from the origin it was
+// measured from, otherwise the straight line (spec 05).
 function distanceKmOf(origin: Origin, trek: Trek): number {
-  return trek.distanceKm ?? distanceFrom(origin, trek);
+  return tripDistance(origin, trek).km;
 }
 
 // "2–3", "3-4 h", "5" → upper bound as a number (NaN if unparseable).
