@@ -23,6 +23,9 @@ const FIELDS = [
   "protectedArea",
   "heritage",
   "image", // a curated photo lost to a source that changed shape (spec 10)
+  // A route-service outage drops every curated road distance (they are `run`
+  // fields, never carried stale), and this refuses that commit (spec 10).
+  "distanceKm",
 ] as const;
 
 const TOLERANCE = 0.02; // fraction each count may drop before this fails

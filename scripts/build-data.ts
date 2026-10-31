@@ -165,8 +165,11 @@ const OWNER: Record<keyof Trek, Owner> = {
 // distance discovery uses to recognise a rescanned summit (spec 27).
 const SAME_PLACE_KM = CARRYOVER_KM;
 
+// The previous record is not validated yet: a missing `sources` must read as
+// "different", not crash the fold before validation can name the record.
+const sourcesOf = (t: Trek): string[] => (Array.isArray(t.sources) ? [...t.sources].sort() : []);
 const sameSources = (a: Trek, b: Trek): boolean =>
-  JSON.stringify([...a.sources].sort()) === JSON.stringify([...b.sources].sort());
+  JSON.stringify(sourcesOf(a)) === JSON.stringify(sourcesOf(b));
 
 /** `next`'s fields, in `prev`'s key order (then any new keys), so a refresh diffs cleanly. */
 function inKeyOrderOf(prev: Trek, next: Record<string, unknown>): Trek {
