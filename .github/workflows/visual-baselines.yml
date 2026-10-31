@@ -19,10 +19,7 @@ permissions:
 
 jobs:
   baselines:
-    # Pinned, not ubuntu-latest: that moved to 26.04, where Playwright 1.60
-    # cannot install its browser deps, and every e2e job failed (spec 42 §E).
-    # Moving off 24.04 means re-rendering every visual baseline there.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
         with:
@@ -35,7 +32,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ env.ImageOS }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       # Both suites carry screenshots: visual.spec.ts covers the app states,
       # static.spec.ts the generated pages served by `vite preview` (spec 42 §C).

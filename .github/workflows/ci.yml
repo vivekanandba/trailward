@@ -66,10 +66,7 @@ jobs:
       - run: npm run coverage
 
   e2e:
-    # Pinned, not ubuntu-latest: that moved to 26.04, where Playwright 1.60
-    # cannot install its browser deps, and every e2e job failed (spec 42 §E).
-    # Moving off 24.04 means re-rendering every visual baseline there.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -81,7 +78,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ env.ImageOS }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       # App projects only (desktop chromium + Pixel-7). The static-surface
       # project needs a full production build and runs as its own job, so a
@@ -101,10 +98,7 @@ jobs:
     # The generated crawl surface (spec 35): trek pages, robots, sitemap,
     # served by `vite preview` from a real production build at the real base
     # path. Separate job because it pays for that build.
-    # Pinned, not ubuntu-latest: that moved to 26.04, where Playwright 1.60
-    # cannot install its browser deps, and every e2e job failed (spec 42 §E).
-    # Moving off 24.04 means re-rendering every visual baseline there.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -115,7 +109,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ env.ImageOS }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e -- --project=static
       - uses: actions/upload-artifact@v4

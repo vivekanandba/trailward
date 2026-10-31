@@ -86,7 +86,8 @@ A journey test asserts the user's goal was achievable, not that a particular but
 
 ## E. The suite must be deterministic (CON-VER-008)
 
-The e2e jobs share this VM with every other project's CI, so load is normal, not exceptional.
+Load is normal, not exceptional: the local gate runs on a VM shared with every other project's
+CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are not idle either).
 
 - **Wait for loading by state.** Waiting for the "Loading peaks" status to detach passed before
   React had rendered it at all, so tests raced the cell load and failed 1 run in 6 at a load
@@ -113,15 +114,22 @@ The e2e jobs share this VM with every other project's CI, so load is normal, not
 - **Every Playwright job runs on one pinned image, never `ubuntu-latest`.** On 2026-10-31
   `ubuntu-latest` had become 26.04, where Playwright 1.60 cannot install its browser
   dependencies: every PR's e2e jobs, the deploy's e2e gate and the baseline generator failed
-  with no change in this repo. They now run on `ubuntu-24.04`, the image the committed
-  screenshot baselines were rendered on, and `scripts/workflows.test.ts` fails if any of them
-  moves to a `latest` label or off the image the others use. Moving image means regenerating the
+  with no change in this repo. The five Playwright jobs run on `ubuntu-24.04`, and
+  `scripts/workflows.test.ts` names them and fails if any is on a `latest` label or on a
+  different image from the others. The browser cache is keyed on the image (`ImageOS`), so a
+  move does not restore browsers built for another one. Moving image means regenerating the
   baselines there (`visual-baselines.yml`) in the same PR.
+  - **Known limit:** `ubuntu-24.04` is a label, and GitHub updates its image weekly. A font or
+    freetype change there can still shift the baselines. The Playwright container
+    (`mcr.microsoft.com/playwright:v<lockfile>-noble`) would pin that too, but every baseline
+    would have to be re-rendered in it, and the local gate on the fleet VM would then no longer
+    render like CI. So the label is the choice for now, and a baseline failure across every
+    screenshot at once is the first sign the image moved.
 - **The baselines lagged the app inside the tolerance.** They showed the shortcut hint as `⌘K`
   while Linux has rendered `Ctrl K` since spec 38, and the 1% pixel tolerance hid it until an
-  unrelated text change pushed the same screenshot over. A baseline refresh fixes it; the lesson
-  is that a tolerance absorbs drift silently, so a refresh after each intentional UI change is
-  part of that change.
+  unrelated text change pushed the same screenshot over. This PR regenerates them. Refreshing the
+  baselines after each intentional UI change is **review-enforced**: no check can tell an
+  intended UI change from drift, and the tolerance absorbs drift silently.
 
 ## Edge cases & error states
 
