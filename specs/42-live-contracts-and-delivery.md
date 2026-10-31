@@ -118,10 +118,11 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   jobs, plus the build that produces the shipped artefact) and the baseline generator in
   `visual-baselines.yml` run on `ubuntu-24.04`. Each Playwright job installs browsers through one
   composite action, `.github/actions/playwright-setup`, which keys the browser cache on the OS
-  release, read in a step (`$ImageOS`): in an expression `env.ImageOS` is empty, which had made
-  every key `playwright--<hash>`. The weekly `ImageVersion` is deliberately not in the key; the
-  browser build does not depend on it, and including it discarded the cache every week. Moving
-  image means regenerating the baselines there in the same PR.
+  release read from `/etc/os-release` in a step. On main the key was `playwright-${{ runner.os }}`,
+  which is `Linux` on 22.04, 24.04 and 26.04 alike, so a move restored browsers built for another
+  release; `env.ImageOS` cannot fix that, being empty in an expression, and `ImageVersion` moves
+  weekly and would discard the cache. Moving image means regenerating the baselines there in the
+  same PR.
   - **Known limit:** `ubuntu-24.04` is a label, and GitHub updates its image weekly. A font or
     freetype change there can still shift the baselines. The Playwright container
     (`mcr.microsoft.com/playwright:v<lockfile>-noble`) would pin that too. It is not used yet
@@ -137,12 +138,20 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   fixed it: `--update-snapshots` defaults to `changed`, rewriting only screenshots that fail, so
   it reported "Baselines already match" over the stale image. The workflow now passes `=all`,
   in the suite's two passes (app projects, then the static project, which starves the dev
-  server when they share one). `npm run e2e:update` locally keeps the default, so it never
-  rewrites passing baselines with the fleet VM's rendering, and runs the same two passes;
-  baselines come from the workflow.
+  server when they share one). There is no local update command: one rewrote failing screenshots
+  with the fleet VM's rendering, and a failing local run already leaves its actual and diff
+  images in `test-results/`. Baselines come only from the workflow.
   Refreshing them after each intentional UI change is **review-enforced**: no check can tell an
   intended UI change from drift. `=all` may also commit antialiasing-only rewrites; that churn is
   the cost of never keeping a stale baseline.
+- **CI runs the projects it says it runs.** The jobs called `npm run e2e -- --project=…`, but
+  npm appends extra arguments only to the last command of a compound script, so the "app" job
+  ran the app suite and then static mixed with the app projects in one pass, the starvation
+  above, and the static job ran the whole app suite first (since spec 42's #75). They now call
+  `npm run e2e:app` and `npm run e2e:static`. And Playwright starts every `webServer` it is
+  given whatever `--project` asked for, so each app-only pass paid for a full production build;
+  the config now starts only the servers the requested projects use
+  (`scripts/lib/playwrightServers.ts`).
 - **A flake fails the run.** CI retried a failed test twice and reported it green, so a flake
   was invisible. CI now retries once, so the failure leaves a trace, and `failOnFlakyTests`
   fails the run when a test passed only on retry (CON-VER-008).
@@ -175,8 +184,11 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   `ubuntu-NN.NN` image, the same one, as is every job of `ci.yml` and `deploy.yml`; each sets up
   browsers only through the shared action, after its checkout; the action reads `$ImageOS` in a
   step before every cache step and keys on its output, never `env.` or `ImageVersion`; the
-  baseline generator rewrites with `=all` in two passes; `e2e:update` does not; CI fails on a
-  flaky test; the expect bound is at least 15 s. Each assertion was mutated and failed.
+  baseline generator rewrites with `=all` in two passes; no package script updates snapshots; no
+  workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least
+  15 s and no `timeout:` anywhere in e2e is tighter. Each assertion was mutated and failed.
+- `scripts/lib/playwrightServers.test.ts`: both `--project` spellings; app projects start only
+  the dev server, static only the preview, all or a mix start both.
 
 ## Out of scope
 

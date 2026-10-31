@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { load } from "js-yaml";
 
@@ -98,8 +98,10 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
       .map((s, i) => [s, i] as const)
       .filter(([s]) => s.uses?.startsWith("actions/cache"));
     expect(caches.length).toBeGreaterThan(0);
-    expect(steps[image]?.run).toMatch(/\$\{ImageOS/);
-    expect(steps[image]?.run).not.toMatch(/ImageVersion/); // weekly; would discard the cache
+    // /etc/os-release works on any Linux runner; ImageOS exists only on
+    // GitHub's images, and ImageVersion moves weekly (it discarded the cache).
+    expect(steps[image]?.run).toMatch(/\/etc\/os-release/);
+    expect(steps[image]?.run).not.toMatch(/ImageVersion/);
     for (const [cache, i] of caches) {
       expect(i).toBeGreaterThan(image);
       expect(String(cache.with?.key)).toContain("${{ steps.image.outputs.os }}");
@@ -121,14 +123,26 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     expect(runs.find((r) => /--project=static/.test(r))).not.toMatch(/--project=(chromium|mobile)/);
   });
 
-  it("the local update command never rewrites passing baselines with local rendering", () => {
-    // The fleet VM renders differently from the pinned CI image; =all there
-    // would overwrite every committed baseline with local fonts.
+  it("there is no local update command: baselines come only from the CI workflow", () => {
+    // A local update rewrites failing screenshots with the fleet VM's rendering;
+    // a failing run already leaves its actual and diff images in test-results/.
     const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
-    // Either spelling the CLI accepts: --update-snapshots=all or ... all.
-    expect(pkg.scripts["e2e:update"]).not.toMatch(/--update-snapshots[=\s]+all\b/);
+    const updating = Object.entries(pkg.scripts).filter(([, cmd]) =>
+      /--update-snapshots|-u\b/.test(cmd),
+    );
+    expect(updating.map(([name]) => name)).toEqual([]);
+  });
+
+  it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {
+    // npm appends extra arguments only to the LAST command of a compound
+    // script: `npm run e2e -- --project=static` ran the app suite, then static
+    // mixed with the app projects in one pass.
+    const passing = jobs.filter(({ job }) =>
+      (job.steps ?? []).some((st) => /npm run e2e\s+--/.test(st.run ?? "")),
+    );
+    expect(passing.map((j) => j.id)).toEqual([]);
   });
 });
 
@@ -148,20 +162,19 @@ describe("the suite cannot hide a flake (spec 42 §E, CON-VER-008)", () => {
     expect(Number(block?.replace(/_/g, ""))).toBeGreaterThanOrEqual(15_000);
   });
 
-  it("no explicit assertion bound in e2e is tighter than that default", () => {
-    const dir = resolve(__dirname, "../e2e");
-    const tight = readdirSync(dir)
-      .filter((f) => f.endsWith(".spec.ts"))
-      .flatMap((f) =>
-        [
-          ...readFileSync(resolve(dir, f), "utf8").matchAll(
-            /expect\([\s\S]{0,200}?\{\s*timeout:\s*([\d_]+)\s*\}/g,
-          ),
-        ]
-          .map((m) => Number(m[1].replace(/_/g, "")))
-          .filter((ms) => ms < 15_000)
-          .map((ms) => `${f}: ${ms}`),
-      );
+  it("no explicit bound anywhere in e2e is tighter than that default", () => {
+    // Every `timeout: N` in the e2e tree: assertions, expect.poll, waitFor.
+    const walk = (dir: string): string[] =>
+      readdirSync(dir).flatMap((n) => {
+        const p = resolve(dir, n);
+        return statSync(p).isDirectory() ? walk(p) : p.endsWith(".ts") ? [p] : [];
+      });
+    const tight = walk(resolve(__dirname, "../e2e")).flatMap((f) =>
+      [...readFileSync(f, "utf8").matchAll(/\btimeout:\s*([\d_]+)/g)]
+        .map((m) => Number(m[1].replace(/_/g, "")))
+        .filter((ms) => ms < 15_000)
+        .map((ms) => `${f}: ${ms}`),
+    );
     expect(tight).toEqual([]);
   });
 });

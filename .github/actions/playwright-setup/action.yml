@@ -6,12 +6,12 @@ description: >-
 runs:
   using: composite
   steps:
-    # The runner's OS release is a shell variable, not an expression context
-    # (`env.ImageOS` is empty in an expression), so read it in a step. Not
-    # ImageVersion: that moves weekly and the browser build does not depend on it.
+    # Key the browser cache on the OS release, read from /etc/os-release in a
+    # step: it works on any Linux runner, hosted or self-hosted (ImageOS is set
+    # only on GitHub's images), and an expression cannot read the shell.
     - id: image
       shell: bash
-      run: echo "os=${ImageOS:?ImageOS is not set on this runner}" >> "$GITHUB_OUTPUT"
+      run: . /etc/os-release && echo "os=${ID}-${VERSION_ID}" >> "$GITHUB_OUTPUT"
     - uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright

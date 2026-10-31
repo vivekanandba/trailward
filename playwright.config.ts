@@ -1,10 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
+import { serversFor } from "./scripts/lib/playwrightServers";
 
 // E2E specs live in e2e/. They boot the Vite dev server and drive the real app.
 // visual.spec.ts additionally diffs committed linux screenshot baselines
-// (spec 33). Regenerate them with the "Update visual baselines" workflow,
-// which renders on the pinned CI image; `npm run e2e:update` locally rewrites
-// only failing screenshots, with this machine's font rendering (spec 42 §E).
+// (spec 33). They come only from the "Update visual baselines" workflow, which
+// renders on the pinned CI image (spec 42 §E); a failing local run leaves its
+// actual and diff images in test-results/ to see what changed.
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -70,17 +71,27 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:4173/trailward/" },
     },
   ],
+  // Only the servers the requested projects use: Playwright starts every one
+  // listed, and an app-only pass paid for a full production build (spec 42 §E).
   webServer: [
-    {
-      command: "npm run dev",
-      url: "http://localhost:5173/trailward/",
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command: "npm run build && npx vite preview --port 4173",
-      url: "http://localhost:4173/trailward/",
-      reuseExistingServer: !process.env.CI,
-      timeout: 180_000, // a full build: sitemap + vite + 3,886 trek pages
-    },
+    ...(serversFor(process.argv).includes("dev")
+      ? [
+          {
+            command: "npm run dev",
+            url: "http://localhost:5173/trailward/",
+            reuseExistingServer: !process.env.CI,
+          },
+        ]
+      : []),
+    ...(serversFor(process.argv).includes("preview")
+      ? [
+          {
+            command: "npm run build && npx vite preview --port 4173",
+            url: "http://localhost:4173/trailward/",
+            reuseExistingServer: !process.env.CI,
+            timeout: 180_000, // a full build: sitemap + vite + 3,886 trek pages
+          },
+        ]
+      : []),
   ],
 });

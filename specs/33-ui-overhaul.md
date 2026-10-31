@@ -84,7 +84,7 @@ screenshot suite locks the finished UI against regression.
   mocked mobile variant.
 - Visual: `e2e/visual.spec.ts` — 6 states × 2 projects = 12 committed linux baselines
   (`e2e/__screenshots__/`), deterministic stubs (flat committed tiles, fixed weather, aborted
-  enrichment hosts), linux-only skip guard, `e2e:update` npm script, `maxDiffPixelRatio: 0.01`,
+  enrichment hosts), linux-only skip guard, `maxDiffPixelRatio: 0.01`,
   `contextOptions.reducedMotion` suite-wide; CI uploads `test-results/` on every outcome.
   Gate proven: a one-line cluster-colour change fails at 3% diff; two consecutive clean runs
   pass byte-identical.
@@ -96,8 +96,8 @@ Font rasterization differs between a local container and the GitHub runner
 too large to absorb with tolerance without blinding the gate, and not a real
 regression. Baselines are therefore produced by
 `.github/workflows/visual-baselines.yml` (`workflow_dispatch`) running on the
-same image that verifies them, and committed by the bot. `npm run e2e:update`
-remains useful locally for seeing what changed; it is not the source of truth.
+same image that verifies them, and committed by the bot. There is no local update command
+(spec 42 §E); a failing local run leaves its actual and diff images in `test-results/`.
 
 ## Out of scope
 

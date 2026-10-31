@@ -4,8 +4,9 @@
  * third-party APIs are stubbed deterministic (helpers/deterministic.ts);
  * `reducedMotion: "reduce"` in the shared config collapses transitions.
  *
- * Regenerate with the "Update visual baselines" workflow, which renders on the
- * pinned CI image (spec 42 §E); `npm run e2e:update` locally shows what changed.
+ * Baselines come only from the "Update visual baselines" workflow, which renders
+ * on the pinned CI image (spec 42 §E). A failing local run leaves its actual and
+ * diff images in test-results/.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { deterministicPage, mapSettled, resultsLoaded } from "./helpers/deterministic";

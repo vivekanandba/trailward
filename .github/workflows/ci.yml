@@ -78,7 +78,9 @@ jobs:
       # App projects only (desktop chromium + Pixel-7). The static-surface
       # project needs a full production build and runs as its own job, so a
       # smoke-test failure is never queued behind 3,886 generated pages.
-      - run: npm run e2e -- --project=chromium --project=mobile
+      # The named script, not `npm run e2e -- --project=…`: npm appends extra
+      # arguments only to the LAST command of the e2e script (spec 42 §E).
+      - run: npm run e2e:app
       # Failing visual diffs (-actual/-diff/-expected PNGs) and traces are
       # useless if discarded — surface them on every run outcome (spec 33).
       - uses: actions/upload-artifact@v4
@@ -102,7 +104,7 @@ jobs:
           cache: npm
       - run: npm ci
       - uses: ./.github/actions/playwright-setup
-      - run: npm run e2e -- --project=static
+      - run: npm run e2e:static
       - uses: actions/upload-artifact@v4
         if: always()
         with:
