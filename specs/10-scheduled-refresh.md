@@ -64,7 +64,8 @@ pipeline, commits changes, and lets the gated deploy publish them.
   **then** it takes nothing from it and says so (`disambiguation: true`), which the fold reads
   as "unknown", not "no photo".
 - **Given** a committed `treks.json` that is not JSON, not an array, or has an entry that is
-  not an object with an id, **then** `build:data` refuses it naming the file, before the fold.
+  not an object with an id, **then** `build:data` refuses it naming the file, before any
+  network enrichment.
 
 ## Interfaces & data contracts
 
@@ -119,7 +120,8 @@ of treks.json`.
   fact.
 - `scripts/report-failure.test.ts` (fake `gh`): opens an issue when none matches, comments on
   the exact-title match, ignores a title that merely contains the words, closes the issue on a
-  later success, does nothing on success with none open or for a cancelled or skipped run,
+  later success, does nothing on success with none open or for a skipped run, files a cancelled
+  run saying it was cancelled (not "failed"),
   reads every open issue through the paginated REST list (not the lagging search index),
   ignores a pull request with the same title, closes every duplicate on success, refuses no
   title.

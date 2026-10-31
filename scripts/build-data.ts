@@ -238,9 +238,8 @@ export async function runBuildData(
   origin: Origin,
   enrichers: Enrichers,
 ): Promise<{ curated: number; total: number }> {
-  const answered = new Set<string>();
-  const treks = await buildDataset(seeds, origin, enrichers, answered);
-  // A malformed file must read as invalid, by name, not crash the fold.
+  // A malformed file must read as invalid, by name, not crash the fold, and
+  // before minutes of rate-limited enrichment rather than after.
   const refuse = (why: string): never => {
     throw new Error(`[build-data] ${file} ${why} — refusing to fold into it`);
   };
@@ -259,6 +258,8 @@ export async function runBuildData(
   );
   if (bad >= 0) refuse(`has an entry at index ${bad} that is not a trek with an id`);
   const existing = entries as Trek[];
+  const answered = new Set<string>();
+  const treks = await buildDataset(seeds, origin, enrichers, answered);
   const ds = validateDataset(foldCurated(treks, existing, answered));
   if (!ds.ok) throw new Error(`[build-data] dataset invalid: ${ds.error}`);
   io.writeFile(file, JSON.stringify(ds.treks) + "\n");
