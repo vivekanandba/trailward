@@ -115,7 +115,7 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   `ubuntu-latest` had become 26.04, where Playwright 1.60 cannot install its browser
   dependencies: every PR's e2e jobs, the deploy's e2e gate and the baseline generator failed
   with no change in this repo. Every job of `ci.yml` and `deploy.yml` (four of them Playwright
-  jobs, plus the build that produces the shipped artefact) and the baseline generator in
+  jobs, plus the site build that is deployed) and the baseline generator in
   `visual-baselines.yml` run on `ubuntu-24.04`. Each Playwright job installs browsers through one
   composite action, `.github/actions/playwright-setup`, which keys the browser cache on the OS
   release read from `/etc/os-release` in a step. On main the key was `playwright-${{ runner.os }}`,
