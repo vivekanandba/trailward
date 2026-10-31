@@ -25,9 +25,11 @@ result="${2:-}"
 : "${GH_REPO:?report-failure: GH_REPO is required}"
 run="${RUN_URL:-(run URL unknown)}"
 
+# A cancelled run is filed like a failure, but said as what it was.
+what="failed"
 case "$result" in
   failure | success) ;;
-  cancelled) result=failure ;;
+  cancelled) result=failure what="was cancelled (a timeout, a runner that never came, or by hand)" ;;
   *) echo "report-failure: '$result' is not a verdict; nothing to report"; exit 0 ;;
 esac
 
@@ -44,7 +46,7 @@ if [ "$result" = "success" ]; then
     gh issue close "$n" --comment "Recovered: this scheduled run succeeded: $run"
   done
 elif [ -n "$number" ]; then
-  gh issue comment "$number" --body "This scheduled run failed: $run"
+  gh issue comment "$number" --body "This scheduled run $what: $run"
 else
-  gh issue create --title "$title" --body "This scheduled run failed: $run"
+  gh issue create --title "$title" --body "This scheduled run $what: $run"
 fi

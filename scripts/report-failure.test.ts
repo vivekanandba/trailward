@@ -89,7 +89,11 @@ describe("report-failure.sh", () => {
 
   it("files a cancelled run: a timeout or a missing runner is a failure nobody saw", () => {
     fakeGh([]);
-    expect(run("Weekly data refresh is failing", "cancelled")).toMatch(/^issue create /);
+    const out = run("Weekly data refresh is failing", "cancelled");
+    expect(out).toMatch(/^issue create /);
+    // ...said as what it was, not as a failure (CON-VER-005).
+    expect(out).toContain("This scheduled run was cancelled");
+    expect(out).not.toContain("run failed");
   });
 
   it("does nothing for a skipped run, which is not a verdict", () => {

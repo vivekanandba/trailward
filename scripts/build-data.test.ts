@@ -325,10 +325,17 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
       ["[{", /is not valid JSON/],
     ] as const) {
       const io = memoryIO({ [file]: body });
+      let enriched = false;
+      const wiki = async () => {
+        enriched = true;
+        return {};
+      };
       await expect(
-        runBuildData(io, file, BANGALORE_SEED, BANGALORE_ORIGIN, {}),
+        runBuildData(io, file, BANGALORE_SEED, BANGALORE_ORIGIN, { wiki }),
         body,
       ).rejects.toThrow(new RegExp(`${file} .*${why.source}`));
+      // Refused before the slow, rate-limited network work.
+      expect(enriched, body).toBe(false);
     }
   });
 
