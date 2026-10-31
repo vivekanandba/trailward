@@ -3,7 +3,11 @@ import { judge, measure, runCheckSize, type SizeIO } from "./check-size";
 
 // Spec 44 rule D5 / register row 4: delight pays its weight. A size budget
 // gate exists before any delight ships.
-function fakeIO(files: Record<string, number>, html: string, budget?: object): SizeIO & {
+function fakeIO(
+  files: Record<string, number>,
+  html: string,
+  budget?: object,
+): SizeIO & {
   logs: string[];
 } {
   const logs: string[] = [];
