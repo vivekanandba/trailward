@@ -241,6 +241,12 @@ describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)
     expect(out[0].landCover).toBe("Grassland"); // baked for the same place
   });
 
+  it("treats a previous record with no sources as citing different ones, without crashing", () => {
+    const broken = { ...prevCurated, sources: undefined, image: { url: "u", attribution: "a" } };
+    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [broken as unknown as Trek]);
+    expect(out[0].image).toBeUndefined();
+  });
+
   it("drops a curated record whose seed was removed, and adds a new one", () => {
     const gone = { ...prevCurated, id: "removed-seed" };
     const out = foldCurated([{ ...BANGALORE_SEED[1] }], [gone, discovery]);

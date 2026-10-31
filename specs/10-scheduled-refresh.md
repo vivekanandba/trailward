@@ -24,6 +24,9 @@ pipeline, commits changes, and lets the gated deploy publish them.
   saying only that the run failed (what it changed before failing is not known there); a later
   **success** closes it, naming the run that recovered; a cancelled or skipped run changes
   nothing; a missing result fails the reporter job rather than being reported as a failure.
+  A checker that is advisory about what it finds (dead links, API drift) still exits non-zero
+  when it **crashes**, so the reporter never reads a crash as success and closes an open issue
+  as recovered.
   Only runs on `main` report, so a dispatch on a branch neither files nor closes the issue. A failed refresh commits no data. In refresh-data and weekly-links the work job holds
   no issues-write token; apply-suggestions and weekly-live-apis hold one for their own work
   (closing suggestion issues, filing drift).
@@ -38,7 +41,9 @@ pipeline, commits changes, and lets the gated deploy publish them.
     enricher may also fill), `bestSeason` (the seed's, else derived this run from the committed
     rainfall grid, as `build:climate` does), the road distance and drive time (facts about the
     route from the origin, not the summit), and the discovery-only signals `discoveryScore` and
-    `estimatedDifficulty`. One removed from the seed, or not produced this run, is gone.
+    `estimatedDifficulty`. One removed from the seed, or not produced this run, is gone. A
+    route-service outage would therefore drop every road distance at once; the drift guard
+    counts `distanceKm`, so that refresh is refused rather than committed.
   - **`place`** fields (terrain, land cover, gazetteer, hill features, trail, POIs, gallery)
     keep their previous value when this run produced none, **while the seed is within 120 m of
     where it was** (`CARRYOVER_KM`, `scripts/lib/carryover.ts`, the distance discovery uses for a
@@ -96,7 +101,8 @@ of treks.json`.
   changes; a `run` field (`permitRequired`) dropped when no longer given; key order kept; a
   removed seed dropped. `runBuildData`: the written file keeps every discovery record.
 - `scripts/sources/parsers.test.ts`: a disambiguation page yields nothing.
-- `scripts/build-tools.test.ts`: the drift guard counts `image` and fails on a bulk photo loss.
+- `scripts/build-tools.test.ts`: the drift guard counts `image` and `distanceKm`, and fails on a
+  bulk photo loss and on every road distance gone.
 - `scripts/report-failure.test.ts` (fake `gh`): opens an issue when none matches, comments on
   the exact-title match, ignores a title that merely contains the words, closes the issue on a
   later success, does nothing on success with none open or for a cancelled or skipped run,

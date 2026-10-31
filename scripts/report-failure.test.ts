@@ -93,12 +93,14 @@ describe("report-failure.sh", () => {
     expect(run("Weekly data refresh is failing", "skipped")).toBe("");
   });
 
-  it("narrows the lookup with a title search, so it is not limited to the newest 200 issues", () => {
+  it("narrows the lookup with a title search before the 100-result limit applies", () => {
+    // The limit bounds title matches, not all open issues, so a pile of
+    // name-suggestion issues cannot push the failure issue out of reach.
     fakeGh([]);
     run("Weekly data refresh is failing");
-    expect(readFileSync(join(dir, "list-args"), "utf8")).toContain(
-      'in:title "Weekly data refresh is failing"',
-    );
+    const args = readFileSync(join(dir, "list-args"), "utf8");
+    expect(args).toContain('in:title "Weekly data refresh is failing"');
+    expect(args).toMatch(/--limit 100\b/);
   });
 
   it("says only that the run failed: what it changed before failing is not known here", () => {

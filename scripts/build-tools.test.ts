@@ -225,6 +225,14 @@ describe("enrichment drift guard (spec 31)", () => {
     expect(driftViolations({ image: 194 }, { image: 184 })).toHaveLength(1);
   });
 
+  it("counts road distances, so a route-service outage cannot commit their loss", () => {
+    // distanceKm is never carried stale (spec 10), so an OSRM outage drops all 16.
+    expect(fieldCounts([trek({ name: "A", distanceKm: 60 }), trek({ name: "B" })]).distanceKm).toBe(
+      1,
+    );
+    expect(driftViolations({ distanceKm: 16 }, { distanceKm: 0 })).toHaveLength(1);
+  });
+
   it("tolerates single-record wobble on tiny hand-curated fields", () => {
     // heritage 2 → 1 is a 50% relative drop but only one record — not a failure.
     expect(driftViolations({ heritage: 2 }, { heritage: 1 })).toEqual([]);

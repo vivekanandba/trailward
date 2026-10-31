@@ -175,7 +175,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     })
     .catch((err) => {
       console.error(`[live] check itself failed: ${(err as Error).message}`);
-      process.exit(0);
+      // Drift stays advisory (exit 0 above); a crash of the checker is not
+      // drift, and must not read as "success" to the run's reporter, which
+      // would close an open failure issue as recovered (spec 10).
+      process.exit(1);
     });
 }
 
