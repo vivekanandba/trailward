@@ -36,6 +36,12 @@ polish phase must satisfy.
   `latin-ext` lacks the dot-below letters of Indic transliteration (ṭ ṇ ḍ ṣ ṛ, checked with
   fontTools), and a heading borrows them from the body face rather than a system font. Indic and
   other scripts fall back to the system by design; no Latin face carries them.
+- **The static pages use the same type.** `build-pages` finds Inter's two hashed woff2 files in
+  `dist/assets` after the app build and declares them on every trek and content page, with the
+  same ranges (`scripts/lib/pageFonts.ts`; a test asserts the ranges equal the app's). A build
+  without them refuses before writing anything. The pages had used `system-ui`, which renders
+  differently on every machine: the static screenshot differed by 23% between the fleet VM and
+  the CI runner.
 - **Components:** `Badge` (difficulty/type/verified), `Card` (trek), `Panel`/`Sheet` (filters,
   detail), `Slider`, `SearchInput`, `Button`. Each documented with states.
 - **Layout:** desktop = map + left filter rail + right detail; mobile = full-map with bottom
@@ -58,6 +64,10 @@ polish phase must satisfy.
 - `src/fonts.test.ts`: each family has a `latin` and a `latin-ext` face whose file exists and
   which declares a range; every Latin Extended letter in any trek name lies inside an Inter
   range; the display stack is Bricolage then Inter.
+- `scripts/lib/pageFonts.test.ts`: both Inter faces at their hashed paths, latin not confused
+  with latin-ext, refusal when either is missing, ranges equal to `index.css`.
+  `scripts/build-pages.test.ts`: trek, content and data pages declare them; the build refuses
+  before writing without them.
 - **Defect fixed (spec 44 register row 18):** the bundled fonts were `latin` only, so 1,944 of
   the 3,886 page names rendered ā, ī or ū in a fallback font mid-word.
 

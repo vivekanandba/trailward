@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import tailwind from "../tailwind.config";
 
 // Spec 08 / spec 44 register row 18. The bundled fonts were Latin-only, and
 // 1,944 of 3,886 page names use a letter above U+00FF (Kumāra, Bhīma), so
@@ -68,7 +67,9 @@ describe("bundled fonts cover the names we show (spec 08)", () => {
     // Bricolage's latin-ext subset lacks the dot-below letters of Indic
     // transliteration (ṭ ṇ ḍ ṣ ṛ); Inter has them, so a heading borrows the
     // glyph from the body face instead of a system font.
-    const display = (tailwind.theme?.extend?.fontFamily as Record<string, string[]>).display;
-    expect(display.slice(0, 2)).toEqual(['"Bricolage Grotesque"', '"Inter"']);
+    // Read as text: the config is untyped JS, and its order is what matters.
+    const config = readFileSync(resolve(__dirname, "../tailwind.config.js"), "utf8");
+    const display = config.match(/display:\s*\[([^\]]*)\]/)?.[1] ?? "";
+    expect(display.replace(/\s+/g, "")).toMatch(/^'"BricolageGrotesque"','"Inter"',/);
   });
 });
