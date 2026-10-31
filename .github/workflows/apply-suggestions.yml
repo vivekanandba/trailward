@@ -38,3 +38,14 @@ jobs:
           else
             echo "No suggestions applied."
           fi
+
+  # A red scheduled run emails only whoever last edited the cron (spec 10).
+  report-failure:
+    needs: apply
+    if: failure()
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/report-failure.yml
+    with:
+      title: "Applying name suggestions is failing"

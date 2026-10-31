@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: write
-  issues: write # to file a failed run where someone will see it
 
 jobs:
   refresh:
@@ -39,20 +38,14 @@ jobs:
           else
             echo "No data changes this run."
           fi
-      - name: File the failure where it will be seen
-        # Every run from 2026-08-10 to 2026-10-26 failed on the drift guard and
-        # nobody looked: a red scheduled run emails only whoever last edited the
-        # cron. One open issue, with a comment per further failure (spec 10).
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          title="Weekly data refresh is failing"
-          body="The weekly data refresh failed and committed nothing: $RUN_URL (spec 10)."
-          n=$(gh issue list --state open --search "\"$title\" in:title" --json number -q '.[0].number')
-          if [ -n "$n" ]; then
-            gh issue comment "$n" --body "$body"
-          else
-            gh issue create --title "$title" --body "$body"
-          fi
+
+  # A red scheduled run emails only whoever last edited the cron (spec 10).
+  report-failure:
+    needs: refresh
+    if: failure()
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/report-failure.yml
+    with:
+      title: "Weekly data refresh is failing"

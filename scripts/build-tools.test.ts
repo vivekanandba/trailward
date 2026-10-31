@@ -221,6 +221,8 @@ describe("enrichment drift guard (spec 31)", () => {
   it("counts photos, so a refresh that drops them is caught", () => {
     const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
     expect(fieldCounts([trek({ name: "A", image: img }), trek({ name: "B" })]).image).toBe(1);
+    // 194 photos today: losing 10 trips the guard, as a bulk loss should.
+    expect(driftViolations({ image: 194 }, { image: 184 })).toHaveLength(1);
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {

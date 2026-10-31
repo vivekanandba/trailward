@@ -25,3 +25,14 @@ jobs:
       # Writes its summary to the run summary, where a human will actually
       # see it — an advisory step that merely goes green is useless.
       - run: npm run check:links -- --all
+
+  # A red scheduled run emails only whoever last edited the cron (spec 10).
+  report-failure:
+    needs: links
+    if: failure()
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/report-failure.yml
+    with:
+      title: "Weekly link check is failing"
