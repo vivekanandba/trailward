@@ -207,7 +207,16 @@ export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
     );
     return inKeyOrderOf(prev, { ...fresh, ...carried });
   });
-  return [...curated, ...existing.filter((t) => t.tier !== "curated" && !builtIds.has(t.id))];
+  return [...curated, ...existing.filter((t) => keptByFold(t, builtIds))];
+}
+
+/**
+ * Whether the fold keeps a committed record exactly as it is: any record not
+ * curated that no seed rebuilds. Curated records are rebuilt or dropped. The
+ * one rule, used by the fold and by runBuildData's check before enrichment.
+ */
+export function keptByFold(t: Trek, rebuiltIds: ReadonlySet<string>): boolean {
+  return t.tier !== "curated" && !rebuiltIds.has(t.id);
 }
 
 /**
@@ -236,19 +245,28 @@ export async function runBuildData(
     }
   }
   if (!Array.isArray(parsed)) refuse("is not an array of treks");
-  // Only what the fold itself needs, located by index. Full validation runs
-  // once, on the folded output before the write, and names any bad record by
-  // id; deciding here which records the fold keeps would be a second copy of
-  // the fold's own rule.
+  // What the fold reads, and every record it keeps exactly (keptByFold, its
+  // own rule), checked here and located by index. A curated record is rebuilt
+  // or dropped, so a tightened rule it breaks is repaired, not refused.
   const entries = parsed as unknown[];
-  const bad = entries.findIndex(
-    (t) => typeof t !== "object" || t === null || typeof (t as Trek).id !== "string",
-  );
-  if (bad >= 0) refuse(`has an entry at index ${bad} that is not a trek with an id`);
+  const rebuilt = new Set(seeds.map((s) => s.id));
+  entries.forEach((t, i) => {
+    if (typeof t !== "object" || t === null || typeof (t as Trek).id !== "string") {
+      refuse(`has an entry at index ${i} that is not a trek with an id`);
+    }
+    if (!keptByFold(t as Trek, rebuilt)) return;
+    const res = validateTrek(t);
+    if (!res.ok) refuse(`has an invalid record at index ${i}: ${res.error}`);
+  });
   const existing = entries as Trek[];
   const treks = await buildDataset(seeds, origin, enrichers);
   const ds = validateDataset(foldCurated(treks, existing));
-  if (!ds.ok) throw new Error(`[build-data] dataset invalid: ${ds.error}`);
+  if (!ds.ok) {
+    // Most likely a carried place field or photo that a tightened rule rejects.
+    throw new Error(
+      `[build-data] folding into ${file} gives an invalid dataset, nothing written: ${ds.error}`,
+    );
+  }
   io.writeFile(file, JSON.stringify(ds.treks) + "\n");
   io.log(
     `[build-data] ${treks.length} curated treks folded into ${ds.treks.length} records → ${file}`,
