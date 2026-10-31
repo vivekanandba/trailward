@@ -45,7 +45,7 @@ export default function TrekList({
         // before the list has rendered, unlike waiting for "Loading" to detach
         // (spec 42 §E).
         aria-busy={loading}
-        className="flex-1 divide-y divide-trail-50 dark:divide-slate-700 focus:outline-none"
+        className="flex-1 divide-y divide-trail-50 focus-visible:-outline-offset-2 dark:divide-slate-700"
       >
         {loading &&
           Array.from({ length: 6 }, (_, i) => (

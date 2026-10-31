@@ -10,6 +10,7 @@ import TrekDetail from "./components/TrekDetail";
 import OriginSearch from "./components/OriginSearch";
 import Panel from "./components/Panel";
 import ThemeToggle from "./components/ThemeToggle";
+import { noteUserActions, userHasActed } from "./lib/motion";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 import { regionStats, type RegionStats } from "./lib/regionStats";
 import { feedbackUrl } from "./lib/github";
@@ -100,6 +101,9 @@ export default function App() {
   // Light/dark theme (spec 08). The initial class is set pre-paint by an inline
   // script in index.html; here we own the runtime toggle + persistence.
   const [theme, setTheme] = useState<Theme>(loadTheme);
+  // Motion answers an action, never a page load (spec 44 register row 6).
+  // Listening starts before the first paint can be pressed.
+  useState(() => noteUserActions(window));
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
@@ -258,6 +262,15 @@ export default function App() {
   // Look up the selection among the currently-visible treks so the detail panel
   // closes automatically when active filters exclude the selected trek (#6).
   const selected = useMemo(() => visible.find((t) => t.id === selectedId), [visible, selectedId]);
+  // Whether the detail panel slides in is decided the moment it opens and held
+  // while it stays open: adding the class later would replay the slide.
+  const panelWasOpen = useRef(false);
+  const panelSlides = useRef(false);
+  if (!!selected !== panelWasOpen.current) {
+    panelWasOpen.current = !!selected;
+    if (selected) panelSlides.current = userHasActed();
+  }
+  const panelEnter = panelSlides.current;
 
   // Only offer the trail-length / duration filters when at least one trek in the
   // current set actually carries the field; otherwise the slider would silently
@@ -616,7 +629,9 @@ export default function App() {
                   onClose={() => setSelectedId(undefined)}
                   labelledBy="trek-detail-title"
                   modal={false}
-                  className="panel-enter absolute inset-y-0 right-0 z-[1010] w-full max-w-sm overflow-hidden border-l border-trail-100 bg-white shadow-2xl focus:outline-none dark:border-slate-700 dark:bg-slate-900"
+                  // Slides in only when opened by an action; a `?sel=` deep link
+                  // shows it in place (spec 44 register row 6).
+                  className={`${panelEnter ? "panel-enter " : ""}absolute inset-y-0 right-0 z-[1010] w-full max-w-sm overflow-hidden border-l border-trail-100 bg-white shadow-2xl focus-visible:-outline-offset-2 dark:border-slate-700 dark:bg-slate-900`}
                 >
                   <TrekDetail
                     trek={selected}
