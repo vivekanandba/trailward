@@ -25,6 +25,10 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   failOnFlakyTests: !!process.env.CI,
   reporter: process.env.CI ? "github" : "list",
+  // Never write a baseline unless asked: a new screenshot run locally would
+  // otherwise get its first baseline from this machine's fonts. The baseline
+  // workflow asks with --update-snapshots=all (spec 42 §E).
+  updateSnapshots: "none",
   expect: {
     // A bound on a HANG, like `timeout` above, not a speed assertion: every
     // assertion still polls for a state. 5 s let a cold mount at a load average

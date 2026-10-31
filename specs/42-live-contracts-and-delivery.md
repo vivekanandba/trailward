@@ -141,8 +141,11 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   server when they share one). There is no local update command: one rewrote failing screenshots
   with the fleet VM's rendering, and a failing local run already leaves its actual and diff
   images in `test-results/`. Baselines come only from the workflow, and `playwright.config.ts`
-  enforces it by refusing to load an update run without `TRAILWARD_BASELINES=1` (a package.json
-  scan was tried first and missed a new spelling every review round).
+  enforces it: it refuses to load a run that asks for any update mode but `none` without
+  `TRAILWARD_BASELINES=1`, and its own default is `none`, so a new screenshot run locally fails
+  rather than writing its first baseline from this machine's fonts. (A package.json scan was
+  tried first and missed a new spelling every review round.) **Known limit:** UI mode's "update
+  snapshots" toggle never reaches the arguments, so that path is review-enforced.
   Refreshing them after each intentional UI change is **review-enforced**: no check can tell an
   intended UI change from drift. `=all` may also commit antialiasing-only rewrites; that churn is
   the cost of never keeping a stale baseline.
@@ -191,11 +194,12 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least
   15 s and no `timeout:` anywhere in e2e is tighter. Each assertion was mutated and failed.
 - `scripts/lib/playwrightServers.test.ts`: `playwright.config.ts` refuses to load for a run
-  that would rewrite committed screenshots (`-u`, `--update-snapshots[=all|changed]`, in every
-  spelling) unless `TRAILWARD_BASELINES=1`, which only the baseline workflow sets; it is read
-  from the arguments Playwright received, so no script spelling, shell wrapper or
-  `npm run x -- -u` escapes it, and a real `playwright test --list -u` is refused. The module's
-  project names equal the config's. Both `--project` spellings, the space spelling
+  that asks to write snapshots (`-u`, `-u<mode>`, `-xu`, `-u <mode>`,
+  `--update-snapshots[=mode]`; any mode but `none`) unless `TRAILWARD_BASELINES=1`; a `-u` that
+  is another option's value (`-g -u`) is not the flag; a real `playwright test --list -uall` is
+  refused; the config's own default is `none`. `scripts/workflows.test.ts`: only the baseline
+  workflow's two update steps set the variable, not its job, another workflow, the shared action
+  or package.json. The module's project names equal the config's. Both `--project` spellings, the space spelling
   reading every value up to the next flag; app projects start only the dev server, static only
   the preview, all or a mix start both; any name that is not exactly a known project (case,
   wildcard), even beside exact ones, starts both, because Playwright matches loosely and a
