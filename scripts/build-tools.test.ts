@@ -3,7 +3,7 @@ import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown, buildIndiaMask, inIndia, isPlausibleSummit } from "./build-detect";
 import { isImplausibleTrek } from "./scrub-implausible";
-import { fieldCounts, driftViolations } from "./check-enrichment-drift";
+import { fieldCounts, driftViolations, curatedLosses } from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -216,6 +216,58 @@ describe("enrichment drift guard (spec 31)", () => {
     const bad = driftViolations(baseline, { records: 1000, bestSeason: 400, landCover: 500 });
     expect(bad).toHaveLength(1);
     expect(bad[0]).toContain("bestSeason: 1000 → 400");
+  });
+
+  it("names, per record and field, each curated route fact or photo that was lost", () => {
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const c = (id: string, over: Record<string, unknown> = {}) =>
+      trek({
+        id,
+        name: id,
+        tier: "curated",
+        distanceKm: 60,
+        driveTimeMin: 90,
+        image: img,
+        ...over,
+      });
+    const head = [
+      c("a", { distanceKm: undefined, driveTimeMin: undefined }), // routed this run
+      c("b"), // loses its drive time: the totals match, the guard must not
+      c("half", { driveTimeMin: undefined }), // already short one; now loses the other
+      c("never", { distanceKm: undefined }), // never had one: not a loss
+      c("photo"),
+      c("resourced"), // a reviewed PR changed its cited sources: the fold drops it on purpose
+      c("moved"), // corrected by more than 120 m: likewise
+      trek({ id: "pin", name: "pin", tier: "discovery", image: img }), // promoted this run
+      c("gone"),
+      c("demoted"), // seed removed; discovery found the summit again
+    ];
+    const now = [
+      c("a"),
+      c("b", { driveTimeMin: undefined }),
+      c("half", { distanceKm: undefined, driveTimeMin: undefined }),
+      c("never", { distanceKm: undefined }),
+      c("photo", { image: undefined }),
+      c("resourced", { image: undefined, sources: ["https://en.wikipedia.org/wiki/Other"] }),
+      // ...but its route facts are still checked.
+      c("moved", { image: undefined, lat: 12.01, driveTimeMin: undefined }),
+      c("pin", { distanceKm: undefined, driveTimeMin: undefined, image: undefined }),
+      c("new", { distanceKm: undefined }),
+      trek({ id: "demoted", name: "demoted", tier: "discovery" }),
+    ];
+    expect(curatedLosses(head, now)).toEqual([
+      "b: lost driveTimeMin",
+      "half: lost distanceKm",
+      "photo: lost image",
+      "moved: lost driveTimeMin",
+    ]);
+  });
+
+  it("does not count discovery photos, whose per-run churn is not an outage", () => {
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const d = (over: Record<string, unknown> = {}) =>
+      trek({ id: "d", name: "D", tier: "discovery", image: img, ...over });
+    expect(curatedLosses([d()], [d({ image: undefined })])).toEqual([]);
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {

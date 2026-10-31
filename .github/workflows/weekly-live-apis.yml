@@ -48,3 +48,17 @@ jobs:
             cat /tmp/live.txt || echo "(no output)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # A red scheduled run emails only whoever last edited the cron (spec 10):
+  # file a failure, close the issue on the next success.
+  report-failure:
+    needs: live
+    # Only main's runs speak for production; a dispatch on a branch does not.
+    if: always() && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/report-failure.yml
+    with:
+      title: "Weekly live API check is failing"
+      result: ${{ needs.live.result }}

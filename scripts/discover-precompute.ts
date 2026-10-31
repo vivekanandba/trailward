@@ -11,6 +11,7 @@
  * A region whose essential fetch fails is skipped — its prior records are left
  * intact, never silently emptied; enrichment is best-effort per peak.
  */
+import { CARRYOVER_KM } from "./lib/carryover";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -145,7 +146,6 @@ export function preserveEnrichment(next: Trek[], previous: Trek[]): Trek[] {
 // Detected-pin ids encode the NMS-winning DEM pixel, so a rescan with changed
 // parameters regenerates every id (spec 27: 0/28,092 survived the all-India
 // rescan) and id-keyed preservation carries nothing.
-const CARRYOVER_KM = 0.12; // ~3 z12 pixels — the same summit, shifted by NMS
 
 /**
  * Coordinate-based fallback for `preserveEnrichment` after a rescan: for each

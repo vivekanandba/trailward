@@ -160,6 +160,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     .then((r) => process.exit(r.exitCode))
     .catch((err) => {
       console.error((err as Error).message);
-      process.exit(0); // advisory even on an internal error
+      // A crash is not advice: exit red, so the scheduled run's reporter files
+      // it instead of reading "success" and closing an open issue (spec 10).
+      // Dead links themselves stay advisory (exitCode above).
+      process.exit(1);
     });
 }
