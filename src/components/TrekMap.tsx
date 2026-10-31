@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { prefersReducedMotion, shouldAnimate } from "../lib/motion";
 import {
   MapContainer,
@@ -158,11 +158,23 @@ function FitToResults({
 }) {
   const map = useMap();
   const hasResults = treks.length > 0;
+  const lastOrigin = useRef<string | undefined>(undefined);
   useEffect(() => {
     const bounds = L.latLng(origin.lat, origin.lng).toBounds(radiusKm * 2 * 1000);
     for (const t of treks) bounds.extend([t.lat, t.lng]);
-    // The first fit happens on load: it jumps; later fits answer an action (spec 44).
-    map.fitBounds(bounds, { padding: [24, 24], animate: shouldAnimate() });
+    const here = `${origin.lat},${origin.lng}`;
+    const moved = lastOrigin.current !== undefined && lastOrigin.current !== here;
+    lastOrigin.current = here;
+    if (moved && shouldAnimate()) {
+      // A new origin: fly there, so the move shows where it is from the old
+      // one (spec 44 R9, allowed past 300 ms by name). Leaflet stops a flight
+      // the moment the person drags (D3).
+      map.flyToBounds(bounds, { padding: [24, 24], duration: 0.8 });
+    } else {
+      // The first fit happens on load and jumps; a radius change animates
+      // briefly only in answer to an action (spec 44 R4).
+      map.fitBounds(bounds, { padding: [24, 24], animate: shouldAnimate() });
+    }
     // Refit on origin/radius change and when results first appear (e.g. discovery
     // loading) — NOT on every filter tweak, which would yank the map mid-typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps

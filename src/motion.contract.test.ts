@@ -23,7 +23,13 @@ const css = readFileSync(join(SRC, "index.css"), "utf8");
  * (spec 44 D3). Each entry names the file, the duration and the requirement
  * that justifies it.
  */
-const LONG_MOTION_ALLOWED: { path: string; ms: number; rule: string }[] = [];
+const LONG_MOTION_ALLOWED: { path: string; ms: number; rule: string }[] = [
+  {
+    path: "components/TrekMap.tsx",
+    ms: 800,
+    rule: "R9: flying to a new origin shows where it is from the old one",
+  },
+];
 
 describe("motion (spec 44 D2, D3)", () => {
   it("asks the motion helper instead of reading the media query directly", () => {
@@ -50,6 +56,10 @@ describe("motion (spec 44 D2, D3)", () => {
       const found = [
         ...[...s.text.matchAll(/(\d+(?:\.\d+)?)ms\b/g)].map((m) => Number(m[1])),
         ...[...s.text.matchAll(/\bduration-(\d+)\b/g)].map((m) => Number(m[1])),
+        // Leaflet takes `duration` in SECONDS (flyTo, flyToBounds, panTo).
+        ...[...s.text.matchAll(/\bduration:\s*(\d*\.?\d+)\b(?!\s*\*)/g)].map((m) =>
+          Number(m[1]) < 10 ? Math.round(Number(m[1]) * 1000) : Number(m[1]),
+        ),
       ];
       for (const ms of found) {
         if (ms <= 300) continue;
