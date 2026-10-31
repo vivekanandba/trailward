@@ -3,7 +3,7 @@ import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown, buildIndiaMask, inIndia, isPlausibleSummit } from "./build-detect";
 import { isImplausibleTrek } from "./scrub-implausible";
-import { fieldCounts, driftViolations } from "./check-enrichment-drift";
+import { fieldCounts, driftViolations, missingRouteFacts } from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -218,19 +218,25 @@ describe("enrichment drift guard (spec 31)", () => {
     expect(bad[0]).toContain("bestSeason: 1000 → 400");
   });
 
-  it("counts photos, so a refresh that drops them is caught", () => {
+  it("counts curated photos only, so discovery's per-run photo churn is not an outage", () => {
     const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
-    expect(fieldCounts([trek({ name: "A", image: img }), trek({ name: "B" })]).image).toBe(1);
-    // 194 photos today: losing 10 trips the guard, as a bulk loss should.
-    expect(driftViolations({ image: 194 }, { image: 184 })).toHaveLength(1);
+    const counts = fieldCounts([
+      trek({ name: "A", tier: "curated", image: img }),
+      trek({ name: "B", tier: "listed", image: img }),
+      trek({ name: "C", tier: "curated" }),
+    ]);
+    expect(counts.curatedImage).toBe(1);
+    expect(counts).not.toHaveProperty("image");
+    // All 13 curated photos lost, the incident, trips the guard.
+    expect(driftViolations({ curatedImage: 13 }, { curatedImage: 0 })).toHaveLength(1);
   });
 
-  it("counts road distances, so a route-service outage cannot commit their loss", () => {
-    // distanceKm is never carried stale (spec 10), so an OSRM outage drops all 16.
-    expect(fieldCounts([trek({ name: "A", distanceKm: 60 }), trek({ name: "B" })]).distanceKm).toBe(
-      1,
-    );
-    expect(driftViolations({ distanceKm: 16 }, { distanceKm: 0 })).toHaveLength(1);
+  it("refuses any curated record newly without a road distance or drive time", () => {
+    // `run` fields are never carried stale (spec 10): one OSRM miss drops one record's.
+    const routed = trek({ name: "A", tier: "curated", distanceKm: 60, driveTimeMin: 90 });
+    expect(missingRouteFacts([routed, trek({ name: "D", tier: "listed" })])).toBe(0);
+    expect(missingRouteFacts([trek({ name: "A", tier: "curated", distanceKm: 60 })])).toBe(1);
+    expect(missingRouteFacts([trek({ name: "A", tier: "curated", driveTimeMin: 90 })])).toBe(1);
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {

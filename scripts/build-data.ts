@@ -61,6 +61,8 @@ export async function buildDataset(
   seeds: Trek[],
   origin: Origin,
   enrichers: Enrichers = {},
+  /** Filled with the ids whose article lookup answered, photo or not. */
+  articleAnswered: Set<string> = new Set(),
 ): Promise<Trek[]> {
   const treks: Trek[] = [];
 
@@ -68,7 +70,12 @@ export async function buildDataset(
     const parts: Partial<Trek>[] = [seed]; // manual seed wins every conflict
 
     const wiki = await safe(enrichers.wiki?.(seed), `wiki(${seed.id})`);
-    if (wiki) parts.push({ highlights: wiki.summary, image: wiki.image });
+    // A disambiguation page is not an answer about this summit, so a photo
+    // carried from the article it used to be is not contradicted by it.
+    if (wiki && !wiki.disambiguation) {
+      articleAnswered.add(seed.id);
+      parts.push({ highlights: wiki.summary, image: wiki.image });
+    }
 
     const scraped = await safe(enrichers.scrape?.(seed), `scrape(${seed.id})`);
     if (scraped) parts.push(scraped);
@@ -111,7 +118,10 @@ export async function buildDataset(
  *   NOT here: it is a fact about the route from the origin, so it is `run`,
  *   and the drift guard refuses a refresh that lost it wholesale.
  * - `sources`: the photo, taken from the article the seed cites. Kept only
- *   while the place AND the cited sources are unchanged.
+ *   while the place AND the cited sources are unchanged, and only when this
+ *   run's lookup could not say: a failed fetch or a title that is now a
+ *   disambiguation page is unknown, but an article that answered with no
+ *   usable photo (removed, relicensed) has none (CON-DATA-002).
  */
 type Owner = "run" | "place" | "sources";
 const OWNER: Record<keyof Trek, Owner> = {
@@ -162,11 +172,6 @@ const OWNER: Record<keyof Trek, Owner> = {
   image: "sources",
 };
 
-// A seed whose coordinates were corrected by more than this describes a
-// different point, and nothing baked for the old one carries over. The same
-// distance discovery uses to recognise a rescanned summit (spec 27).
-const SAME_PLACE_KM = CARRYOVER_KM;
-
 // The previous record is not validated yet: a missing `sources` must read as
 // "different", not crash the fold before validation can name the record.
 const sourcesOf = (t: Trek): string[] => (Array.isArray(t.sources) ? [...t.sources].sort() : []);
@@ -189,7 +194,11 @@ function inKeyOrderOf(prev: Trek, next: Record<string, unknown>): Trek {
  * run did not produce, under the conditions in OWNER. Curated records whose
  * seed is gone are dropped.
  */
-export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
+export function foldCurated(
+  built: Trek[],
+  existing: Trek[],
+  articleAnswered: ReadonlySet<string> = new Set(),
+): Trek[] {
   // Every tier: a seed that promotes a discovery pin to curated takes over
   // that record (and what was baked for its place) rather than duplicating it.
   const prevById = new Map(existing.map((t) => [t.id, t]));
@@ -198,11 +207,15 @@ export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
     const prev = prevById.get(t.id);
     if (!prev) return t;
     const fresh = Object.fromEntries(Object.entries(t).filter(([, v]) => v !== undefined));
-    const samePlace = distanceFrom(prev, t) <= SAME_PLACE_KM;
+    // A seed whose coordinates moved further than discovery's rescan distance
+    // (spec 27) describes a different point; nothing baked for the old one carries.
+    const samePlace = distanceFrom(prev, t) <= CARRYOVER_KM;
     const keep = (k: string): boolean => {
       const owner = OWNER[k as keyof Trek];
       if (owner === "place") return samePlace;
-      if (owner === "sources") return samePlace && sameSources(prev, t);
+      if (owner === "sources") {
+        return samePlace && sameSources(prev, t) && !articleAnswered.has(t.id);
+      }
       return false; // "run", or a key Trek does not declare
     };
     const carried = Object.fromEntries(
@@ -225,14 +238,28 @@ export async function runBuildData(
   origin: Origin,
   enrichers: Enrichers,
 ): Promise<{ curated: number; total: number }> {
-  const treks = await buildDataset(seeds, origin, enrichers);
-  const parsed: unknown = io.exists(file) ? JSON.parse(io.readFile(file)) : [];
+  const answered = new Set<string>();
+  const treks = await buildDataset(seeds, origin, enrichers, answered);
   // A malformed file must read as invalid, by name, not crash the fold.
-  if (!Array.isArray(parsed)) {
-    throw new Error(`[build-data] ${file} is not an array of treks — refusing to fold into it`);
+  const refuse = (why: string): never => {
+    throw new Error(`[build-data] ${file} ${why} — refusing to fold into it`);
+  };
+  let parsed: unknown = [];
+  if (io.exists(file)) {
+    try {
+      parsed = JSON.parse(io.readFile(file));
+    } catch (err) {
+      refuse(`is not valid JSON (${(err as Error).message})`);
+    }
   }
-  const existing = parsed as Trek[];
-  const ds = validateDataset(foldCurated(treks, existing));
+  if (!Array.isArray(parsed)) refuse("is not an array of treks");
+  const entries = parsed as unknown[];
+  const bad = entries.findIndex(
+    (t) => typeof t !== "object" || t === null || typeof (t as Trek).id !== "string",
+  );
+  if (bad >= 0) refuse(`has an entry at index ${bad} that is not a trek with an id`);
+  const existing = entries as Trek[];
+  const ds = validateDataset(foldCurated(treks, existing, answered));
   if (!ds.ok) throw new Error(`[build-data] dataset invalid: ${ds.error}`);
   io.writeFile(file, JSON.stringify(ds.treks) + "\n");
   io.log(
