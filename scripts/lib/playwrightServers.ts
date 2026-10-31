@@ -15,12 +15,20 @@ export function requestedProjects(argv: string[]): string[] {
   return out;
 }
 
-/** The app projects run against the dev server; static (and pwa) against `vite preview`. */
+const APP = ["chromium", "mobile"];
+
+/**
+ * The app projects run against the dev server; static (and pwa) against
+ * `vite preview`. Playwright matches `--project` case-insensitively and
+ * accepts wildcards, so anything other than an exact lower-case name starts
+ * both servers: a spare server costs time, a missing one fails every test.
+ */
 export function serversFor(argv: string[]): ("dev" | "preview")[] {
   const asked = requestedProjects(argv);
-  const all = asked.length === 0;
+  const exact = asked.length > 0 && asked.every((p) => [...APP, "static"].includes(p));
+  if (!exact) return ["dev", "preview"];
   const servers: ("dev" | "preview")[] = [];
-  if (all || asked.some((p) => p === "chromium" || p === "mobile")) servers.push("dev");
-  if (all || asked.includes("static")) servers.push("preview");
+  if (asked.some((p) => APP.includes(p))) servers.push("dev");
+  if (asked.includes("static")) servers.push("preview");
   return servers;
 }

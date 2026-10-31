@@ -182,7 +182,7 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
 
 - `scripts/workflows.test.ts`: the five Playwright jobs named exactly; each on one literal
   `ubuntu-NN.NN` image, the same one, as is every job of `ci.yml` and `deploy.yml`; each sets up
-  browsers only through the shared action, after its checkout; the action reads `$ImageOS` in a
+  browsers only through the shared action, after its checkout; the action reads `/etc/os-release` in a
   step before every cache step and keys on its output, never `env.` or `ImageVersion`; the
   baseline generator rewrites with `=all` in two passes; no package script updates snapshots; no
   workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least

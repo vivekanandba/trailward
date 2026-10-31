@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import { serversFor } from "./scripts/lib/playwrightServers";
 
+const servers = serversFor(process.argv);
+
 // E2E specs live in e2e/. They boot the Vite dev server and drive the real app.
 // visual.spec.ts additionally diffs committed linux screenshot baselines
 // (spec 33). They come only from the "Update visual baselines" workflow, which
@@ -74,7 +76,7 @@ export default defineConfig({
   // Only the servers the requested projects use: Playwright starts every one
   // listed, and an app-only pass paid for a full production build (spec 42 §E).
   webServer: [
-    ...(serversFor(process.argv).includes("dev")
+    ...(servers.includes("dev")
       ? [
           {
             command: "npm run dev",
@@ -83,7 +85,7 @@ export default defineConfig({
           },
         ]
       : []),
-    ...(serversFor(process.argv).includes("preview")
+    ...(servers.includes("preview")
       ? [
           {
             command: "npm run build && npx vite preview --port 4173",
