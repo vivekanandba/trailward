@@ -4,7 +4,8 @@
  * third-party APIs are stubbed deterministic (helpers/deterministic.ts);
  * `reducedMotion: "reduce"` in the shared config collapses transitions.
  *
- * Regenerate intentionally with: npm run e2e:update
+ * Regenerate with the "Update visual baselines" workflow, which renders on the
+ * pinned CI image (spec 42 §E); `npm run e2e:update` locally shows what changed.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { deterministicPage, mapSettled, resultsLoaded } from "./helpers/deterministic";
@@ -82,7 +83,7 @@ test("visual: command palette open", async ({ page }) => {
   const palette = page.getByRole("dialog");
   await expect(palette.getByRole("combobox")).toBeVisible();
   await palette.getByRole("combobox").fill("Kumara");
-  await expect(palette.getByRole("option").first()).toBeVisible({ timeout: 10_000 });
+  await expect(palette.getByRole("option").first()).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(300);
   await expect(page).toHaveScreenshot("palette.png");
 });

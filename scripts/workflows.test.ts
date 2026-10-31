@@ -76,9 +76,12 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
         steps.filter((s) => s === SETUP),
         id,
       ).toHaveLength(1);
-      expect(steps.indexOf(SETUP), id).toBeGreaterThan(
-        steps.findIndex((s) => s.startsWith("actions/checkout")),
-      );
+      // A local action needs the repo checked out first; no checkout at all
+      // must fail too (findIndex would return -1 and pass a bare comparison).
+      const checkout = steps.findIndex((s) => s.startsWith("actions/checkout"));
+      expect(checkout, `${id} has no checkout`).toBeGreaterThanOrEqual(0);
+      expect(steps.indexOf(SETUP), id).toBeGreaterThan(checkout);
+
       expect(
         steps.some((s) => /playwright install/.test(s)),
         `${id} installs outside the action`,
@@ -124,19 +127,41 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
-    expect(pkg.scripts["e2e:update"]).not.toMatch(/=all/);
+    // Either spelling the CLI accepts: --update-snapshots=all or ... all.
+    expect(pkg.scripts["e2e:update"]).not.toMatch(/--update-snapshots[=\s]+all\b/);
   });
 });
 
 describe("the suite cannot hide a flake (spec 42 §E, CON-VER-008)", () => {
-  const config = readFileSync(resolve(__dirname, "../playwright.config.ts"), "utf8");
+  // Comments stripped, so a commented-out setting does not count.
+  const config = readFileSync(resolve(__dirname, "../playwright.config.ts"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
 
   it("fails a run in CI when a test passed only on retry", () => {
     expect(config).toMatch(/failOnFlakyTests:\s*!!process\.env\.CI/);
   });
 
   it("bounds an assertion's wait well above a cold mount under load", () => {
-    const t = Number(config.match(/expect:\s*\{[^}]*?timeout:\s*([\d_]+)/s)?.[1].replace(/_/g, ""));
-    expect(t).toBeGreaterThanOrEqual(15_000);
+    // The expect block's own timeout, not one nested in toHaveScreenshot.
+    const block = config.match(/expect:\s*\{\s*timeout:\s*([\d_]+)/)?.[1];
+    expect(Number(block?.replace(/_/g, ""))).toBeGreaterThanOrEqual(15_000);
+  });
+
+  it("no explicit assertion bound in e2e is tighter than that default", () => {
+    const dir = resolve(__dirname, "../e2e");
+    const tight = readdirSync(dir)
+      .filter((f) => f.endsWith(".spec.ts"))
+      .flatMap((f) =>
+        [
+          ...readFileSync(resolve(dir, f), "utf8").matchAll(
+            /expect\([\s\S]{0,200}?\{\s*timeout:\s*([\d_]+)\s*\}/g,
+          ),
+        ]
+          .map((m) => Number(m[1].replace(/_/g, "")))
+          .filter((ms) => ms < 15_000)
+          .map((ms) => `${f}: ${ms}`),
+      );
+    expect(tight).toEqual([]);
   });
 });

@@ -125,9 +125,11 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   - **Known limit:** `ubuntu-24.04` is a label, and GitHub updates its image weekly. A font or
     freetype change there can still shift the baselines. The Playwright container
     (`mcr.microsoft.com/playwright:v<lockfile>-noble`) would pin that too. It is not used yet
-    because every baseline would have to be re-rendered in it, and today the local gate on the
-    fleet VM renders within the 1% tolerance of the 24.04 runner (it passed against these
-    baselines), which a container image is not known to. A baseline failure across every
+    because every baseline would have to be re-rendered in it. Spec 33 measured a ~2% text
+    diff between a local container and the runner (August 2026); on this VM, on 2026-10-31, the
+    local suite passed against these CI-made baselines, so today local and CI agree within the
+    1% tolerance. That is an observation, not a guarantee, and a container would remove the
+    question. A baseline failure across every
     screenshot at once is the first sign the image moved.
 - **The baselines lagged the app inside the tolerance.** They showed the shortcut hint as `⌘K`
   while Linux has rendered `Ctrl K` since spec 38, and the 1% pixel tolerance hid it until an
@@ -136,7 +138,8 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   it reported "Baselines already match" over the stale image. The workflow now passes `=all`,
   in the suite's two passes (app projects, then the static project, which starves the dev
   server when they share one). `npm run e2e:update` locally keeps the default, so it never
-  rewrites passing baselines with the fleet VM's rendering; baselines come from the workflow.
+  rewrites passing baselines with the fleet VM's rendering, and runs the same two passes;
+  baselines come from the workflow.
   Refreshing them after each intentional UI change is **review-enforced**: no check can tell an
   intended UI change from drift. `=all` may also commit antialiasing-only rewrites; that churn is
   the cost of never keeping a stale baseline.
@@ -145,8 +148,9 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   fails the run when a test passed only on retry (CON-VER-008).
 - **An assertion's wait is a bound on a hang, not a speed check.** Every assertion polls for a
   state, but Playwright's default 5 s let "granted permission refreshes the origin" fail at a
-  load average of 14 with the app not yet mounted (2026-10-31). The bound is 15 s, under the
-  60 s per-test limit.
+  load average of 14 with the app not yet mounted (2026-10-31). The default bound is 15 s; the
+  two waits on the lazy palette chunk, which had their own 10 s, are 20 s, so no explicit bound
+  is tighter than the default. All are under the 60 s per-test limit.
 
 ## Edge cases & error states
 
