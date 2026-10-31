@@ -66,15 +66,11 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - **Given** a Wikipedia title that is now a disambiguation page, **when** the build reads it,
   **then** it takes nothing from it.
 - **Given** a committed `treks.json` that is not JSON, not an array, or has an entry that is
-  not an object with an id, or holds an invalid record the fold keeps exactly (any non-curated
-  record, or a curated one no seed rebuilds), **then** `build:data` refuses it naming the file
-  and the entry's index, before any network enrichment. A curated record a seed rebuilds needs
-  only an id there: the fold replaces its `run` fields, which is how `build:data` repairs one a
-  tightened rule rejects. Its carried place fields and photo are not rebuilt, so one of those
-  that fails is refused with the rest of the output, before the write.
-
-## Interfaces & data contracts
-
+  not an object with an id, **then** `build:data` refuses it naming the file and the entry's
+  index, before any network enrichment. Anything else wrong in a record is found once, by the
+  full validation of the folded output before the write, which names the record; a rebuilt
+  curated record's `run` fields are replaced by the fold, which is how `build:data` repairs one
+  a tightened rule rejects.
 - `.github/workflows/refresh-data.yml` (`permissions: contents: write`): checkout → setup-node →
   `npm ci` → `npm run build:data` → `npm run build:discovery` → `npm run validate:data` → the
   drift guard (`check-enrichment-drift.ts`, spec 31) → `build:chunks` → commit-if-changed.
@@ -117,9 +113,9 @@ of treks.json`.
   changes, and kept when the lookup answered without one or failed; a `run` field
   (`permitRequired`) dropped when no longer given;
   key order kept; a removed seed dropped. `runBuildData`: the written file keeps every discovery
-  record; a non-JSON file, a non-array, a `null` or id-less entry and an invalid kept record are
-  each refused by name and index before any enricher runs; a rebuilt curated record whose `run`
-  field the validator rejects is repaired by the fold, not refused.
+  record; a non-JSON file, a non-array and a `null` or id-less entry are each refused by name and
+  index before any enricher runs; a rebuilt curated record whose `run` field the validator
+  rejects is repaired by the fold, not refused.
 - `scripts/sources/parsers.test.ts`: a disambiguation page yields nothing.
 - `scripts/build-tools.test.ts`: `curatedLosses` names each route fact or photo a curated record
   lost, per record and field: a record routed this run does not hide another's loss, one already

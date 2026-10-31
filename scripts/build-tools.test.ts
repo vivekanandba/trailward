@@ -249,7 +249,8 @@ describe("enrichment drift guard (spec 31)", () => {
       c("never", { distanceKm: undefined }),
       c("photo", { image: undefined }),
       c("resourced", { image: undefined, sources: ["https://en.wikipedia.org/wiki/Other"] }),
-      c("moved", { image: undefined, lat: 12.01 }),
+      // ...but its route facts are still checked.
+      c("moved", { image: undefined, lat: 12.01, driveTimeMin: undefined }),
       c("pin", { distanceKm: undefined, driveTimeMin: undefined, image: undefined }),
       c("new", { distanceKm: undefined }),
       trek({ id: "demoted", name: "demoted", tier: "discovery" }),
@@ -258,6 +259,7 @@ describe("enrichment drift guard (spec 31)", () => {
       "b: lost driveTimeMin",
       "half: lost distanceKm",
       "photo: lost image",
+      "moved: lost driveTimeMin",
     ]);
   });
 
