@@ -315,6 +315,8 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
     for (const [body, why] of [
       ["[null]", /has an entry at index 0 that is not a trek with an id/],
       ['[{"name":"x"}]', /has an entry at index 0 that is not a trek with an id/],
+      // Kept exactly by the fold, so refused up front, by index.
+      ['[{"id":"x"}]', /has an invalid record at index 0: .*name/],
       ["[{", /is not valid JSON/],
     ] as const) {
       const io = memoryIO({ [file]: body });
@@ -351,9 +353,10 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
     }
   });
 
-  it("repairs a committed curated record that a tightened rule rejects", async () => {
-    // The fold replaces curated records, so build:data can fix one the
-    // validator now refuses instead of refusing the whole file.
+  it("repairs a committed curated record whose rebuilt fields a tightened rule rejects", async () => {
+    // The fold replaces a rebuilt record's `run` fields, so build:data fixes
+    // one the validator now refuses there instead of refusing the file.
+    // (A carried place field or photo is not rebuilt, so it is not repaired.)
     const file = "/repo/src/data/treks.json";
     const seed = BANGALORE_SEED[0];
     const io = memoryIO({ [file]: JSON.stringify([{ ...seed, lat: "not a number" }]) });

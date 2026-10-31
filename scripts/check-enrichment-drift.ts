@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
+import { photoCarries } from "./lib/carryover";
 
 const FIELDS = [
   "name", // counted as non-"Unnamed" — a naming regression is a data loss too
@@ -59,7 +60,10 @@ export function curatedLosses(head: Trek[], now: Trek[]): string[] {
     const prev = before.get(t.id);
     // Curated then and now: a pin promoted this run never had curated facts.
     if (t.tier !== "curated" || prev?.tier !== "curated") continue;
-    const lost = CURATED_KEPT.filter((f) => prev[f] !== undefined && t[f] === undefined);
+    // A photo the fold dropped on purpose (the seed moved, or cites other
+    // sources) is the fold's own rule, not a loss.
+    const kept = CURATED_KEPT.filter((f) => f !== "image" || photoCarries(prev, t));
+    const lost = kept.filter((f) => prev[f] !== undefined && t[f] === undefined);
     if (lost.length > 0) out.push(`${t.id}: lost ${lost.join(" and ")}`);
   }
   return out;

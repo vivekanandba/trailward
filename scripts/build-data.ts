@@ -15,7 +15,7 @@ import type { Origin, Trek } from "../src/lib/trek";
 import { validateDataset, validateTrek } from "../src/lib/trek";
 import { distanceFrom } from "../src/lib/distance";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
-import { CARRYOVER_KM } from "./lib/carryover";
+import { CARRYOVER_KM, photoCarries } from "./lib/carryover";
 import { seasonFor, type MonthlyRain } from "../src/lib/climate";
 import climateGrid from "../src/data/climate.json";
 import { mergeTrek } from "./sources/merge";
@@ -166,12 +166,6 @@ const OWNER: Record<keyof Trek, Owner> = {
   image: "sources",
 };
 
-// The previous record is not validated yet: a missing `sources` must read as
-// "different", not crash the fold before validation can name the record.
-const sourcesOf = (t: Trek): string[] => (Array.isArray(t.sources) ? [...t.sources].sort() : []);
-const sameSources = (a: Trek, b: Trek): boolean =>
-  JSON.stringify(sourcesOf(a)) === JSON.stringify(sourcesOf(b));
-
 /** `next`'s fields, in `prev`'s key order (then any new keys), so a refresh diffs cleanly. */
 function inKeyOrderOf(prev: Trek, next: Record<string, unknown>): Trek {
   const out: Record<string, unknown> = {};
@@ -204,7 +198,7 @@ export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
       const owner = OWNER[k as keyof Trek];
       if (owner === "place") return samePlace;
       if (owner === "sources") {
-        return samePlace && sameSources(prev, t);
+        return photoCarries(prev, t);
       }
       return false; // "run", or a key Trek does not declare
     };
@@ -242,15 +236,20 @@ export async function runBuildData(
     }
   }
   if (!Array.isArray(parsed)) refuse("is not an array of treks");
-  // Only what the fold itself needs, located by index. Not the full record
-  // validation: the fold replaces or drops curated records, and that is how
-  // build:data repairs one a tightened rule rejects; the output is validated
-  // in full before it is written.
+  // Everything the fold keeps exactly as committed is validated here, located
+  // by index; a curated record this run rebuilds needs only an id, because
+  // the fold replaces its `run` fields. (Its carried place fields and photo
+  // are still validated, with the rest of the output, before the write.)
   const entries = parsed as unknown[];
-  const bad = entries.findIndex(
-    (t) => typeof t !== "object" || t === null || typeof (t as Trek).id !== "string",
-  );
-  if (bad >= 0) refuse(`has an entry at index ${bad} that is not a trek with an id`);
+  const rebuilt = new Set(seeds.map((s) => s.id));
+  entries.forEach((t, i) => {
+    if (typeof t !== "object" || t === null || typeof (t as Trek).id !== "string") {
+      refuse(`has an entry at index ${i} that is not a trek with an id`);
+    }
+    const kept = (t as Trek).tier !== "curated" || !rebuilt.has((t as Trek).id);
+    const res = kept ? validateTrek(t) : { ok: true as const };
+    if (!res.ok) refuse(`has an invalid record at index ${i}: ${res.error}`);
+  });
   const existing = entries as Trek[];
   const treks = await buildDataset(seeds, origin, enrichers);
   const ds = validateDataset(foldCurated(treks, existing));
