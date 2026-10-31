@@ -121,6 +121,12 @@ of treks.json`.
 
 ## Out of scope
 
+- **One file per writer.** `build:data` and `build:discovery` both write the whole `treks.json`,
+  which is why the fold and the ownership table exist. Committing the curated tier as its own
+  file, composed by discovery and chunking, would remove the read-modify-write. It touches the
+  app's loader, chunking and every hand-run tool, so it is its own change; until then, the fold
+  and the drift guard keep the shared file safe.
+
 - Deploy mechanics (→ 09). Curating new cities (a manual/dispatch pipeline run).
 
 ## Open questions
