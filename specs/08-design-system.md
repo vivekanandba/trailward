@@ -29,6 +29,13 @@ polish phase must satisfy.
 - **Palette** (Tailwind theme tokens): a nature-leaning primary (`trail`), neutrals, and a fixed
   difficulty triad — finalized during polish, recorded here as tokens + hex.
 - **Type scale:** display / h1 / h2 / body / caption with a single heading + body font pairing.
+- **Fonts cover the names we show.** Inter (body) and Bricolage Grotesque (display) are
+  self-hosted fontsource 5.3.0 builds in two subsets each, `latin` and `latin-ext`, declared
+  with fontsource's own `unicode-range`, so the extended files are fetched only when a name on
+  screen needs them. The display stack is Bricolage, then Inter, then the system: Bricolage's
+  `latin-ext` lacks the dot-below letters of Indic transliteration (ṭ ṇ ḍ ṣ ṛ, checked with
+  fontTools), and a heading borrows them from the body face rather than a system font. Indic and
+  other scripts fall back to the system by design; no Latin face carries them.
 - **Components:** `Badge` (difficulty/type/verified), `Card` (trek), `Panel`/`Sheet` (filters,
   detail), `Slider`, `SearchInput`, `Button`. Each documented with states.
 - **Layout:** desktop = map + left filter rail + right detail; mobile = full-map with bottom
@@ -47,6 +54,12 @@ polish phase must satisfy.
 - Difficulty token usage is centralized (a single source maps difficulty → color), asserted by a
   unit test so markers/badges can't drift.
 - Axe/contrast smoke check on the main view (no critical violations).
+
+- `src/fonts.test.ts`: each family has a `latin` and a `latin-ext` face whose file exists and
+  which declares a range; every Latin Extended letter in any trek name lies inside an Inter
+  range; the display stack is Bricolage then Inter.
+- **Defect fixed (spec 44 register row 18):** the bundled fonts were `latin` only, so 1,944 of
+  the 3,886 page names rendered ā, ī or ū in a fallback font mid-word.
 
 ## Out of scope
 
