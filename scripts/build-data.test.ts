@@ -351,6 +351,54 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
     }
   });
 
+  it("refuses up front only the records the fold keeps exactly", async () => {
+    const file = "/repo/src/data/treks.json";
+    const pin = {
+      id: "gn-1",
+      name: "A hill",
+      lat: 13.1,
+      lng: 77.2,
+      tier: "discovery",
+      sources: [],
+      verified: false,
+    };
+    // A kept record (a discovery pin no seed rebuilds) that is invalid: refused by index, early.
+    let enriched = false;
+    const wiki = async () => {
+      enriched = true;
+      return {};
+    };
+    const bad = memoryIO({ [file]: JSON.stringify([{ ...pin, lat: "x" }]) });
+    await expect(
+      runBuildData(bad, file, BANGALORE_SEED, BANGALORE_ORIGIN, { wiki }),
+    ).rejects.toThrow(/has an invalid record at index 0: .*lat/);
+    expect(enriched).toBe(false);
+    // The same invalid record, promoted by a seed with its id, is replaced, not refused.
+    const seed = BANGALORE_SEED[0];
+    const promoted = memoryIO({ [file]: JSON.stringify([{ ...pin, id: seed.id, lat: "x" }]) });
+    await runBuildData(promoted, file, [seed], BANGALORE_ORIGIN, {});
+    expect((JSON.parse(promoted.files.get(file)!) as Trek[])[0].lat).toBe(seed.lat);
+    // An invalid curated record whose seed is gone is dropped, not refused.
+    const gone = { ...pin, id: "gone", tier: "curated", lat: "x" };
+    const dropped = memoryIO({ [file]: JSON.stringify([gone]) });
+    await runBuildData(dropped, file, [seed], BANGALORE_ORIGIN, {});
+    expect((JSON.parse(dropped.files.get(file)!) as Trek[]).map((t) => t.id)).toEqual([seed.id]);
+  });
+
+  it("refuses a carried photo a tightened rule rejects, naming it, and writes nothing", async () => {
+    // Not rebuilt, so not repaired: the output validation is its gate.
+    const file = "/repo/src/data/treks.json";
+    const seed = BANGALORE_SEED[0];
+    const committed = JSON.stringify([{ ...seed, image: { url: "", attribution: "" } }]);
+    const io = memoryIO({ [file]: committed });
+    await expect(runBuildData(io, file, [seed], BANGALORE_ORIGIN, {})).rejects.toThrow(
+      new RegExp(
+        `folding into ${file} gives an invalid dataset, nothing written: .*${seed.id}.*image`,
+      ),
+    );
+    expect(io.files.get(file)).toBe(committed);
+  });
+
   it("repairs a committed curated record whose rebuilt fields a tightened rule rejects", async () => {
     // The fold replaces a rebuilt record's `run` fields, so build:data fixes
     // one the validator now refuses there instead of refusing the file.
