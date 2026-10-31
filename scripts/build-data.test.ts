@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { buildDataset, foldCurated, liveEnrichers, runBuildData } from "./build-data";
 import { memoryIO } from "./lib/buildIO";
+import { bestSeasonFrom, climateCellKey } from "../src/lib/climate";
+import climateGrid from "../src/data/climate.json";
 import { BANGALORE_ORIGIN, BANGALORE_SEED } from "./seed/bangalore";
 import { validateTrek, type Trek } from "../src/lib/trek";
 
@@ -138,10 +140,10 @@ describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)
     const prev = { ...prevCurated, image, distanceKm: 60, driveTimeMin: 70 };
     const out = foldCurated([{ ...BANGALORE_SEED[0] }], [prev]);
     expect(out[0].image).toEqual(image);
-    expect(out[0].distanceKm).toBe(60);
     // ...but a value this run did return replaces it.
-    const fresh = foldCurated([{ ...BANGALORE_SEED[0], distanceKm: 61 }], [prev]);
-    expect(fresh[0].distanceKm).toBe(61);
+    const other = { url: "https://upload.wikimedia.org/b.jpg", attribution: "Commons" };
+    const fresh = foldCurated([{ ...BANGALORE_SEED[0], image: other }], [prev]);
+    expect(fresh[0].image).toEqual(other);
   });
 
   it("drops a field this run decides when the seed and its enrichers no longer give it", () => {
@@ -193,11 +195,37 @@ describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)
     expect(Object.keys(out[0]).slice(0, shared.length)).toEqual(shared);
   });
 
-  it("keeps a best season build:climate baked onto a seed that states none", () => {
+  it("drops a best season the curator deleted from the seed", () => {
+    // bestSeason is decided by this run: the seed's, else this run's climate
+    // derivation (buildDataset). A carried value would outlive the deletion.
     const { bestSeason: _drop, ...seed } = BANGALORE_SEED[0];
     void _drop;
-    const out = foldCurated([seed as Trek], [{ ...prevCurated, bestSeason: "Nov–Feb" }]);
-    expect(out[0].bestSeason).toBe("Nov–Feb");
+    const out = foldCurated([seed as Trek], [{ ...prevCurated, bestSeason: "Jun–Sep" }]);
+    expect(out[0].bestSeason).toBeUndefined();
+  });
+
+  it("does not carry a discovery score or estimated difficulty onto a promoted pin", () => {
+    const pin = {
+      ...discovery,
+      id: BANGALORE_SEED[0].id,
+      lat: BANGALORE_SEED[0].lat,
+      lng: BANGALORE_SEED[0].lng,
+      discoveryScore: 0.8,
+      estimatedDifficulty: "Hard",
+    } as Trek;
+    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [pin]);
+    expect(out[0].discoveryScore).toBeUndefined();
+    expect(out[0].estimatedDifficulty).toBeUndefined();
+  });
+
+  it("does not carry a road distance this run did not measure", () => {
+    // It is a fact about the route from the origin, not about the summit.
+    const out = foldCurated(
+      [{ ...BANGALORE_SEED[0] }],
+      [{ ...prevCurated, distanceKm: 60, driveTimeMin: 70 }],
+    );
+    expect(out[0].distanceKm).toBeUndefined();
+    expect(out[0].driveTimeMin).toBeUndefined();
   });
 
   it("takes over a discovery pin a new seed promotes, instead of duplicating its id", () => {
@@ -221,6 +249,29 @@ describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)
 
   it("starts from the built records alone when there is no previous dataset", () => {
     expect(foldCurated([{ ...BANGALORE_SEED[0] }], [])).toHaveLength(1);
+  });
+});
+
+describe("buildDataset — a seed with no best season gets one from the committed rainfall", () => {
+  it("derives it this run, the way build:climate does, and lets the seed's own win", async () => {
+    const { bestSeason: _drop, ...bare } = BANGALORE_SEED[0];
+    void _drop;
+    const season = () => "Nov–Feb";
+    const [derived] = await buildDataset([bare as Trek], BANGALORE_ORIGIN, { season });
+    expect(derived.bestSeason).toBe("Nov–Feb");
+    const [stated] = await buildDataset([BANGALORE_SEED[0]], BANGALORE_ORIGIN, { season });
+    expect(stated.bestSeason).toBe(BANGALORE_SEED[0].bestSeason);
+  });
+
+  it("the live enricher reads the committed climate grid", () => {
+    const e = liveEnrichers();
+    // Skandagiri's cell is sampled (spec 20): the same season build:climate
+    // would bake from that cell.
+    const t = BANGALORE_SEED[0];
+    const monthly = (climateGrid as Record<string, number[]>)[climateCellKey(t.lat, t.lng)];
+    expect(monthly).toBeDefined();
+    expect(e.season!({ ...t })).toBe(bestSeasonFrom(monthly));
+    expect(e.season!({ ...t, lat: 0, lng: 0 })).toBeUndefined(); // no cell there
   });
 });
 

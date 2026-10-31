@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { execFileSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -45,6 +45,15 @@ function run(title: string, result = "failure"): string {
   }
 }
 
+// The fake gh applies the script's --jq filter with jq, as gh itself would.
+beforeAll(() => {
+  try {
+    execFileSync("jq", ["--version"]);
+  } catch {
+    throw new Error("report-failure.test.ts needs `jq` on PATH to stand in for gh's --jq");
+  }
+});
+
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "report-failure-"));
   calls = join(dir, "calls");
@@ -90,6 +99,36 @@ describe("report-failure.sh", () => {
     expect(readFileSync(join(dir, "list-args"), "utf8")).toContain(
       'in:title "Weekly data refresh is failing"',
     );
+  });
+
+  it("says only that the run failed: what it changed before failing is not known here", () => {
+    // apply-suggestions may close suggestion issues before a later step fails.
+    fakeGh([]);
+    const out = run("Weekly data refresh is failing");
+    expect(out).toContain("This scheduled run failed:");
+    expect(out).not.toMatch(/changed nothing/);
+  });
+
+  it("refuses a missing result instead of reporting it as a failure", () => {
+    // A renamed job makes needs.<job>.result empty: "could not tell" is not
+    // "failed" (CON-VER-005), and the reporter job must go red to say so.
+    fakeGh([{ number: 7, title: "Weekly data refresh is failing" }]);
+    expect(() => run("Weekly data refresh is failing", "")).toThrow();
+    expect(() => readFileSync(calls, "utf8")).toThrow(); // nothing was posted
+  });
+
+  it("only main's runs report: a dispatched run on a branch is not production", () => {
+    const dir = resolve(__dirname, "../.github/workflows");
+    for (const f of [
+      "refresh-data.yml",
+      "apply-suggestions.yml",
+      "weekly-links.yml",
+      "weekly-live-apis.yml",
+    ]) {
+      const text = readFileSync(join(dir, f), "utf8");
+      const job = text.slice(text.indexOf("  report-failure:"));
+      expect(job, f).toMatch(/if: always\(\) && github\.ref == 'refs\/heads\/main'/);
+    }
   });
 
   it("refuses to run without a title", () => {

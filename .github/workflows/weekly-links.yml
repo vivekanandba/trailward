@@ -30,7 +30,8 @@ jobs:
   # file a failure, close the issue on the next success.
   report-failure:
     needs: links
-    if: always()
+    # Only main's runs speak for production; a dispatch on a branch does not.
+    if: always() && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       issues: write
