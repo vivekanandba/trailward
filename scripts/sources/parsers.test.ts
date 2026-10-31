@@ -109,6 +109,17 @@ describe("parseWikiSummary", () => {
     expect(info.image?.attribution).toBeTruthy();
   });
 
+  it("takes nothing from a disambiguation page — it is not this trek's article", () => {
+    // Incident: Nandi_Hills became a disambiguation page and the build took
+    // its "Topics referred to by the same term" in place of the hill (spec 02).
+    const info = parseWikiSummary({
+      type: "disambiguation",
+      extract: "Nandi Hills may refer to:",
+      originalimage: { source: "https://upload.wikimedia.org/wikipedia/commons/a/a8/X.jpg" },
+    });
+    expect(info).toEqual({});
+  });
+
   it("skips a non-Commons image (can't attribute its license)", () => {
     const info = parseWikiSummary({
       extract: "x",

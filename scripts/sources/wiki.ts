@@ -13,6 +13,7 @@ export interface WikiInfo {
 }
 
 interface WikiSummaryResponse {
+  type?: unknown;
   extract?: unknown;
   originalimage?: { source?: unknown };
   thumbnail?: { source?: unknown };
@@ -57,6 +58,9 @@ function imageFrom(json: WikiSummaryResponse): TrekImage | undefined {
 export function parseWikiSummary(json: unknown): WikiInfo {
   const data = (json ?? {}) as WikiSummaryResponse;
   const info: WikiInfo = {};
+  // A disambiguation page lists other articles; nothing on it describes this
+  // trek (the client refuses it too, src/lib/enrich.ts).
+  if (data.type === "disambiguation") return info;
   if (typeof data.extract === "string" && data.extract.trim()) {
     info.summary = data.extract.trim();
   }

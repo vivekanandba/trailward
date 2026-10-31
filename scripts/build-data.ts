@@ -9,7 +9,7 @@
  * real (network) enrichers and writes the file. Enrichment is best-effort: a
  * source that errors is skipped for that field, never failing the whole run.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Origin, Trek } from "../src/lib/trek";
@@ -86,6 +86,51 @@ export async function buildDataset(
   return ds.treks;
 }
 
+// The fields the curated seed itself states. They are a human judgement and
+// come from this run's seed only, so one removed from the seed is removed here.
+// Every other field on a committed curated record is either an enricher's
+// output (photo, road distance) or baked by another tool (terrain, land cover,
+// gazetteer, hill features), and survives a run that did not produce it.
+const SEED_FIELDS = new Set<string>([
+  "id",
+  "name",
+  "lat",
+  "lng",
+  "cityId",
+  "tier",
+  "verified",
+  "sources",
+  "elevationM",
+  "difficulty",
+  "type",
+  "bestSeason",
+  "nightTrek",
+  "highlights",
+  "nearestTown",
+  "entryFee",
+]);
+
+/**
+ * Fold freshly built curated records into the committed dataset (spec 10).
+ * build-data owns only the curated tier; every other record is kept as it was,
+ * because build:discovery reads this file as the previous dataset and preserves
+ * enrichment from it. A curated record keeps every non-seed field it had unless
+ * this run produced a new value: a source that failed or changed shape this week
+ * is not evidence the photo or road distance is gone. Curated records whose
+ * seed is gone are dropped.
+ */
+export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
+  const prevById = new Map(existing.filter((t) => t.tier === "curated").map((t) => [t.id, t]));
+  const curated = built.map((t) => {
+    const prev = prevById.get(t.id);
+    if (!prev) return t;
+    const carried = Object.fromEntries(Object.entries(prev).filter(([k]) => !SEED_FIELDS.has(k)));
+    const fresh = Object.fromEntries(Object.entries(t).filter(([, v]) => v !== undefined));
+    return { ...carried, ...fresh } as Trek;
+  });
+  return [...curated, ...existing.filter((t) => t.tier !== "curated")];
+}
+
 // ---- CLI shell: wire the real network enrichers and write the file. ---------
 
 export function liveEnrichers(): Enrichers {
@@ -116,8 +161,13 @@ async function main(): Promise<void> {
 
   const here = dirname(fileURLToPath(import.meta.url));
   const out = resolve(here, "../src/data/treks.json");
-  writeFileSync(out, JSON.stringify(treks, null, 2) + "\n", "utf8");
-  console.log(`[build-data] wrote ${treks.length} validated treks → ${out}`);
+  const existing = existsSync(out) ? (JSON.parse(readFileSync(out, "utf8")) as Trek[]) : [];
+  const ds = validateDataset(foldCurated(treks, existing));
+  if (!ds.ok) throw new Error(`[build-data] dataset invalid: ${ds.error}`);
+  writeFileSync(out, JSON.stringify(ds.treks) + "\n", "utf8");
+  console.log(
+    `[build-data] ${treks.length} curated treks folded into ${ds.treks.length} records → ${out}`,
+  );
 }
 
 // Run only when invoked directly (not when imported by tests).

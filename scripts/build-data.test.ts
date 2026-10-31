@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildDataset, liveEnrichers } from "./build-data";
+import { buildDataset, foldCurated, liveEnrichers } from "./build-data";
 import { BANGALORE_ORIGIN, BANGALORE_SEED } from "./seed/bangalore";
 import { validateTrek, type Trek } from "../src/lib/trek";
 
@@ -85,5 +85,71 @@ describe("liveEnrichers wiring (spec 41)", () => {
     await expect(
       e.scrape!(seed({ sources: ["https://en.wikipedia.org/wiki/X"] }) as never),
     ).resolves.toEqual({});
+  });
+});
+
+describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)", () => {
+  // Incident: from 2026-08-10 build:data overwrote treks.json with the 16
+  // curated records, so build:discovery "preserved" enrichment from a file that
+  // no longer held any, and the drift guard refused every weekly run.
+  const prevCurated = {
+    ...BANGALORE_SEED[0],
+    landCover: "Tree cover",
+    reliefM: 412,
+    historicalNote: { text: "A fort.", source: "Gazetteer", year: 1908 },
+    entryFee: "₹100",
+  } as Trek;
+  const discovery = {
+    id: "gn-1",
+    name: "A hill",
+    lat: 13.1,
+    lng: 77.2,
+    tier: "discovery",
+    sources: [],
+    verified: false,
+    landCover: "Grassland",
+    bestSeason: "Oct–Feb",
+  } as Trek;
+
+  it("keeps every non-curated record exactly as it was", () => {
+    const built = [{ ...BANGALORE_SEED[0] }];
+    const out = foldCurated(built, [prevCurated, discovery]);
+    expect(out).toHaveLength(2);
+    expect(out.find((t) => t.id === "gn-1")).toEqual(discovery);
+  });
+
+  it("carries fields other tools baked onto a curated record", () => {
+    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [prevCurated]);
+    expect(out[0].landCover).toBe("Tree cover");
+    expect(out[0].reliefM).toBe(412);
+    expect(out[0].historicalNote?.year).toBe(1908);
+  });
+
+  it("lets build-data's own fields win, and drops one the seed no longer has", () => {
+    const built = [{ ...BANGALORE_SEED[0], highlights: "new", entryFee: undefined }];
+    const out = foldCurated(built, [{ ...prevCurated, highlights: "old" }]);
+    expect(out[0].highlights).toBe("new");
+    expect(out[0].entryFee).toBeUndefined();
+  });
+
+  it("keeps an enriched field this run's source did not return (a failed lookup is not evidence)", () => {
+    const image = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const prev = { ...prevCurated, image, distanceKm: 60, driveTimeMin: 70 };
+    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [prev]);
+    expect(out[0].image).toEqual(image);
+    expect(out[0].distanceKm).toBe(60);
+    // ...but a value this run did return replaces it.
+    const fresh = foldCurated([{ ...BANGALORE_SEED[0], distanceKm: 61 }], [prev]);
+    expect(fresh[0].distanceKm).toBe(61);
+  });
+
+  it("drops a curated record whose seed was removed, and adds a new one", () => {
+    const gone = { ...prevCurated, id: "removed-seed" };
+    const out = foldCurated([{ ...BANGALORE_SEED[1] }], [gone, discovery]);
+    expect(out.map((t) => t.id).sort()).toEqual([BANGALORE_SEED[1].id, "gn-1"].sort());
+  });
+
+  it("starts from the built records alone when there is no previous dataset", () => {
+    expect(foldCurated([{ ...BANGALORE_SEED[0] }], [])).toHaveLength(1);
   });
 });

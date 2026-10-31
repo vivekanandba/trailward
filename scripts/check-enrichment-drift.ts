@@ -22,6 +22,7 @@ const FIELDS = [
   "hillFeatures",
   "protectedArea",
   "heritage",
+  "image", // a curated photo lost to a source that changed shape (spec 10)
 ] as const;
 
 const TOLERANCE = 0.02; // fraction each count may drop before this fails
