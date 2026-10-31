@@ -19,7 +19,10 @@ permissions:
 
 jobs:
   baselines:
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: that moved to 26.04, where Playwright 1.60
+    # cannot install its browser deps, and every e2e job failed (spec 42 §E).
+    # Moving off 24.04 means re-rendering every visual baseline there.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:

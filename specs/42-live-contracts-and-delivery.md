@@ -110,6 +110,18 @@ The e2e jobs share this VM with every other project's CI, so load is normal, not
   no timeout could have saved it. Tests that drive the app by keyboard wait for
   `resultsLoaded()` first. Waits on lazy chunks get an explicit bound under the test timeout.
 - Third-party tiles are stubbed. The static project runs in its own pass.
+- **Every Playwright job runs on one pinned image, never `ubuntu-latest`.** On 2026-10-31
+  `ubuntu-latest` had become 26.04, where Playwright 1.60 cannot install its browser
+  dependencies: every PR's e2e jobs, the deploy's e2e gate and the baseline generator failed
+  with no change in this repo. They now run on `ubuntu-24.04`, the image the committed
+  screenshot baselines were rendered on, and `scripts/workflows.test.ts` fails if any of them
+  moves to a `latest` label or off the image the others use. Moving image means regenerating the
+  baselines there (`visual-baselines.yml`) in the same PR.
+- **The baselines lagged the app inside the tolerance.** They showed the shortcut hint as `⌘K`
+  while Linux has rendered `Ctrl K` since spec 38, and the 1% pixel tolerance hid it until an
+  unrelated text change pushed the same screenshot over. A baseline refresh fixes it; the lesson
+  is that a tolerance absorbs drift silently, so a refresh after each intentional UI change is
+  part of that change.
 
 ## Edge cases & error states
 
