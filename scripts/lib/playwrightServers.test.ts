@@ -78,7 +78,4 @@ describe("playwright.config.ts snapshot defaults (spec 42 §E)", () => {
     // baseline from this machine's fonts.
     expect(config.updateSnapshots).toBe("none");
   });
-  it("refuses any resolved update mode in globalSetup, not by parsing argv", () => {
-    expect(String(config.globalSetup)).toMatch(/scripts\/lib\/baselineGuard\.ts$/);
-  });
 });

@@ -38,11 +38,7 @@ jobs:
       # Two passes, as `npm run e2e` runs them: the static project's full
       # build starves the dev server when they share one (playwright.config.ts).
       - run: npx playwright test --project=chromium --project=mobile visual.spec.ts --update-snapshots=all
-        env:
-          TRAILWARD_BASELINES: "1" # the one place allowed to rewrite (playwright.config.ts)
       - run: npx playwright test --project=static static.spec.ts --update-snapshots=all
-        env:
-          TRAILWARD_BASELINES: "1" # the one place allowed to rewrite (playwright.config.ts)
       - name: Commit refreshed baselines if changed
         run: |
           if [[ -n "$(git status --porcelain e2e/__screenshots__)" ]]; then

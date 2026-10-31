@@ -27,8 +27,6 @@ export default defineConfig({
   // otherwise get its first baseline from this machine's fonts. The baseline
   // workflow asks with --update-snapshots=all (spec 42 §E).
   updateSnapshots: "none",
-  // Refuses any other resolved mode outside the baseline workflow.
-  globalSetup: "./scripts/lib/baselineGuard.ts",
   expect: {
     // A bound on a HANG, like `timeout` above, not a speed assertion: every
     // assertion still polls for a state. 5 s let a cold mount at a load average

@@ -140,14 +140,15 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   in the suite's two passes (app projects, then the static project, which starves the dev
   server when they share one). There is no local update command: one rewrote failing screenshots
   with the fleet VM's rendering, and a failing local run already leaves its actual and diff
-  images in `test-results/`. Baselines come only from the workflow, enforced in
-  `scripts/lib/baselineGuard.ts`, the config's `globalSetup`: it refuses any update mode but
-  `none` without `TRAILWARD_BASELINES=1`, reading the mode Playwright itself resolved from the
-  command line and config. The config's own default is `none`, so a new screenshot run locally
-  fails rather than writing its first baseline from this machine's fonts. (A package.json scan,
-  then hand-parsing the arguments, were tried first; each round of review found a spelling one
-  let through or an ordinary run it refused.) **Known limit:** UI mode applies its "update
-  snapshots" toggle per run, after global setup, so that path is review-enforced.
+  images in `test-results/`. Baselines come only from the workflow. The config's
+  `updateSnapshots` is `none`, so a run that is not asked to update never writes one (a new
+  screenshot run locally fails rather than taking its first baseline from this machine's fonts).
+  **Review-enforced, not gated (CON-PROC-011):** a deliberate `-u` run outside the workflow.
+  Three mechanisms were built and dropped in review on #80: a package.json scan and an argument
+  parser each missed spellings or refused ordinary runs, and a `globalSetup` check runs only
+  after Playwright has cleared `test-results/` and started the servers, destroying the diff
+  images its own message points to. A worker fixture would need every spec to import a shared
+  `test`; that is a change of its own if it is ever wanted.
   Refreshing them after each intentional UI change is **review-enforced**: no check can tell an
   intended UI change from drift. `=all` may also commit antialiasing-only rewrites; that churn is
   the cost of never keeping a stale baseline.
@@ -191,18 +192,10 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   `ubuntu-NN.NN` image, the same one, as is every job of `ci.yml` and `deploy.yml`; each sets up
   browsers only through the shared action, after its checkout; the action reads `/etc/os-release` in a
   step before every cache step and keys on its output, never `env.` or `ImageVersion`; the
-  baseline generator rewrites with `=all` in two passes, and only its two update steps set
-  `TRAILWARD_BASELINES=1`; no
+  baseline generator rewrites with `=all` in two passes; no
   workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least
   15 s and no `timeout:` anywhere in e2e is tighter. Each assertion was mutated and failed.
-- `scripts/lib/baselineGuard.test.ts`: any mode but `none` is refused unless
-  `TRAILWARD_BASELINES=1`; against the real CLI, on a throwaway project using the guard,
-  `-u`, `-uall`, `-xu`, `-u all` and `--update-snapshots=missing` are refused while a plain run
-  and `-groute` pass, and the workflow's update passes. `scripts/lib/playwrightServers.test.ts`:
-  the config's default is `none` and its globalSetup is the guard. `scripts/workflows.test.ts`:
-  the variable is named only on the baseline workflow's two update steps, nowhere else in that
-  file (no workflow- or job-level env, no `$GITHUB_ENV` write), under `.github/`, in a script or
-  in package.json. The module's project names equal the config's. Both `--project` spellings, the space spelling
+- `scripts/lib/playwrightServers.test.ts`: the config's `updateSnapshots` is `none`. The module's project names equal the config's. Both `--project` spellings, the space spelling
   reading every value up to the next flag; app projects start only the dev server, static only
   the preview, all or a mix start both; any name that is not exactly a known project (case,
   wildcard), even beside exact ones, starts both, because Playwright matches loosely and a

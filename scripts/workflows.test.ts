@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { load } from "js-yaml";
-import { BASELINES_ENV } from "./lib/baselineGuard";
 
 // Spec 42 §E. ubuntu-latest moved to 26.04 on its own schedule, Playwright
 // 1.60 cannot install its browser dependencies there, and every e2e job and
@@ -12,13 +11,11 @@ const dir = resolve(__dirname, "../.github/workflows");
 
 interface Job {
   "runs-on"?: unknown;
-  env?: Record<string, string>;
   steps?: {
     id?: string;
     run?: string;
     uses?: string;
     with?: Record<string, unknown>;
-    env?: Record<string, string>;
   }[];
 }
 
@@ -129,29 +126,6 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     for (const r of runs) expect(r).toMatch(/--update-snapshots=all\b/);
     expect(runs.filter((r) => /--project=static/.test(r))).toHaveLength(1);
     expect(runs.find((r) => /--project=static/.test(r))).not.toMatch(/--project=(chromium|mobile)/);
-  });
-
-  it("only the baseline workflow's update steps carry the permission to rewrite", () => {
-    // baselineGuard.ts refuses an update run without it (spec 42 §E).
-    const gen = playwrightJobs.find((j) => j.id === "visual-baselines.yml:baselines")!;
-    const steps = (gen.job.steps ?? []).filter((st) => /playwright test/.test(st.run ?? ""));
-    expect(steps).toHaveLength(2);
-    for (const st of steps) expect(st.env?.[BASELINES_ENV]).toBe("1");
-    // Named nowhere else in that file (no workflow- or job-level env, no
-    // $GITHUB_ENV write), nor anywhere else under .github/, nor in a script.
-    const text = readFileSync(resolve(dir, "visual-baselines.yml"), "utf8");
-    expect(text.split(BASELINES_ENV).length - 1).toBe(steps.length);
-    const walk = (d: string): string[] =>
-      readdirSync(d).flatMap((n) => {
-        const p = resolve(d, n);
-        return statSync(p).isDirectory() ? walk(p) : [p];
-      });
-    const elsewhere = [
-      ...walk(resolve(__dirname, "../.github")).filter((p) => !p.endsWith("visual-baselines.yml")),
-      ...walk(__dirname).filter((p) => p.endsWith(".sh")),
-      resolve(__dirname, "../package.json"),
-    ];
-    for (const f of elsewhere) expect(readFileSync(f, "utf8"), f).not.toContain(BASELINES_ENV);
   });
 
   it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {
