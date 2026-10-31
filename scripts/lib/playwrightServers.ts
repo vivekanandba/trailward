@@ -5,12 +5,17 @@
  * used. The config asks this instead.
  */
 
-/** Projects named with `--project=x` or `--project x`; empty means all of them. */
+/**
+ * Projects named with `--project=x` or `--project x y …` (the space spelling
+ * takes every value up to the next flag); empty means all of them.
+ */
 export function requestedProjects(argv: string[]): string[] {
   const out: string[] = [];
   argv.forEach((a, i) => {
     if (a.startsWith("--project=")) out.push(a.slice("--project=".length));
-    else if (a === "--project" && argv[i + 1]) out.push(argv[i + 1]);
+    else if (a === "--project") {
+      for (let j = i + 1; j < argv.length && !argv[j].startsWith("-"); j++) out.push(argv[j]);
+    }
   });
   return out;
 }
@@ -18,8 +23,7 @@ export function requestedProjects(argv: string[]): string[] {
 const APP = ["chromium", "mobile"];
 
 /**
- * The app projects run against the dev server; static (and pwa) against
- * `vite preview`. Playwright matches `--project` case-insensitively and
+ * The app projects run against the dev server; static against `vite preview`. Playwright matches `--project` case-insensitively and
  * accepts wildcards, so anything other than an exact lower-case name starts
  * both servers: a spare server costs time, a missing one fails every test.
  */

@@ -47,4 +47,13 @@ describe("serversFor", () => {
       expect(serversFor(argv(a)), a).toEqual(["dev", "preview"]);
     }
   });
+
+  it("reads every value after a space-spelled --project", () => {
+    // `--project mobile static` runs both, so both servers are needed.
+    expect(requestedProjects(argv("--project mobile static --workers 1"))).toEqual([
+      "mobile",
+      "static",
+    ]);
+    expect(serversFor(argv("--project mobile static"))).toEqual(["dev", "preview"]);
+  });
 });

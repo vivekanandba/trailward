@@ -28,13 +28,13 @@ validates and all tests pass**.
   - `validate-data`: `npm ci && npm run validate:data`
   - `test`: `npm ci && npm run typecheck && npm test`
   - `e2e`: `npm ci`, the shared Playwright setup action, then `npm run e2e:app` (both Chromium-based projects: desktop + Pixel-7 mobile; includes the spec-33 visual diffs; `test-results/` uploaded as an artifact on every outcome)
-  - `build`: `needs: [validate-data, test, e2e]` → `npm run build` → upload Pages artifact
+  - `build`: `needs: [quality, validate-data, test, e2e, e2e-static]` → `npm run build` → upload Pages artifact
   - `deploy`: `needs: build` → `actions/deploy-pages`
 - Pages source = **GitHub Actions** (set once in repo Settings → Pages).
 
 ## Edge cases & error states
 
-- e2e flakiness → Playwright `retries: 2` in CI; still must pass to deploy.
+- e2e flakiness → Playwright `retries: 1` with `failOnFlakyTests` in CI: a test that passes only on retry fails the run (CON-VER-008), so a flake blocks the deploy rather than hiding in it.
 - A red pipeline leaves the previously deployed site live (no partial publish).
 - Forks/PRs don't deploy (deploy only on `main` / dispatch).
 
