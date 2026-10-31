@@ -236,20 +236,15 @@ export async function runBuildData(
     }
   }
   if (!Array.isArray(parsed)) refuse("is not an array of treks");
-  // Everything the fold keeps exactly as committed is validated here, located
-  // by index; a curated record this run rebuilds needs only an id, because
-  // the fold replaces its `run` fields. (Its carried place fields and photo
-  // are still validated, with the rest of the output, before the write.)
+  // Only what the fold itself needs, located by index. Full validation runs
+  // once, on the folded output before the write, and names any bad record by
+  // id; deciding here which records the fold keeps would be a second copy of
+  // the fold's own rule.
   const entries = parsed as unknown[];
-  const rebuilt = new Set(seeds.map((s) => s.id));
-  entries.forEach((t, i) => {
-    if (typeof t !== "object" || t === null || typeof (t as Trek).id !== "string") {
-      refuse(`has an entry at index ${i} that is not a trek with an id`);
-    }
-    const kept = (t as Trek).tier !== "curated" || !rebuilt.has((t as Trek).id);
-    const res = kept ? validateTrek(t) : { ok: true as const };
-    if (!res.ok) refuse(`has an invalid record at index ${i}: ${res.error}`);
-  });
+  const bad = entries.findIndex(
+    (t) => typeof t !== "object" || t === null || typeof (t as Trek).id !== "string",
+  );
+  if (bad >= 0) refuse(`has an entry at index ${bad} that is not a trek with an id`);
   const existing = entries as Trek[];
   const treks = await buildDataset(seeds, origin, enrichers);
   const ds = validateDataset(foldCurated(treks, existing));

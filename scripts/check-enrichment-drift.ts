@@ -42,8 +42,8 @@ export function fieldCounts(treks: Trek[]): Record<string, number> {
  * Fields a weekly refresh never legitimately removes from a curated record:
  * the road distance and drive time (`run` fields, never carried stale, so a
  * route-service hiccup drops them outright) and the photo (carried unless the
- * seed's sources change, which happens in a reviewed PR, not in a refresh;
- * six were once lost to a source that changed shape). Spec 10.
+ * seed moves more than 120 m or cites other sources, both reviewed edits, not
+ * refresh events; six were once lost to a source that changed shape). Spec 10.
  */
 const CURATED_KEPT = ["distanceKm", "driveTimeMin", "image"] as const;
 

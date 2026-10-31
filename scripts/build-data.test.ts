@@ -315,8 +315,6 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
     for (const [body, why] of [
       ["[null]", /has an entry at index 0 that is not a trek with an id/],
       ['[{"name":"x"}]', /has an entry at index 0 that is not a trek with an id/],
-      // Kept exactly by the fold, so refused up front, by index.
-      ['[{"id":"x"}]', /has an invalid record at index 0: .*name/],
       ["[{", /is not valid JSON/],
     ] as const) {
       const io = memoryIO({ [file]: body });
