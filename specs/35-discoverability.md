@@ -67,9 +67,22 @@ attribution, source links, and the map deep-link.
 
 ## E. Social cards
 
-Per-page Open Graph images generated at build from the trek's own facts (name, elevation,
-difficulty, relief), typographic only, no network access at generation time. Deferred to
-section C's PR; the app-shell card (`icons/og.png`) already exists.
+Per-page link-preview images (spec 44 R17), typographic only, generated at build with no network
+access: `scripts/lib/socialCard.ts` lays out the trek's name, then a facts line from the fields
+the record holds (elevation, difficulty, marked "est." when terrain-estimated, relief), and
+renders 1200×630 PNGs with `@resvg/resvg-js` and a committed DejaVu Sans Bold
+(`scripts/cards/`, Bitstream Vera licence). Both are build-time only; nothing ships to a reader
+but the PNGs (CON-SEC-003: a build-tree dependency, audited as one).
+
+- **Which pages:** every curated page and the top 100 by hidden-gem score, about 116 cards and
+  4 MB per build. Every other page keeps the global card (`icons/og.png`). Carding all 3,886
+  would be about 140 MB of images for crawlers alone.
+- **Which names:** only Latin and Latin Extended, which the font covers (ā ī ū ṭ ṇ). A name with
+  any other script keeps the global card rather than render boxes.
+- **Fit:** the title shrinks from 96 px to 64 px and wraps at a word onto two lines, the second
+  cut with "…" if needed; a test measures every carded name's rendered width with resvg itself.
+- The page's `og:image` points at its card; cards are written under `dist/t/<slug>/`, so the
+  generator's clean rebuild removes a card whose page is gone.
 
 ## Edge cases & error states
 

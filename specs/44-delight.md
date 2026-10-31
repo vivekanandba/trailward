@@ -54,7 +54,7 @@ that implements each one names its check. R1 is enforced by the tests named unde
 | 0   | Static pages' JSON-LD              | **3,815 of 3,886** pages put a `url` in their structured data that 404s live. `trekJsonLd` built it from `trek.id`, but the page lives at a slug made from the name (`slugFor`, `pages.ts:14`), plus a `-<id>` suffix on a name collision (`slugMap`, `pages.ts:77`)           | **R1, defect**                                              |
 | 1   | Focus                              | `focus-visible` is styled only in `ui/Button.tsx`; seven places set `outline-none`, and five of them add no replacement                                                                                                                                                        | later                                                       |
 | 2   | Print                              | No `@media print` anywhere                                                                                                                                                                                                                                                     | later                                                       |
-| 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                       | later; waits for row 18                                     |
+| 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                       | **R17** (spec 35 §E)                                        |
 | 4   | Size                               | No size budget. JS+CSS in `dist/assets` is 674,629 bytes, of 764,229 with fonts                                                                                                                                                                                                | later; before any other delight                             |
 | 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                 | later                                                       |
 | 6   | Motion on load                     | A `?sel=` deep link mounts the panel with `.panel-enter` (`App.tsx:84`); the mobile sheet slides on mount (`Sheet.tsx:91`); `FitToResults` animates on mount (`TrekMap.tsx:169`)                                                                                               | later                                                       |
@@ -111,6 +111,11 @@ that implements each one names its check. R1 is enforced by the tests named unde
     be read fails, naming what is missing.
   - The fixed sample `t/skandagiri/` stays in the deploy surface for what it checks (the page
     exists and is not a soft 404). Its slug equals its id, so it could never see this defect.
+
+- **R17 — a trek's link shows that trek (row 3).** Curated pages and the top 100 hidden gems
+  get their own social card, typographic and built only from the record's fields (D1); every
+  other page, and any name in a script the card font lacks, keeps the global card. Specified in
+  spec 35 §E.
 
 ## Constraints learned in review — for the requirements still to be written
 
@@ -187,6 +192,7 @@ npm run build:pages                                 # R1 on every real page (ref
 npx vitest run scripts/lib/deploycheck.test.ts scripts/check-deploy.test.ts  # R1 live check
 npm run e2e:static                                  # R1 on the sampled pages, as served
 npm run check:deploy                                # R1 against the live site, after deploy
+npx vitest run scripts/lib/socialCard.test.ts scripts/build-pages.test.ts  # R17
 ```
 
 ## Revisions

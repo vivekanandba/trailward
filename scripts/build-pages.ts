@@ -21,6 +21,7 @@ import {
 } from "./lib/pages";
 import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
+import { cardPages, cardSvg, renderCard } from "./lib/socialCard";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
 import {
@@ -30,7 +31,7 @@ import {
   sampleByKind,
   versionFile,
 } from "./lib/deploycheck";
-import { SITE_URL } from "../src/lib/seo";
+import { SITE_URL, absoluteUrl } from "../src/lib/seo";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
@@ -122,9 +123,20 @@ export function runBuildPages(
   // `npm run build` never runs validateDataset (validate:data is a separate CI
   // job) — so one hand-edited record used to half-wipe dist/t and exit with a
   // raw TypeError. After this point NOTHING renders: the loop below only writes.
+  // Social cards (spec 35 §E, spec 44 R17): curated pages and the top hidden
+  // gems get their own link-preview image, rendered here so a render failure
+  // refuses before anything is written. Every other page keeps the global card.
+  const cards = new Map(cardPages(pages).map((t) => [t.id, renderCard(cardSvg(t)!)] as const));
+  const globalCard = absoluteUrl("icons/og.png");
   const trekPages = pages.map((trek) => {
     const slug = slugs.get(trek.id)!;
-    const html = renderTrekPage(trek, slug);
+    const rendered = renderTrekPage(trek, slug);
+    const html = cards.has(trek.id)
+      ? rendered.replace(
+          `content="${globalCard}"`,
+          `content="${absoluteUrl(`t/${slug}/card.png`)}"`,
+        )
+      : rendered;
     // Spec 44 R1, on EVERY real page of EVERY build: the page names its own
     // url, and its structured data names the same one. 3,815 pages once
     // advertised a url that 404s, and no gate looked at the real output.
@@ -133,7 +145,7 @@ export function runBuildPages(
     // bug in absoluteUrl (a doubled base path) would pass both sides.
     const problem = jsonLdProblem(`${SITE_URL}/t/${slug}/`, parseTrekPage(html));
     if (problem) throw new Error(`[pages] t/${slug}/: ${problem}`);
-    return { path: `${paths.outDir}/${slug}/index.html`, html };
+    return { path: `${paths.outDir}/${slug}/index.html`, html, slug, card: cards.get(trek.id) };
   });
 
   const stats = datasetStats(treks, pages.length);
@@ -165,8 +177,13 @@ export function runBuildPages(
 
   // ---- Everything above can refuse. Everything below only writes. ----
   io.removeDir(paths.outDir, repoRoot);
-  for (const { path, html } of trekPages) io.writeFile(path, html);
-  io.log(`[pages] wrote ${pages.length} trek page(s) → ${paths.outDir}`);
+  for (const { path, html, slug, card } of trekPages) {
+    io.writeFile(path, html);
+    if (card) io.writeFile(`${paths.outDir}/${slug}/card.png`, card);
+  }
+  io.log(
+    `[pages] wrote ${pages.length} trek page(s), ${cards.size} with a social card → ${paths.outDir}`,
+  );
 
   // Content pages (spec 36). Authored markdown, plus a generated /data/ page.
   const written: string[] = [];
