@@ -22,10 +22,11 @@ pipeline, commits changes, and lets the gated deploy publish them.
   **when** its work job ends, **then** a separate `report-failure` job reports the result: a
   **failure** opens, or comments on, the one open issue with exactly that workflow's title,
   saying only that the run failed (what it changed before failing is not known there); a later
-  **success** closes it, naming the run that recovered; a cancelled or skipped run changes
-  nothing; a missing result fails the reporter job rather than being reported as a failure.
+  **success** closes it, naming the run that recovered; a **cancelled** run (a timeout, a runner
+  that never came) is filed like a failure; a skipped run changes nothing; a missing result fails the reporter job rather than being reported as a failure.
   A checker that is advisory about what it finds (dead links, API drift) still exits non-zero
-  when it **crashes**, so the reporter never reads a crash as success and closes an open issue
+  when it **crashes**, and the live check exits non-zero when it found drift but **could not
+  file** the drift issue, so the reporter never reads either as success and closes an open issue
   as recovered.
   Only runs on `main` report, so a dispatch on a branch neither files nor closes the issue. A failed refresh commits no data. In refresh-data and weekly-links the work job holds
   no issues-write token; apply-suggestions and weekly-live-apis hold one for their own work
@@ -111,8 +112,9 @@ of treks.json`.
   none gets the rainfall-derived one this run, and the live enricher reads the committed grid; a
   promoted pin replaces the discovery record without its discovery score or estimated
   difficulty; a road distance this run did not measure is not carried; key order holds even
-  when the built record's keys come in a different order.
-- `scripts/report-failure.test.ts` also: the message says only "failed"; a missing result is
+  when the built record's keys come in a different order; a committed file that is not an
+  array is refused by name.
+- `scripts/report-failure.test.ts` also: a cancelled run is filed; the message says only "failed"; a missing result is
   refused with nothing posted; the four callers report only on `main`; the test names `jq` when
   it is missing.
 - After merge: dispatch the refresh and read back a green run (CON-VER-003).

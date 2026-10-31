@@ -170,8 +170,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       }
       // ADVISORY by design: upstream reorganising its API is not something a
       // revert here can fix, and a red scheduled run trains everyone to ignore
-      // the tab. The issue is the signal.
-      process.exit(0);
+      // the tab. The issue is the signal — so when the issue could NOT be
+      // filed, the run is red: otherwise its reporter reads success and the
+      // drift is recorded nowhere (spec 10).
+      process.exit(r.fileError ? 1 : 0);
     })
     .catch((err) => {
       console.error(`[live] check itself failed: ${(err as Error).message}`);

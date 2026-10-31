@@ -5,9 +5,12 @@
 #
 #   GH_REPO=owner/repo RUN_URL=https://… scripts/report-failure.sh "<title>" <result>
 #
-#   failure → comment on the open issue with exactly this title, or open one
+#   failure, cancelled → comment on the open issue with exactly this title, or
+#                        open one. A scheduled run is cancelled by a timeout or a
+#                        runner that never came, and twelve silent weeks is the
+#                        incident this exists for.
 #   success → close that issue, if one is open, naming the run that recovered
-#   anything else (cancelled, skipped) is not a verdict, and changes nothing
+#   skipped → not a verdict; nothing changes
 #
 # GH_REPO, not a git checkout, names the repo. The title is matched exactly, so
 # an issue that merely contains the same words never receives the alert.
@@ -24,6 +27,7 @@ run="${RUN_URL:-(run URL unknown)}"
 
 case "$result" in
   failure | success) ;;
+  cancelled) result=failure ;;
   *) echo "report-failure: '$result' is not a verdict; nothing to report"; exit 0 ;;
 esac
 
