@@ -23,7 +23,8 @@ import { dirname } from "node:path";
 
 export interface BuildIO {
   readFile(path: string): string;
-  writeFile(path: string, body: string): void;
+  /** A string is written as UTF-8; bytes (a social card's PNG) as they are. */
+  writeFile(path: string, body: string | Uint8Array): void;
   exists(path: string): boolean;
   /**
    * Remove a directory tree, but only if it resolves to somewhere INSIDE
@@ -40,7 +41,8 @@ export const nodeIO: BuildIO = {
   readFile: (p) => readFileSync(p, "utf8"),
   writeFile: (p, body) => {
     mkdirSync(dirname(p), { recursive: true });
-    writeFileSync(p, body, "utf8");
+    if (typeof body === "string") writeFileSync(p, body, "utf8");
+    else writeFileSync(p, body);
   },
   exists: (p) => existsSync(p),
   removeDir(p, within) {
@@ -82,6 +84,8 @@ export const nodeIO: BuildIO = {
  */
 export function memoryIO(seed: Record<string, string> = {}): BuildIO & {
   files: Map<string, string>;
+  /** What was written as bytes, kept apart so `files` stays text. */
+  bytes: Map<string, Uint8Array>;
   logs: string[];
 } {
   // A seed key ending in "/" is an EMPTY directory. Without this the fake
@@ -94,13 +98,15 @@ export function memoryIO(seed: Record<string, string> = {}): BuildIO & {
       .map((k) => k.replace(/\/+$/, "")),
   );
   const files = new Map(Object.entries(seed).filter(([k]) => !k.endsWith("/")));
+  const bytes = new Map<string, Uint8Array>();
   const logs: string[] = [];
   // The trailing slash matters: without it `/a/foo` would report as a directory
   // merely because `/a/foobar/x` starts with `/a/foo`.
   const isDir = (path: string): boolean =>
-    dirs.has(path) || [...files.keys()].some((k) => k.startsWith(`${path}/`));
+    dirs.has(path) || [...files.keys(), ...bytes.keys()].some((k) => k.startsWith(`${path}/`));
   return {
     files,
+    bytes,
     logs,
     readFile(path) {
       const body = files.get(path);
@@ -108,11 +114,12 @@ export function memoryIO(seed: Record<string, string> = {}): BuildIO & {
       return body;
     },
     writeFile(path, body) {
-      files.set(path, body);
+      if (typeof body === "string") files.set(path, body);
+      else bytes.set(path, body);
     },
     // nodeIO.exists is true for a directory, so this must be too: a fake that
     // is stricter than the real thing makes a passing test meaningless.
-    exists: (path) => files.has(path) || isDir(path),
+    exists: (path) => files.has(path) || bytes.has(path) || isDir(path),
     removeDir(path, within) {
       // The fake enforces containment too — a memoryIO test must not pass on a
       // path nodeIO would refuse, or the guard is only half-tested.
@@ -136,6 +143,9 @@ export function memoryIO(seed: Record<string, string> = {}): BuildIO & {
       for (const key of [...files.keys()]) {
         if (key.startsWith(`${path}/`)) files.delete(key);
       }
+      for (const key of [...bytes.keys()]) {
+        if (key.startsWith(`${path}/`)) bytes.delete(key);
+      }
       // Clearing `dirs` matters: without it the fake reports a removed
       // directory as still existing, which is the opposite of the disk.
       for (const dir of [...dirs]) {
@@ -146,7 +156,7 @@ export function memoryIO(seed: Record<string, string> = {}): BuildIO & {
       if (!isDir(path)) throw new Error(`ENOENT: ${path}`);
       return [
         ...new Set(
-          [...files.keys()]
+          [...files.keys(), ...bytes.keys()]
             .filter((k) => k.startsWith(`${path}/`))
             .map((k) => k.slice(path.length + 1).split("/")[0]),
         ),
