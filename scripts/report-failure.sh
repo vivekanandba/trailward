@@ -34,15 +34,13 @@ case "$result" in
 esac
 
 # Every open issue, through the REST list rather than search: the search index
-# lags a just-filed issue, so a quick re-run would open a duplicate. Only the
-# ones this script filed, known by a marker in the body rather than by the
-# token's login, which nothing here could confirm: a person's issue with the
-# same title is never closed as "recovered". Pull requests drop out.
-marker="<!-- report-failure -->"
-numbers=$(TITLE="$title" MARKER="$marker" gh api --paginate \
-  "repos/$GH_REPO/issues?state=open&per_page=100" \
+# lags a just-filed issue, so a quick re-run would open a duplicate. Only those
+# a bot filed (`user.type == "Bot"`, which an outside account on this public
+# repo cannot be and an edit cannot remove), so a person's issue with the same
+# title is never commented on or closed as "recovered". Pull requests drop out.
+numbers=$(TITLE="$title" gh api --paginate "repos/$GH_REPO/issues?state=open&per_page=100" \
   --jq '.[] | select(.pull_request == null and .title == env.TITLE
-    and ((.body // "") | contains(env.MARKER))) | .number')
+    and .user.type == "Bot") | .number')
 number=$(printf '%s\n' "$numbers" | sed -n 1p)
 
 if [ "$result" = "success" ]; then
@@ -53,7 +51,5 @@ if [ "$result" = "success" ]; then
 elif [ -n "$number" ]; then
   gh issue comment "$number" --body "This scheduled run $what: $run"
 else
-  gh issue create --title "$title" --body "This scheduled run $what: $run
-
-$marker"
+  gh issue create --title "$title" --body "This scheduled run $what: $run"
 fi

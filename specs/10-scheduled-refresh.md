@@ -47,7 +47,9 @@ pipeline, commits changes, and lets the gated deploy publish them.
     refresh in which **any** record curated before and after lacks a road distance, drive time
     or photo it had (`curatedLosses`, per record and per field, no tolerance: there are only 16,
     and a count would let one record's gain hide another's loss). A new seed or a pin promoted
-    this run is not a loss; one whose route failed ships without it.
+    this run is not a loss; one whose route failed ships without it. Nor is a photo the fold
+    dropped by its own rule (the seed moved, or cites other sources: `photoCarries`, shared by
+    the fold and the guard so they cannot disagree).
   - **`place`** fields (terrain, land cover, gazetteer, hill features, trail, POIs, gallery)
     keep their previous value when this run produced none, **while the seed is within 120 m of
     where it was** (`CARRYOVER_KM`, `scripts/lib/carryover.ts`, the distance discovery uses for a
@@ -64,10 +66,12 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - **Given** a Wikipedia title that is now a disambiguation page, **when** the build reads it,
   **then** it takes nothing from it.
 - **Given** a committed `treks.json` that is not JSON, not an array, or has an entry that is
-  not an object with an id, **then** `build:data` refuses it naming the file and the entry's
-  index, before any network enrichment. A record that is merely invalid is not refused there:
-  the fold replaces or drops curated records, which is how `build:data` repairs one a tightened
-  rule rejects, and the folded output is validated in full before it is written.
+  not an object with an id, or holds an invalid record the fold keeps exactly (any non-curated
+  record, or a curated one no seed rebuilds), **then** `build:data` refuses it naming the file
+  and the entry's index, before any network enrichment. A curated record a seed rebuilds needs
+  only an id there: the fold replaces its `run` fields, which is how `build:data` repairs one a
+  tightened rule rejects. Its carried place fields and photo are not rebuilt, so one of those
+  that fails is refused with the rest of the output, before the write.
 
 ## Interfaces & data contracts
 
@@ -113,22 +117,23 @@ of treks.json`.
   changes, and kept when the lookup answered without one or failed; a `run` field
   (`permitRequired`) dropped when no longer given;
   key order kept; a removed seed dropped. `runBuildData`: the written file keeps every discovery
-  record; a non-JSON file, a non-array, and a `null` or id-less entry are each refused by name
-  and index before any enricher runs; a committed curated record the validator rejects is
-  repaired by the fold, not refused.
+  record; a non-JSON file, a non-array, a `null` or id-less entry and an invalid kept record are
+  each refused by name and index before any enricher runs; a rebuilt curated record whose `run`
+  field the validator rejects is repaired by the fold, not refused.
 - `scripts/sources/parsers.test.ts`: a disambiguation page yields nothing.
 - `scripts/build-tools.test.ts`: `curatedLosses` names each route fact or photo a curated record
   lost, per record and field: a record routed this run does not hide another's loss, one already
-  short a fact is caught losing the other, and a never-held field, a new record and a promoted
-  pin are not losses; discovery photos are not counted.
+  short a fact is caught losing the other, and a never-held field, a new record, a promoted pin,
+  a demoted record and a photo dropped because the seed moved or changed sources are not losses;
+  discovery photos are not counted.
 - `scripts/report-failure.test.ts` (fake `gh`): opens an issue when none matches, comments on
   the exact-title match, ignores a title that merely contains the words, closes the issue on a
   later success, does nothing on success with none open or for a skipped run, files a cancelled
   run saying it was cancelled (not "failed"),
   reads every open issue through the paginated REST list (not the lagging search index),
-  ignores a pull request with the same title and an issue a person filed with it (its own carry
-  a body marker, not a login nothing could confirm), closes every duplicate on success, refuses
-  no title.
+  ignores a pull request with the same title and an issue a person filed with it (only a bot's,
+  `user.type == "Bot"`, is its own: an outside account cannot be one and an edit cannot remove
+  it), closes every duplicate on success, refuses no title.
 - `scripts/build-data.test.ts` also: a best season deleted from the seed is gone; a seed with
   none gets the rainfall-derived one this run, and the live enricher reads the committed grid; a
   promoted pin replaces the discovery record without its discovery score or estimated

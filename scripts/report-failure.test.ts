@@ -11,14 +11,19 @@ const script = resolve(__dirname, "report-failure.sh");
 let dir: string;
 let calls: string;
 
-type Issue = { number: number; title: string; pull_request?: object; body?: string };
+type Issue = {
+  number: number;
+  title: string;
+  pull_request?: object;
+  user?: { login: string; type: "Bot" | "User" };
+};
 
-/** Open issues as the REST list returns them; filed by this script unless a body is given. */
+/** Open issues as the REST list returns them; filed by the workflow's bot unless stated. */
 function fakeGh(openIssues: Issue[]): void {
-  const filed = "This scheduled run failed: x\n\n<!-- report-failure -->";
+  const bot = { login: "github-actions[bot]", type: "Bot" };
   writeFileSync(
     join(dir, "issues.json"),
-    JSON.stringify(openIssues.map((i) => ({ body: filed, ...i }))),
+    JSON.stringify(openIssues.map((i) => ({ user: bot, ...i }))),
   );
   writeFileSync(
     join(dir, "gh"),
@@ -119,18 +124,13 @@ describe("report-failure.sh", () => {
   });
 
   it("never touches a same-titled issue a person filed", () => {
-    // A person may track a problem the run cannot see; a green run is not its recovery.
-    for (const body of ["Tracking a data problem by hand", null]) {
-      fakeGh([{ number: 5, title: "Weekly data refresh is failing", body } as never]);
-      rmSync(calls, { force: true });
-      expect(run("Weekly data refresh is failing", "success")).toBe("");
-      expect(run("Weekly data refresh is failing")).toMatch(/^issue create /);
-    }
-  });
-
-  it("marks the issue it files, so it can tell its own from a person's", () => {
-    fakeGh([]);
-    expect(run("Weekly data refresh is failing")).toContain("<!-- report-failure -->");
+    // A person may track a problem the run cannot see, and on a public repo
+    // anyone can open an issue with this title; only a bot's issue is ours.
+    const person = { login: "someone", type: "User" as const };
+    fakeGh([{ number: 5, title: "Weekly data refresh is failing", user: person }]);
+    expect(run("Weekly data refresh is failing", "success")).toBe("");
+    rmSync(calls, { force: true });
+    expect(run("Weekly data refresh is failing")).toMatch(/^issue create /);
   });
 
   it("never mistakes a pull request with that title for the issue", () => {

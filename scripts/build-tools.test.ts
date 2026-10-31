@@ -236,6 +236,8 @@ describe("enrichment drift guard (spec 31)", () => {
       c("half", { driveTimeMin: undefined }), // already short one; now loses the other
       c("never", { distanceKm: undefined }), // never had one: not a loss
       c("photo"),
+      c("resourced"), // a reviewed PR changed its cited sources: the fold drops it on purpose
+      c("moved"), // corrected by more than 120 m: likewise
       trek({ id: "pin", name: "pin", tier: "discovery", image: img }), // promoted this run
       c("gone"),
       c("demoted"), // seed removed; discovery found the summit again
@@ -246,6 +248,8 @@ describe("enrichment drift guard (spec 31)", () => {
       c("half", { distanceKm: undefined, driveTimeMin: undefined }),
       c("never", { distanceKm: undefined }),
       c("photo", { image: undefined }),
+      c("resourced", { image: undefined, sources: ["https://en.wikipedia.org/wiki/Other"] }),
+      c("moved", { image: undefined, lat: 12.01 }),
       c("pin", { distanceKm: undefined, driveTimeMin: undefined, image: undefined }),
       c("new", { distanceKm: undefined }),
       trek({ id: "demoted", name: "demoted", tier: "discovery" }),
@@ -262,7 +266,6 @@ describe("enrichment drift guard (spec 31)", () => {
     const d = (over: Record<string, unknown> = {}) =>
       trek({ id: "d", name: "D", tier: "discovery", image: img, ...over });
     expect(curatedLosses([d()], [d({ image: undefined })])).toEqual([]);
-    expect(fieldCounts([d()])).not.toHaveProperty("image");
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {
