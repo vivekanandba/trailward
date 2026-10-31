@@ -16,7 +16,7 @@ import { validateDataset, validateTrek } from "../src/lib/trek";
 import { distanceFrom } from "../src/lib/distance";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
 import { CARRYOVER_KM } from "./lib/carryover";
-import { bestSeasonFrom, climateCellKey, type MonthlyRain } from "../src/lib/climate";
+import { seasonFor, type MonthlyRain } from "../src/lib/climate";
 import climateGrid from "../src/data/climate.json";
 import { mergeTrek } from "./sources/merge";
 import { BANGALORE_ORIGIN, BANGALORE_SEED } from "./seed/bangalore";
@@ -105,9 +105,11 @@ export async function buildDataset(
  * - `run`: this run alone decides — the seed, then this run's enrichers. A
  *   field removed from the seed is removed; one an enricher supplied before
  *   and not this time is dropped too, because a curator may have removed it.
- * - `place`: baked for the summit's location by another tool or an earlier
- *   run (terrain, land cover, gazetteer, road distance). Kept unless this run
- *   produced a value, and only while the seed still points at the same place.
+ * - `place`: baked for the summit's location by another tool (terrain, land
+ *   cover, gazetteer, hill features). Kept unless this run produced a value,
+ *   and only while the seed still points at the same place. Road distance is
+ *   NOT here: it is a fact about the route from the origin, so it is `run`,
+ *   and the drift guard refuses a refresh that lost it wholesale.
  * - `sources`: the photo, taken from the article the seed cites. Kept only
  *   while the place AND the cited sources are unchanged.
  */
@@ -224,7 +226,12 @@ export async function runBuildData(
   enrichers: Enrichers,
 ): Promise<{ curated: number; total: number }> {
   const treks = await buildDataset(seeds, origin, enrichers);
-  const existing = io.exists(file) ? (JSON.parse(io.readFile(file)) as Trek[]) : [];
+  const parsed: unknown = io.exists(file) ? JSON.parse(io.readFile(file)) : [];
+  // A malformed file must read as invalid, by name, not crash the fold.
+  if (!Array.isArray(parsed)) {
+    throw new Error(`[build-data] ${file} is not an array of treks — refusing to fold into it`);
+  }
+  const existing = parsed as Trek[];
   const ds = validateDataset(foldCurated(treks, existing));
   if (!ds.ok) throw new Error(`[build-data] dataset invalid: ${ds.error}`);
   io.writeFile(file, JSON.stringify(ds.treks) + "\n");
@@ -245,12 +252,7 @@ export function liveEnrichers(): Enrichers {
       return m;
     },
     route: (origin, seed) => fetchRoute(origin, { lat: seed.lat, lng: seed.lng }),
-    season: (seed) => {
-      const monthly = (climateGrid as Record<string, MonthlyRain>)[
-        climateCellKey(seed.lat, seed.lng)
-      ];
-      return monthly ? bestSeasonFrom(monthly) : undefined;
-    },
+    season: (seed) => seasonFor(climateGrid as Record<string, MonthlyRain>, seed),
     wiki: async (seed) => {
       const title = seed.sources.map(titleFromWikiUrl).find((t): t is string => Boolean(t));
       return title ? fetchWiki(title) : undefined;

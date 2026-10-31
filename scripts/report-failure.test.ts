@@ -87,9 +87,13 @@ describe("report-failure.sh", () => {
     expect(run("Weekly data refresh is failing", "success")).toBe("");
   });
 
-  it("does nothing for a cancelled or skipped run, which is not a verdict", () => {
+  it("files a cancelled run: a timeout or a missing runner is a failure nobody saw", () => {
+    fakeGh([]);
+    expect(run("Weekly data refresh is failing", "cancelled")).toMatch(/^issue create /);
+  });
+
+  it("does nothing for a skipped run, which is not a verdict", () => {
     fakeGh([{ number: 7, title: "Weekly data refresh is failing" }]);
-    expect(run("Weekly data refresh is failing", "cancelled")).toBe("");
     expect(run("Weekly data refresh is failing", "skipped")).toBe("");
   });
 

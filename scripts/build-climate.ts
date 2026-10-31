@@ -11,12 +11,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
 import { validateDataset } from "../src/lib/trek";
-import {
-  climateCellKey,
-  bestSeasonFrom,
-  CLIMATE_CELL_DEG,
-  type MonthlyRain,
-} from "../src/lib/climate";
+import { climateCellKey, seasonFor, CLIMATE_CELL_DEG, type MonthlyRain } from "../src/lib/climate";
 import { fetchMonthlyRain, type CellPoint } from "./sources/climate";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
 
@@ -105,8 +100,7 @@ export async function runBuildClimate(
   let baked = 0;
   const next = treks.map((t) => {
     if (t.tier === "curated" && t.bestSeason) return t;
-    const monthly = merged[climateCellKey(t.lat, t.lng)];
-    const season = monthly ? bestSeasonFrom(monthly) : undefined;
+    const season = seasonFor(merged, t);
     if (!season) return t;
     baked++;
     return { ...t, bestSeason: season };

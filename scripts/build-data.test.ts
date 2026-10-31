@@ -302,6 +302,14 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
     expect(written.find((t) => t.id === "gn-1")).toEqual(discovery);
   });
 
+  it("refuses, by name, a committed file that is not an array", async () => {
+    const file = "/repo/src/data/treks.json";
+    const io = memoryIO({ [file]: "{}" });
+    await expect(runBuildData(io, file, BANGALORE_SEED, BANGALORE_ORIGIN, {})).rejects.toThrow(
+      /not an array of treks/,
+    );
+  });
+
   it("writes the curated records alone when there is no file yet", async () => {
     const file = "/repo/src/data/treks.json";
     const io = memoryIO({});
