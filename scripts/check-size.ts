@@ -61,7 +61,9 @@ export function judge(usage: SizeReport, budget: SizeReport): string[] {
       throw new Error(`size-budget.json has no number for "${c}"`);
     }
     if (usage[c] > budget[c]) {
-      out.push(`${c}: ${usage[c]} B is over the ${budget[c]} B budget by ${usage[c] - budget[c]} B`);
+      out.push(
+        `${c}: ${usage[c]} B is over the ${budget[c]} B budget by ${usage[c] - budget[c]} B`,
+      );
     }
   }
   return out;
