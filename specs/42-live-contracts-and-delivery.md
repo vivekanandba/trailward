@@ -127,7 +127,10 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
     screenshot at once is the first sign the image moved.
 - **The baselines lagged the app inside the tolerance.** They showed the shortcut hint as `⌘K`
   while Linux has rendered `Ctrl K` since spec 38, and the 1% pixel tolerance hid it until an
-  unrelated text change pushed the same screenshot over. This PR regenerates them. Refreshing the
+  unrelated text change pushed the same screenshot over. The baseline workflow could not have
+  fixed it: `--update-snapshots` defaults to `changed`, rewriting only screenshots that fail, so
+  it reported "Baselines already match" over the stale image. It now passes `=all`, and
+  `workflows.test.ts` asserts that. This PR regenerates them. Refreshing the
   baselines after each intentional UI change is **review-enforced**: no check can tell an
   intended UI change from drift, and the tolerance absorbs drift silently.
 

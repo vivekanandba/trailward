@@ -49,4 +49,12 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
   it("all on the same image, the one that renders the screenshot baselines", () => {
     expect(new Set(playwrightJobs.map((j) => j.job["runs-on"])).size).toBe(1);
   });
+
+  it("the baseline generator rewrites every screenshot, not only failing ones", () => {
+    // Plain --update-snapshots means "changed": drift inside the tolerance was
+    // never refreshed, and the run reported "already match" over a stale image.
+    const gen = playwrightJobs.find((j) => j.id === "visual-baselines.yml:baselines")!;
+    const runs = (gen.job.steps ?? []).map((s) => s.run ?? "").join("\n");
+    expect(runs).toMatch(/--update-snapshots=all\b/);
+  });
 });
