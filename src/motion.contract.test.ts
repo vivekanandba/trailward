@@ -23,7 +23,13 @@ const css = readFileSync(join(SRC, "index.css"), "utf8");
  * (spec 44 D3). Each entry names the file, the duration and the requirement
  * that justifies it.
  */
-const LONG_MOTION_ALLOWED: { path: string; ms: number; rule: string }[] = [];
+const LONG_MOTION_ALLOWED: { path: string; ms: number; rule: string }[] = [
+  {
+    path: "index.css",
+    ms: 600,
+    rule: "R16: a short celebration of something the person did (ticking a peak)",
+  },
+];
 
 describe("motion (spec 44 D2, D3)", () => {
   it("asks the motion helper instead of reading the media query directly", () => {

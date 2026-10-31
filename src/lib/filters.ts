@@ -16,6 +16,7 @@ export interface FilterState {
   hiddenGemsOnly: boolean; // discoveryScore >= HIDDEN_GEM_MIN (spec 15)
   minReliefM?: number; // keep peaks with reliefM >= this (rugged filter)
   namedOnly: boolean; // hide "Unnamed …" terrain-detected pins (spec 31)
+  climbedOnly: boolean; // only the peaks this person ticked (spec 44 R16)
 }
 
 // A discovery peak at/above this score counts as a "hidden gem".
@@ -29,6 +30,7 @@ export const DEFAULT_FILTERS: FilterState = {
   query: "",
   hiddenGemsOnly: false,
   namedOnly: false,
+  climbedOnly: false,
 };
 
 // Distance from the origin: prefer the precomputed road distance, fall back to
@@ -51,7 +53,12 @@ function maxDurationHrs(durationHrs?: string): number {
  * IS active, treks missing the relevant field are excluded — documented in
  * spec 05 so "show all" still surfaces unknown-field discovery treks.
  */
-export function applyFilters(treks: Trek[], origin: Origin, f: FilterState): Trek[] {
+export function applyFilters(
+  treks: Trek[],
+  origin: Origin,
+  f: FilterState,
+  climbed: ReadonlySet<string> = new Set(),
+): Trek[] {
   const q = f.query.trim().toLowerCase();
 
   return treks.filter((t) => {
@@ -94,6 +101,7 @@ export function applyFilters(treks: Trek[], origin: Origin, f: FilterState): Tre
     if (f.hiddenGemsOnly && (t.discoveryScore ?? 0) < HIDDEN_GEM_MIN) return false;
 
     if (f.namedOnly && t.name.startsWith("Unnamed")) return false;
+    if (f.climbedOnly && !climbed.has(t.id)) return false;
 
     if (f.minReliefM !== undefined) {
       if (t.reliefM === undefined || t.reliefM < f.minReliefM) return false;

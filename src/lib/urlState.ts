@@ -33,6 +33,7 @@ export function encodeState(origin: Origin, filters: FilterState, selectedId?: s
   if (filters.nightOnly) p.set("n", "1");
   if (filters.hiddenGemsOnly) p.set("hg", "1");
   if (filters.namedOnly) p.set("nm", "1");
+  if (filters.climbedOnly) p.set("mine", "1");
   if (filters.minReliefM !== undefined) p.set("mr", String(filters.minReliefM));
   if (filters.query.trim()) p.set("q", filters.query.trim());
   if (selectedId) p.set("sel", selectedId);
@@ -80,6 +81,7 @@ export function decodeState(params: URLSearchParams): UrlState {
   if (params.get("n") === "1") filters.nightOnly = true;
   if (params.get("hg") === "1") filters.hiddenGemsOnly = true;
   if (params.get("nm") === "1") filters.namedOnly = true;
+  if (params.get("mine") === "1") filters.climbedOnly = true;
   const mr = Number(params.get("mr"));
   if (params.get("mr") !== null && Number.isFinite(mr) && mr > 0) filters.minReliefM = mr;
   const q = params.get("q");

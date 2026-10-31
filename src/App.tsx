@@ -11,6 +11,7 @@ import OriginSearch from "./components/OriginSearch";
 import Panel from "./components/Panel";
 import ThemeToggle from "./components/ThemeToggle";
 import { noteUserActions, userHasActed } from "./lib/motion";
+import { loadClimbed, setClimbed } from "./lib/climbed";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 import { regionStats, type RegionStats } from "./lib/regionStats";
 import { feedbackUrl } from "./lib/github";
@@ -100,6 +101,14 @@ export default function App() {
 
   // Light/dark theme (spec 08). The initial class is set pre-paint by an inline
   // script in index.html; here we own the runtime toggle + persistence.
+  // "Been there" (spec 44 R16): this device's ticked peaks.
+  const [climbed, setClimbedMap] = useState(loadClimbed);
+  const climbedIds = useMemo(() => new Set(climbed.keys()), [climbed]);
+  const toggleClimbed = (id: string, on: boolean): boolean => {
+    const kept = setClimbed(id, on);
+    if (kept) setClimbedMap(loadClimbed());
+    return kept;
+  };
   const [theme, setTheme] = useState<Theme>(loadTheme);
   // Motion answers an action, never a page load (spec 44 register row 6).
   // Listening starts before the first paint can be pressed.
@@ -231,8 +240,8 @@ export default function App() {
     return t;
   }, [nearbyTreks]);
   const visible = useMemo(
-    () => applyFilters(baseTreks, origin, filters),
-    [baseTreks, origin, filters],
+    () => applyFilters(baseTreks, origin, filters, climbedIds),
+    [baseTreks, origin, filters, climbedIds],
   );
   // Curated vs discovery split of what's currently on screen, so the banner can
   // say "N lesser-known peaks" whether they stand alone (a preset region) or
@@ -346,6 +355,7 @@ export default function App() {
     if (filters.nightOnly) n++;
     if (filters.hiddenGemsOnly) n++;
     if (filters.namedOnly) n++;
+    if (filters.climbedOnly) n++;
     if (filters.minReliefM !== undefined) n++;
     if (filters.query.trim()) n++;
     return n;
@@ -448,6 +458,7 @@ export default function App() {
     !filters.nightOnly &&
     !filters.hiddenGemsOnly &&
     !filters.namedOnly &&
+    !filters.climbedOnly &&
     filters.minReliefM === undefined &&
     filters.query.trim() === "";
 
@@ -637,6 +648,8 @@ export default function App() {
                     trek={selected}
                     origin={origin}
                     onClose={() => setSelectedId(undefined)}
+                    climbedOn={climbed.get(selected.id)}
+                    onToggleClimbed={(on) => toggleClimbed(selected.id, on)}
                   />
                 </Panel>
               </>
@@ -729,6 +742,8 @@ export default function App() {
                 trek={selected}
                 origin={origin}
                 onClose={() => setSelectedId(undefined)}
+                climbedOn={climbed.get(selected.id)}
+                onToggleClimbed={(on) => toggleClimbed(selected.id, on)}
               />
             </Sheet>
           )}

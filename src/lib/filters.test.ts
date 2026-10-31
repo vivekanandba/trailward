@@ -251,3 +251,20 @@ describe("query matches alternate names (spec 25)", () => {
     expect(applyFilters([trek], origin, { ...DEFAULT_FILTERS, query: "nomatch" })).toHaveLength(0);
   });
 });
+
+describe("applyFilters — your peaks (spec 44 R16)", () => {
+  const treks = [trek({ id: "a", distanceKm: 5 }), trek({ id: "b", distanceKm: 5 })];
+
+  it("keeps only the peaks you have ticked", () => {
+    const out = applyFilters(treks, origin, filters({ climbedOnly: true }), new Set(["b"]));
+    expect(out.map((t) => t.id)).toEqual(["b"]);
+  });
+
+  it("keeps nothing when you have ticked nothing, rather than ignoring the filter", () => {
+    expect(applyFilters(treks, origin, filters({ climbedOnly: true }))).toEqual([]);
+  });
+
+  it("is off by default", () => {
+    expect(DEFAULT_FILTERS.climbedOnly).toBe(false);
+  });
+});

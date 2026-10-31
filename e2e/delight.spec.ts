@@ -74,3 +74,18 @@ test("the theme icon turns only after a press, never on load (spec 44 row 5)", a
   await page.getByRole("button", { name: /Switch to (dark|light) mode/ }).click();
   await expect(page.getByTestId("theme-icon")).toHaveClass(/theme-icon-in/);
 });
+
+test("been there: a tick survives a reload and the filter finds it (spec 44 R16)", async ({
+  page,
+}) => {
+  await page.goto("/?sel=skandagiri");
+  const toggle = page.getByRole("button", { name: "Been there" });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText(/^Ticked on .*, on this device\.$/)).toBeVisible();
+
+  await page.goto("/?mine=1");
+  await resultsLoaded(page);
+  await expect(page.locator("#results").getByText("Skandagiri")).toBeVisible();
+  await expect(page.locator("#results li button")).toHaveCount(1);
+});
