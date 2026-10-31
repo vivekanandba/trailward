@@ -114,11 +114,13 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
 - **Every Playwright job runs on one pinned image, never `ubuntu-latest`.** On 2026-10-31
   `ubuntu-latest` had become 26.04, where Playwright 1.60 cannot install its browser
   dependencies: every PR's e2e jobs, the deploy's e2e gate and the baseline generator failed
-  with no change in this repo. The five Playwright jobs run on `ubuntu-24.04`, and
-  `scripts/workflows.test.ts` names them and fails if any is on a `latest` label or on a
-  different image from the others. The browser cache is keyed on the image (`ImageOS`), so a
-  move does not restore browsers built for another one. Moving image means regenerating the
-  baselines there (`visual-baselines.yml`) in the same PR.
+  with no change in this repo. Every job of `ci.yml` and `deploy.yml` (the five Playwright jobs,
+  and the build that produces the shipped artefact) runs on `ubuntu-24.04`, and
+  `scripts/workflows.test.ts` names the Playwright jobs (found by command or action, in `.yml`
+  or `.yaml`) and fails if any job there is on a `latest` label or on a different image. The
+  browser cache is keyed on the runner image, read in a step (`$ImageOS-$ImageVersion`): in an
+  expression `env.ImageOS` is empty, which had made every key `playwright--<hash>`. Moving
+  image means regenerating the baselines there (`visual-baselines.yml`) in the same PR.
   - **Known limit:** `ubuntu-24.04` is a label, and GitHub updates its image weekly. A font or
     freetype change there can still shift the baselines. The Playwright container
     (`mcr.microsoft.com/playwright:v<lockfile>-noble`) would pin that too, but every baseline
@@ -129,8 +131,8 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   while Linux has rendered `Ctrl K` since spec 38, and the 1% pixel tolerance hid it until an
   unrelated text change pushed the same screenshot over. The baseline workflow could not have
   fixed it: `--update-snapshots` defaults to `changed`, rewriting only screenshots that fail, so
-  it reported "Baselines already match" over the stale image. It now passes `=all`, and
-  `workflows.test.ts` asserts that. This PR regenerates them. Refreshing the
+  it reported "Baselines already match" over the stale image. It now passes `=all`, as does
+  `npm run e2e:update`, and `workflows.test.ts` asserts both. This PR regenerates them. Refreshing the
   baselines after each intentional UI change is **review-enforced**: no check can tell an
   intended UI change from drift, and the tolerance absorbs drift silently.
 
