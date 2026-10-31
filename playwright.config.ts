@@ -1,9 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
-import { refuseLocalBaselines, serversFor } from "./scripts/lib/playwrightServers";
+import { serversFor } from "./scripts/lib/playwrightServers";
 
 const servers = serversFor(process.argv);
-const refusal = refuseLocalBaselines(process.argv, process.env);
-if (refusal) throw new Error(refusal);
 
 // E2E specs live in e2e/. They boot the Vite dev server and drive the real app.
 // visual.spec.ts additionally diffs committed linux screenshot baselines
@@ -29,6 +27,8 @@ export default defineConfig({
   // otherwise get its first baseline from this machine's fonts. The baseline
   // workflow asks with --update-snapshots=all (spec 42 §E).
   updateSnapshots: "none",
+  // Refuses any other resolved mode outside the baseline workflow.
+  globalSetup: "./scripts/lib/baselineGuard.ts",
   expect: {
     // A bound on a HANG, like `timeout` above, not a speed assertion: every
     // assertion still polls for a state. 5 s let a cold mount at a load average
