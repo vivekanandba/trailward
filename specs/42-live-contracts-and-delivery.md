@@ -114,27 +114,39 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
 - **Every Playwright job runs on one pinned image, never `ubuntu-latest`.** On 2026-10-31
   `ubuntu-latest` had become 26.04, where Playwright 1.60 cannot install its browser
   dependencies: every PR's e2e jobs, the deploy's e2e gate and the baseline generator failed
-  with no change in this repo. Every job of `ci.yml` and `deploy.yml` (the five Playwright jobs,
-  and the build that produces the shipped artefact) runs on `ubuntu-24.04`, and
-  `scripts/workflows.test.ts` names the Playwright jobs (found by command or action, in `.yml`
-  or `.yaml`) and fails if any job there is on a `latest` label or on a different image. The
-  browser cache is keyed on the runner image, read in a step (`$ImageOS-$ImageVersion`): in an
-  expression `env.ImageOS` is empty, which had made every key `playwright--<hash>`. Moving
-  image means regenerating the baselines there (`visual-baselines.yml`) in the same PR.
+  with no change in this repo. Every job of `ci.yml` and `deploy.yml` (four of them Playwright
+  jobs, plus the build that produces the shipped artefact) and the baseline generator in
+  `visual-baselines.yml` run on `ubuntu-24.04`. Each Playwright job installs browsers through one
+  composite action, `.github/actions/playwright-setup`, which keys the browser cache on the OS
+  release, read in a step (`$ImageOS`): in an expression `env.ImageOS` is empty, which had made
+  every key `playwright--<hash>`. The weekly `ImageVersion` is deliberately not in the key; the
+  browser build does not depend on it, and including it discarded the cache every week. Moving
+  image means regenerating the baselines there in the same PR.
   - **Known limit:** `ubuntu-24.04` is a label, and GitHub updates its image weekly. A font or
     freetype change there can still shift the baselines. The Playwright container
-    (`mcr.microsoft.com/playwright:v<lockfile>-noble`) would pin that too, but every baseline
-    would have to be re-rendered in it, and the local gate on the fleet VM would then no longer
-    render like CI. So the label is the choice for now, and a baseline failure across every
+    (`mcr.microsoft.com/playwright:v<lockfile>-noble`) would pin that too. It is not used yet
+    because every baseline would have to be re-rendered in it, and today the local gate on the
+    fleet VM renders within the 1% tolerance of the 24.04 runner (it passed against these
+    baselines), which a container image is not known to. A baseline failure across every
     screenshot at once is the first sign the image moved.
 - **The baselines lagged the app inside the tolerance.** They showed the shortcut hint as `⌘K`
   while Linux has rendered `Ctrl K` since spec 38, and the 1% pixel tolerance hid it until an
   unrelated text change pushed the same screenshot over. The baseline workflow could not have
   fixed it: `--update-snapshots` defaults to `changed`, rewriting only screenshots that fail, so
-  it reported "Baselines already match" over the stale image. It now passes `=all`, as does
-  `npm run e2e:update`, and `workflows.test.ts` asserts both. This PR regenerates them. Refreshing the
-  baselines after each intentional UI change is **review-enforced**: no check can tell an
-  intended UI change from drift, and the tolerance absorbs drift silently.
+  it reported "Baselines already match" over the stale image. The workflow now passes `=all`,
+  in the suite's two passes (app projects, then the static project, which starves the dev
+  server when they share one). `npm run e2e:update` locally keeps the default, so it never
+  rewrites passing baselines with the fleet VM's rendering; baselines come from the workflow.
+  Refreshing them after each intentional UI change is **review-enforced**: no check can tell an
+  intended UI change from drift. `=all` may also commit antialiasing-only rewrites; that churn is
+  the cost of never keeping a stale baseline.
+- **A flake fails the run.** CI retried a failed test twice and reported it green, so a flake
+  was invisible. CI now retries once, so the failure leaves a trace, and `failOnFlakyTests`
+  fails the run when a test passed only on retry (CON-VER-008).
+- **An assertion's wait is a bound on a hang, not a speed check.** Every assertion polls for a
+  state, but Playwright's default 5 s let "granted permission refreshes the origin" fail at a
+  load average of 14 with the app not yet mounted (2026-10-31). The bound is 15 s, under the
+  60 s per-test limit.
 
 ## Edge cases & error states
 
@@ -154,6 +166,13 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
 - `version.json` is emitted by the build and carries the SHA.
 - The post-deploy assertion fails on a mismatched SHA, on a 404, and on a missing file.
 - Journeys as above, on both desktop and mobile projects.
+
+- `scripts/workflows.test.ts`: the five Playwright jobs named exactly; each on one literal
+  `ubuntu-NN.NN` image, the same one, as is every job of `ci.yml` and `deploy.yml`; each sets up
+  browsers only through the shared action, after its checkout; the action reads `$ImageOS` in a
+  step before every cache step and keys on its output, never `env.` or `ImageVersion`; the
+  baseline generator rewrites with `=all` in two passes; `e2e:update` does not; CI fails on a
+  flaky test; the expect bound is at least 15 s. Each assertion was mutated and failed.
 
 ## Out of scope
 

@@ -2,19 +2,30 @@ import { defineConfig, devices } from "@playwright/test";
 
 // E2E specs live in e2e/. They boot the Vite dev server and drive the real app.
 // visual.spec.ts additionally diffs committed linux screenshot baselines
-// (spec 33) — regenerate intentionally with `npm run e2e:update`.
+// (spec 33). Regenerate them with the "Update visual baselines" workflow,
+// which renders on the pinned CI image; `npm run e2e:update` locally rewrites
+// only failing screenshots, with this machine's font rendering (spec 42 §E).
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
-  // A bound on a HANG, not a speed assertion (spec 42 §E). The e2e jobs share
-  // this VM with every other project's CI; a first test that pays for the dev
+  // A bound on a HANG, not a speed assertion (spec 42 §E). The local gate shares
+  // the fleet VM with every other project's CI; a first test that pays for the dev
   // server's cold compile at a load average of 13 needed more than the 30 s
   // default, while hanging tests still fail.
   timeout: 60_000,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // A retry is kept so a failure leaves a trace (trace: "on-first-retry"), but
+  // a test that only passes on retry FAILS the run: a flake is a suite defect
+  // (CON-VER-008), and two silent retries were hiding them (spec 42 §E).
+  retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI,
   reporter: process.env.CI ? "github" : "list",
   expect: {
+    // A bound on a HANG, like `timeout` above, not a speed assertion: every
+    // assertion still polls for a state. 5 s let a cold mount at a load average
+    // of 14 fail "granted permission refreshes the origin" with the app not yet
+    // rendered (2026-10-31).
+    timeout: 15_000,
     toHaveScreenshot: {
       // 1% of pixels absorbs antialiasing wobble; a real layout/palette change
       // is orders of magnitude larger.

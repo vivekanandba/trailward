@@ -1,0 +1,20 @@
+name: Playwright browsers
+description: >-
+  Install the lockfile's Chromium with its system dependencies, the browser
+  download cached per runner OS release (spec 42 §E). One copy, used by every
+  Playwright job.
+runs:
+  using: composite
+  steps:
+    # The runner's OS release is a shell variable, not an expression context
+    # (`env.ImageOS` is empty in an expression), so read it in a step. Not
+    # ImageVersion: that moves weekly and the browser build does not depend on it.
+    - id: image
+      shell: bash
+      run: echo "os=${ImageOS:?ImageOS is not set on this runner}" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ steps.image.outputs.os }}-${{ hashFiles('package-lock.json') }}
+    - shell: bash
+      run: npx playwright install --with-deps chromium

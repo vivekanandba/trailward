@@ -25,12 +25,18 @@ const jobs = readdirSync(dir)
     }));
   });
 
-// Any step that installs or runs Playwright, however it is spelt: a command
-// or an action.
+const SETUP = "./.github/actions/playwright-setup";
+
+// Any step that installs or runs Playwright, however it is spelt: a command,
+// an action, or the shared setup action.
 const usesPlaywright = (job: Job): boolean =>
   (job.steps ?? []).some((s) => /playwright|npm run e2e/.test(`${s.run ?? ""} ${s.uses ?? ""}`));
 
 const playwrightJobs = jobs.filter((j) => usesPlaywright(j.job));
+
+const action = load(
+  readFileSync(resolve(__dirname, "../.github/actions/playwright-setup/action.yml"), "utf8"),
+) as { runs: { steps: NonNullable<Job["steps"]> } };
 
 describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
   it("are exactly the five it is about, so none drops out unnoticed", () => {
@@ -43,37 +49,16 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     ]);
   });
 
-  it("each names a single fixed image, never a latest label", () => {
+  it("each names one literal, versioned Ubuntu image", () => {
+    // A substring ban on "latest" let `self-hosted`, a matrix or a repo
+    // variable through; only a literal version pins the rendering.
     for (const { id, job } of playwrightJobs) {
-      const runsOn = job["runs-on"];
-      expect(typeof runsOn, `${id}: runs-on must be one label`).toBe("string");
-      expect(runsOn as string, id).not.toMatch(/latest/);
+      expect(job["runs-on"], id).toMatch(/^ubuntu-\d\d\.\d\d$/);
     }
   });
 
   it("all on the same image, the one that renders the screenshot baselines", () => {
     expect(new Set(playwrightJobs.map((j) => j.job["runs-on"])).size).toBe(1);
-  });
-
-  it("the baseline generator rewrites every screenshot, not only failing ones", () => {
-    // Plain --update-snapshots means "changed": drift inside the tolerance was
-    // never refreshed, and the run reported "already match" over a stale image.
-    const gen = playwrightJobs.find((j) => j.id === "visual-baselines.yml:baselines")!;
-    const runs = (gen.job.steps ?? []).map((s) => s.run ?? "").join("\n");
-    expect(runs).toMatch(/--update-snapshots=all\b/);
-  });
-
-  it("the browser cache is keyed on the runner image, read in a step", () => {
-    // ${{ env.ImageOS }} is empty in an expression (env holds only
-    // workflow-set variables), which made every key "playwright--<hash>".
-    for (const { id, job } of playwrightJobs) {
-      const cache = (job.steps ?? []).find((s) => s.uses?.startsWith("actions/cache"));
-      if (!cache) continue;
-      const image = (job.steps ?? []).find((s) => s.id === "image");
-      expect(image?.run, id).toMatch(/\$\{?ImageOS\}?-\$\{?ImageVersion\}?/);
-      expect(String(cache.with?.key), id).toContain("${{ steps.image.outputs.id }}");
-      expect(String(cache.with?.key), id).not.toContain("env.ImageOS");
-    }
   });
 
   it("the shipped build and the checks run on the image the e2e gates use", () => {
@@ -84,10 +69,74 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     expect(shipping.filter((j) => j.job["runs-on"] !== image).map((j) => j.id)).toEqual([]);
   });
 
-  it("the local update command rewrites every screenshot too", () => {
+  it("each sets up browsers through the one shared action, after its checkout", () => {
+    for (const { id, job } of playwrightJobs) {
+      const steps = (job.steps ?? []).map((s) => s.uses ?? s.run ?? "");
+      expect(
+        steps.filter((s) => s === SETUP),
+        id,
+      ).toHaveLength(1);
+      expect(steps.indexOf(SETUP), id).toBeGreaterThan(
+        steps.findIndex((s) => s.startsWith("actions/checkout")),
+      );
+      expect(
+        steps.some((s) => /playwright install/.test(s)),
+        `${id} installs outside the action`,
+      ).toBe(false);
+    }
+  });
+
+  it("the shared action keys its cache on the OS release, read in a step before the cache", () => {
+    // ${{ env.ImageOS }} is empty in an expression (env holds only
+    // workflow-set variables), which made every key "playwright--<hash>".
+    const steps = action.runs.steps;
+    const image = steps.findIndex((s) => s.id === "image");
+    const caches = steps
+      .map((s, i) => [s, i] as const)
+      .filter(([s]) => s.uses?.startsWith("actions/cache"));
+    expect(caches.length).toBeGreaterThan(0);
+    expect(steps[image]?.run).toMatch(/\$\{ImageOS/);
+    expect(steps[image]?.run).not.toMatch(/ImageVersion/); // weekly; would discard the cache
+    for (const [cache, i] of caches) {
+      expect(i).toBeGreaterThan(image);
+      expect(String(cache.with?.key)).toContain("${{ steps.image.outputs.os }}");
+      expect(String(cache.with?.key)).not.toContain("env.");
+    }
+  });
+
+  it("the baseline generator rewrites every screenshot, in the suite's two passes", () => {
+    // Plain --update-snapshots means "changed": drift inside the tolerance was
+    // never refreshed. And one pass with the static project starves the dev
+    // server (playwright.config.ts), as npm run e2e avoids.
+    const gen = playwrightJobs.find((j) => j.id === "visual-baselines.yml:baselines")!;
+    const runs = (gen.job.steps ?? [])
+      .map((s) => s.run ?? "")
+      .filter((r) => /playwright test/.test(r));
+    expect(runs).toHaveLength(2);
+    for (const r of runs) expect(r).toMatch(/--update-snapshots=all\b/);
+    expect(runs.filter((r) => /--project=static/.test(r))).toHaveLength(1);
+    expect(runs.find((r) => /--project=static/.test(r))).not.toMatch(/--project=(chromium|mobile)/);
+  });
+
+  it("the local update command never rewrites passing baselines with local rendering", () => {
+    // The fleet VM renders differently from the pinned CI image; =all there
+    // would overwrite every committed baseline with local fonts.
     const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
-    expect(pkg.scripts["e2e:update"]).toMatch(/--update-snapshots=all\b/);
+    expect(pkg.scripts["e2e:update"]).not.toMatch(/=all/);
+  });
+});
+
+describe("the suite cannot hide a flake (spec 42 §E, CON-VER-008)", () => {
+  const config = readFileSync(resolve(__dirname, "../playwright.config.ts"), "utf8");
+
+  it("fails a run in CI when a test passed only on retry", () => {
+    expect(config).toMatch(/failOnFlakyTests:\s*!!process\.env\.CI/);
+  });
+
+  it("bounds an assertion's wait well above a cold mount under load", () => {
+    const t = Number(config.match(/expect:\s*\{[^}]*?timeout:\s*([\d_]+)/s)?.[1].replace(/_/g, ""));
+    expect(t).toBeGreaterThanOrEqual(15_000);
   });
 });
