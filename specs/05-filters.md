@@ -48,8 +48,14 @@ export function applyFilters(treks: Trek[], origin: Origin, f: FilterState): Tre
 export function countByDifficulty(treks: Trek[]): Record<Difficulty, number>;
 ```
 
-- `applyFilters` uses `distanceFrom(origin, trek)` (haversine in `src/lib/distance.ts`) when a
-  trek lacks a precomputed `distanceKm`.
+- Distance from the origin is `tripDistance(origin, trek)` (`src/lib/distance.ts`), used by the
+  filter, the map tooltip and the detail panel alike. A curated trek's baked `distanceKm` and
+  `driveTimeMin` are the OSRM route **from Bengaluru's centre** (`ROAD_ORIGIN`, spec 02), so they
+  are used only when the origin is that point (within 50 m). From any other origin, including a
+  live location a few hundred metres away, the distance is the straight line (haversine), and
+  it is labelled as such.
+- The detail panel says which it is: `~68 km by road · 1 h 16 min drive`, or `~176 km in a
+straight line` (`formatTrip`). The map tooltip appends "by road" only to a road distance.
 
 ## Edge cases & error states
 
@@ -58,6 +64,9 @@ export function countByDifficulty(treks: Trek[]): Record<Difficulty, number>;
 - Discovery treks often lack `difficulty`/`type`; document that type/difficulty filters exclude
   unknowns only when that filter is active (so "show all" still shows them).
 - Radius below nearest trek distance → empty, with hint to widen.
+- **Defect fixed (spec 44 register row 16):** every curated trek reported its road distance
+  from Bengaluru whatever the origin, in the filter, the tooltip and the detail. From Mysuru,
+  Skandagiri was listed at 67.6 km and passed a 100 km radius; it is ~176 km away.
 
 ## Test cases (TDD checklist)
 
@@ -65,6 +74,12 @@ export function countByDifficulty(treks: Trek[]): Record<Difficulty, number>;
 - Radius boundary: trek exactly at R is included; R−ε excludes it.
 - Elevation range inclusive bounds; unknown-elevation handling matches the documented rule.
 - Free-text matches name and `nearestTown`, case-insensitive.
+- `src/lib/distance.test.ts` → `tripDistance`: road distance and drive time from Bengaluru; the
+  straight line from another origin and from a live location ~350 m away; the straight line when
+  nothing was measured. `formatTrip`: each label form.
+- `src/lib/filters.test.ts`: from Mysuru, Bengaluru's road distance does not admit Skandagiri.
+- `src/components/TrekDetail.test.tsx`: "by road · … drive" from Bengaluru, "in a straight line"
+  and no drive time from Mysuru.
 - `DEFAULT_FILTERS` returns the full set; Reset restores defaults.
 - Component test: moving the slider updates count + list; map receives filtered treks.
 

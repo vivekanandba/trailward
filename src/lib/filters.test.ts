@@ -44,6 +44,13 @@ describe("applyFilters — radius", () => {
     expect(applyFilters(treks, origin, filters({ radiusKm: 49.999 }))).toHaveLength(0);
   });
 
+  it("ignores Bengaluru's road distance from another origin (spec 44 row 16)", () => {
+    // Skandagiri: 67.6 km by road from Bengaluru, ~176 km from Mysuru.
+    const skandagiri = [trek({ id: "sk", lat: 13.4192, lng: 77.6836, distanceKm: 67.6 })];
+    const mysuru: Origin = { id: "mysuru", name: "Mysuru", lat: 12.2958, lng: 76.6394 };
+    expect(applyFilters(skandagiri, mysuru, filters({ radiusKm: 100 }))).toHaveLength(0);
+  });
+
   it("falls back to haversine when distanceKm is absent", () => {
     const far = [trek({ id: "far", lat: 0, lng: 0 })]; // ~1500 km+ from Bengaluru
     expect(applyFilters(far, origin, filters({ radiusKm: 100 }))).toHaveLength(0);
