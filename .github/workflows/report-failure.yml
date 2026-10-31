@@ -1,0 +1,30 @@
+name: Report a failed scheduled run
+
+# Called by every scheduled workflow, as its own job that runs only when the
+# work failed (spec 10). It is a separate job so only this one holds an
+# issues-write token: the work's `npm ci` lifecycle scripts never see it.
+on:
+  workflow_call:
+    inputs:
+      title:
+        description: The issue title; matched exactly.
+        required: true
+        type: string
+
+permissions:
+  issues: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: scripts/report-failure.sh
+          sparse-checkout-cone-mode: false
+      - name: Open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash scripts/report-failure.sh "${{ inputs.title }}"

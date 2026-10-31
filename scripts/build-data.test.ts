@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildDataset, foldCurated, liveEnrichers } from "./build-data";
+import { buildDataset, foldCurated, liveEnrichers, runBuildData } from "./build-data";
+import { memoryIO } from "./lib/buildIO";
 import { BANGALORE_ORIGIN, BANGALORE_SEED } from "./seed/bangalore";
 import { validateTrek, type Trek } from "../src/lib/trek";
 
@@ -143,6 +144,46 @@ describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)
     expect(fresh[0].distanceKm).toBe(61);
   });
 
+  it("drops a field this run decides when the seed and its enrichers no longer give it", () => {
+    // permitRequired can be stated by a curator or scraped; either way this
+    // run decides, so removing it from the seed removes it (a hand-kept list
+    // of seed fields missed it, and it would have stuck forever).
+    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [{ ...prevCurated, permitRequired: true }]);
+    expect(out[0].permitRequired).toBeUndefined();
+  });
+
+  it("carries nothing baked for the old point when a seed's coordinates are corrected", () => {
+    const prev = { ...prevCurated, distanceKm: 60, image: { url: "u", attribution: "a" } };
+    const moved = { ...BANGALORE_SEED[0], lat: BANGALORE_SEED[0].lat + 0.01 }; // ~1.1 km
+    const out = foldCurated([moved], [prev]);
+    expect(out[0].landCover).toBeUndefined();
+    expect(out[0].distanceKm).toBeUndefined();
+    expect(out[0].image).toBeUndefined();
+  });
+
+  it("drops the old article's photo when the seed cites a different article", () => {
+    const prev = {
+      ...prevCurated,
+      sources: ["https://en.wikipedia.org/wiki/Ramadevarabetta_Vulture_Sanctuary"],
+      image: { url: "u", attribution: "a" },
+    };
+    const built = {
+      ...BANGALORE_SEED[0],
+      sources: ["https://en.wikipedia.org/wiki/Ramadevarabetta"],
+    };
+    const out = foldCurated([built], [prev]);
+    expect(out[0].image).toBeUndefined();
+    expect(out[0].landCover).toBe("Tree cover"); // still the same place
+  });
+
+  it("keeps each record's key order, so a refresh does not rewrite unchanged records", () => {
+    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [prevCurated]);
+    expect(Object.keys(out[0]).slice(0, 2)).toEqual(["id", "name"]);
+    expect(Object.keys(out[0]).filter((k) => k in prevCurated)).toEqual(
+      Object.keys(prevCurated).filter((k) => k in out[0]),
+    );
+  });
+
   it("drops a curated record whose seed was removed, and adds a new one", () => {
     const gone = { ...prevCurated, id: "removed-seed" };
     const out = foldCurated([{ ...BANGALORE_SEED[1] }], [gone, discovery]);
@@ -151,5 +192,34 @@ describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)
 
   it("starts from the built records alone when there is no previous dataset", () => {
     expect(foldCurated([{ ...BANGALORE_SEED[0] }], [])).toHaveLength(1);
+  });
+});
+
+describe("runBuildData — what build:data actually writes (spec 10)", () => {
+  // The bug lived in main()'s write, not in a helper: test the run end to end.
+  it("folds into the committed file, keeping every discovery record", async () => {
+    const file = "/repo/src/data/treks.json";
+    const discovery = {
+      id: "gn-1",
+      name: "A hill",
+      lat: 13.1,
+      lng: 77.2,
+      tier: "discovery",
+      sources: [],
+      verified: false,
+      landCover: "Grassland",
+    };
+    const io = memoryIO({ [file]: JSON.stringify([discovery]) });
+    const r = await runBuildData(io, file, BANGALORE_SEED, BANGALORE_ORIGIN, {});
+    const written = JSON.parse(io.files.get(file)!) as Trek[];
+    expect(r.total).toBe(BANGALORE_SEED.length + 1);
+    expect(written.find((t) => t.id === "gn-1")).toEqual(discovery);
+  });
+
+  it("writes the curated records alone when there is no file yet", async () => {
+    const file = "/repo/src/data/treks.json";
+    const io = memoryIO({});
+    await runBuildData(io, file, BANGALORE_SEED, BANGALORE_ORIGIN, {});
+    expect(JSON.parse(io.files.get(file)!)).toHaveLength(BANGALORE_SEED.length);
   });
 });
