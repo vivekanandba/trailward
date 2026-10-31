@@ -4,6 +4,12 @@ import { memoryIO } from "./lib/buildIO";
 import { parseTrekPage } from "./lib/deploycheck";
 import type { Trek } from "../src/lib/trek";
 
+// The app build's font files, which build-pages declares on every page (spec 08).
+const FONT_ASSETS = {
+  "/repo/dist/assets/inter-latin-var-t.woff2": "",
+  "/repo/dist/assets/inter-latin-ext-var-t.woff2": "",
+};
+
 const trek = (over: Partial<Trek> & Pick<Trek, "id" | "name">): Trek => ({
   lat: 13,
   lng: 77,
@@ -41,6 +47,7 @@ const ABOUT = [
 
 function seeded() {
   return memoryIO({
+    ...FONT_ASSETS,
     [P.treks]: JSON.stringify(TREKS),
     [`${P.contentDir}/about.md`]: ABOUT,
   });
@@ -162,7 +169,11 @@ describe("build-pages run (spec 35/36/40)", () => {
     // listDir returns [] for an empty directory, so the missing-directory
     // guard does not fire. Without this the build exits 0 having written only
     // /data/ while the sitemap still advertises /about/ and /sources/.
-    const io = memoryIO({ [P.treks]: JSON.stringify(TREKS), "/repo/content/": "" });
+    const io = memoryIO({
+      ...FONT_ASSETS,
+      [P.treks]: JSON.stringify(TREKS),
+      "/repo/content/": "",
+    });
     expect(() => runBuildPages(io, ROOT, [], "2026-09-19")).toThrow(/no content/);
   });
 
@@ -183,6 +194,7 @@ describe("build-pages run (spec 35/36/40)", () => {
 
   it("the nav FOLLOWS the listing — a renamed page renames the links", () => {
     const io = memoryIO({
+      ...FONT_ASSETS,
       [P.treks]: JSON.stringify(TREKS),
       [`${P.contentDir}/faq.md`]: ABOUT,
     });
@@ -216,6 +228,7 @@ describe("build-pages run (spec 35/36/40)", () => {
   it("refuses to build when no page qualifies for the JSON-LD sample (spec 44 R1)", () => {
     // Only slug == id pages: the live check could only fail, after publishing.
     const io = memoryIO({
+      ...FONT_ASSETS,
       [P.treks]: JSON.stringify([TREKS[0]]),
       [`${P.contentDir}/about.md`]: ABOUT,
     });
@@ -238,6 +251,7 @@ describe("build-pages run (spec 35/36/40)", () => {
     // So one hand-edited record threw a raw TypeError after the clean.
     const broken = [...TREKS, { ...TREKS[0], id: "broken", name: "Broken", lat: null }];
     const io = memoryIO({
+      ...FONT_ASSETS,
       [P.treks]: JSON.stringify(broken),
       [`${P.contentDir}/about.md`]: ABOUT,
     });
@@ -316,5 +330,30 @@ describe("build-pages run (spec 35/36/40)", () => {
     runBuildPages(a, ROOT, ["about.md"], "2026-09-19");
     runBuildPages(b, ROOT, ["about.md"], "2026-09-19");
     expect([...b.files.entries()].sort()).toEqual([...a.files.entries()].sort());
+  });
+});
+
+describe("build-pages gives every page the app's bundled type (spec 08)", () => {
+  it("declares Inter at the build's hashed asset paths on trek and content pages", () => {
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-10-31");
+    for (const page of [
+      "/repo/dist/t/skandagiri/index.html",
+      "/repo/dist/about/index.html",
+      "/repo/dist/data/index.html",
+    ]) {
+      const html = io.files.get(page)!;
+      expect(html, page).toContain('url("/trailward/assets/inter-latin-var-t.woff2")');
+      expect(html, page).toContain('url("/trailward/assets/inter-latin-ext-var-t.woff2")');
+      expect(html, page).toMatch(/font:16px\/1\.\d Inter,system-ui/);
+    }
+  });
+
+  it("refuses, before writing anything, when the app build left no Inter faces", () => {
+    const io = seeded();
+    io.files.delete("/repo/dist/assets/inter-latin-ext-var-t.woff2");
+    io.writeFile(`${P.outDir}/old/index.html`, "GOOD PREVIOUS BUILD");
+    expect(() => runBuildPages(io, ROOT, ["about.md"], "2026-10-31")).toThrow(/inter-latin-ext/);
+    expect(io.files.get(`${P.outDir}/old/index.html`)).toBe("GOOD PREVIOUS BUILD");
   });
 });

@@ -10,7 +10,7 @@ const STYLE = `
 :root{color-scheme:light dark;--ink:#1c3927;--bg:#f0f7f1;--muted:#4b5f52;--card:#fff;--line:#d9e6dc}
 @media(prefers-color-scheme:dark){:root{--ink:#e6eeea;--bg:#0f172a;--muted:#9fb3a6;--card:#1e293b;--line:#334155}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 .wrap{max-width:46rem;margin:0 auto;padding:2rem 1.25rem 4rem}
 a{color:#2f6b3f}
 @media(prefers-color-scheme:dark){a{color:#7fb98c}}
