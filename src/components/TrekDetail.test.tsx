@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import TrekDetail from "./TrekDetail";
+import { sunTimes } from "../lib/sun";
+import { sunSentence } from "../lib/voice";
+
+const sunSentenceFor = (lat: number, lng: number, y: number, m: number, d: number) =>
+  sunSentence(sunTimes(lat, lng, y, m, d));
 import type { Origin, Trek } from "../lib/trek";
 
 // Weather is a network call; stub it so the detail panel renders offline.
@@ -304,5 +309,44 @@ describe("TrekDetail GPX export", () => {
     // races the browser's blob fetch and intermittently aborts the download.
     expect(revokeURL).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("TrekDetail sun and season (spec 44 R6, R7)", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("gives today's sunrise and sunset in a sentence, and the same in the drawing's label", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-06-21T03:00:00Z")); // 08:30 IST
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    const sentence = screen.getByText(
+      /^Sunrise \d\d:\d\d and sunset \d\d:\d\d today \(IST\); the sun comes up in the (north|east)/,
+    );
+    const drawing = screen.getByRole("img", { name: sentence.textContent! });
+    expect(drawing.tagName.toLowerCase()).toBe("svg");
+  });
+
+  it("uses India's date, not the device's UTC date, near midnight", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // 23:00 UTC on 20 Jun is 04:30 IST on 21 Jun: the sun of the 21st.
+    vi.setSystemTime(new Date("2026-06-20T23:00:00Z"));
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    const june21 = sunSentenceFor(baseTrek.lat, baseTrek.lng, 2026, 6, 21);
+    expect(screen.getByText(june21)).toBeInTheDocument();
+  });
+
+  it("marks this month on the rainfall chart and says what it means here", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-01-15T06:00:00Z"));
+    const { container } = render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    expect(container.querySelector('[data-month-now="0"]')).not.toBeNull();
+    expect(screen.getByText(/^Now is the drier stretch here/)).toBeInTheDocument();
+  });
+
+  it("says nothing about the season where no cell was sampled", () => {
+    render(
+      <TrekDetail trek={{ ...baseTrek, lat: 0, lng: -30 }} origin={origin} onClose={vi.fn()} />,
+    );
+    expect(screen.queryByText(/^Now is/)).not.toBeInTheDocument();
   });
 });

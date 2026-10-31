@@ -13,6 +13,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import { noteUserActions, userHasActed } from "./lib/motion";
 import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
 import { regionStats, type RegionStats } from "./lib/regionStats";
+import { regionSentence } from "./lib/voice";
 import { feedbackUrl } from "./lib/github";
 import { loadTreksAround } from "./lib/cells";
 import { difficultyColor } from "./lib/difficulty";
@@ -31,21 +32,16 @@ import { browserEnvironment, registerServiceWorker } from "./lib/serviceWorker";
 
 // Compact overview of the peaks in view (spec 15): count, a difficulty-spread
 // bar (single-purpose micro-chart), highest, most-rugged, top hidden-gem.
-function RegionStatsCard({ stats }: { stats: RegionStats }) {
+function RegionStatsCard({ stats, place }: { stats: RegionStats; place: string }) {
   const { spread } = stats;
   const graded = spread.Easy + spread.Moderate + spread.Hard;
   return (
     <div className="border-b border-trail-100 px-4 py-3 text-xs dark:border-slate-700">
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-trail-800 dark:text-slate-100">
-          {stats.count} peak{stats.count === 1 ? "" : "s"} in view
-        </span>
-        {stats.topGem && (
-          <span className="truncate pl-2 text-trail-600 dark:text-slate-400">
-            top gem: {stats.topGem.name}
-          </span>
-        )}
-      </div>
+      {/* Opens as a sentence about the place (spec 44 R8), built only from
+          the numbers below it. */}
+      <p data-testid="region-sentence" className="text-sm text-trail-800 dark:text-slate-100">
+        {regionSentence(stats, place)}
+      </p>
       {graded > 0 && (
         <div
           className="mt-2 flex h-2 gap-px overflow-hidden rounded-full"
@@ -503,7 +499,7 @@ export default function App() {
           <div className="mt-2 h-2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
         </div>
       )}
-      {!loadingCells && visible.length > 0 && <RegionStatsCard stats={stats} />}
+      {!loadingCells && visible.length > 0 && <RegionStatsCard stats={stats} place={origin.name} />}
       {discoveryCount > 0 && !loadingCells && (
         <p className="border-b border-trail-100 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-slate-700 dark:bg-amber-500/10 dark:text-amber-200">
           {hasCurated

@@ -58,9 +58,9 @@ that implements each one names its check. R1 is enforced by the tests named unde
 | 4   | Size                               | No size budget. JS+CSS in `dist/assets` is 674,629 bytes, of 764,229 with fonts                                                                                                                                                                                                | **R2**                                                      |
 | 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                 | **R4**                                                      |
 | 6   | Motion on load                     | A `?sel=` deep link mounts the panel with `.panel-enter` (`App.tsx:84`); the mobile sheet slides on mount (`Sheet.tsx:91`); `FitToResults` animates on mount (`TrekMap.tsx:169`)                                                                                               | **R4**                                                      |
-| 7   | Sparse peak detail                 | Numbers only for nearly all 120k records                                                                                                                                                                                                                                       | later                                                       |
-| 8   | Origin change                      | The map jumps                                                                                                                                                                                                                                                                  | later                                                       |
-| 9   | Region stats card                  | Accurate, reads like a dashboard                                                                                                                                                                                                                                               | later                                                       |
+| 7   | Sparse peak detail                 | Numbers only for nearly all 120k records                                                                                                                                                                                                                                       | **R6, R7**                                                  |
+| 8   | Origin change                      | The map jumps                                                                                                                                                                                                                                                                  | **R9**                                                      |
+| 9   | Region stats card                  | Accurate, reads like a dashboard                                                                                                                                                                                                                                               | **R8**                                                      |
 | 10  | 404                                | `public/404.html` redirects to the app root and **drops the path**                                                                                                                                                                                                             | later; waits for row 17                                     |
 | 11  | Empty result list                  | Advises "try widening the radius", with no control that does it                                                                                                                                                                                                                | later                                                       |
 | 12  | Palette with no matches            | A status message only                                                                                                                                                                                                                                                          | later                                                       |
@@ -145,6 +145,29 @@ that implements each one names its check. R1 is enforced by the tests named unde
   - Nothing lasts longer than 300 ms unless it is on the named allow-list in
     `src/motion.contract.test.ts`, which is empty.
 
+- **R6 — sunrise and sunset, computed (row 7).** The detail panel says "Sunrise 06:05 and
+  sunset 18:43 today (IST); the sun comes up in the east-northeast", beside a small drawing of the
+  two bearings whose label is that sentence. `src/lib/sun.ts` uses NOAA's general solar position
+  equations for the sun's centre at −0.833°, on today's date **in India**, whatever the device's
+  zone; no correction for the summit's height (stated). It agrees with the US Naval Observatory
+  (`src/lib/__fixtures__/usno-sun.json`, fetched 2026-10-31) within 2 minutes (worst: 1) at 8.5°,
+  21.1° and 34.2° N on both solstices and an equinox. A day the sun does not cross the horizon is
+  said plainly, never given a time.
+- **R7 — is now a good time? (row 7).** The rainfall chart outlines this month, and a sentence
+  says whether it falls in the cell's drier stretch ("Now is the drier stretch here (Dec–Mar),
+  going by rainfall"). A cell with no clear dry season, or malformed data, gets no sentence:
+  `driestMonths` returns `[]` for both, and neither is a fact about the season.
+- **R8 — the area card opens with a sentence (row 9).** "601 peaks around Bengaluru, most of
+  them easy; the highest stands at 1712 m, and the top hidden gem is Kumbārachi Kallu", built
+  only from `regionStats`. A spread with no majority is "a mix of …"; a missing figure drops its
+  clause; an "Unnamed peak" never leads one. A property test removes each optional figure in
+  every combination and rejects `undefined`, `NaN`, empty clauses and dangling joins.
+- **R9 — a new origin flies (row 8).** After an action, a change of origin flies the map to the
+  new bounds (0.8 s, on the named allow-list: the motion shows where the new place is from the
+  old); a radius change animates briefly; the first fit jumps. Under reduced motion every one
+  jumps. Leaflet stops a flight the moment the person drags. The contract test also reads
+  Leaflet's `duration`, which is in seconds.
+
 ## Constraints learned in review — for the requirements still to be written
 
 Not requirements. These are facts about today's code that review established, recorded so the PR
@@ -224,6 +247,9 @@ npx vitest run scripts/check-size.test.ts           # R2: categories, verdicts, 
 npm run build && npm run check:size                 # R2 on the real build
 npx vitest run src/lib/motion.test.ts src/motion.contract.test.ts  # R3, R4 by source and helper
 npx playwright test e2e/delight.spec.ts             # R3, R4 in a browser, with motion allowed
+npx vitest run src/lib/sun.test.ts                  # R6: against the USNO fixture
+npx vitest run src/lib/voice.test.ts                # R6–R8: sentences, sparse records
+npx vitest run src/components/TrekDetail.test.tsx src/App.test.tsx  # R6–R8 rendered
 ```
 
 ## Revisions

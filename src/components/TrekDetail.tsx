@@ -10,6 +10,8 @@ import { nameSuggestionUrl } from "../lib/github";
 import climateRaw from "../data/climate.json";
 import { climateCellKey, driestMonths, wettestMonth, MONTHS } from "../lib/climate";
 import { ExternalLinkIcon, XIcon } from "./icons";
+import { sunTimes, type SunTimes } from "../lib/sun";
+import { seasonSentence, sunSentence } from "../lib/voice";
 
 // Mean monthly rainfall keyed by climate cell (spec 20) — stored once per cell
 // rather than duplicated onto every trek.
@@ -120,13 +122,65 @@ function ElevationProfile({ trail }: { trail: NonNullable<Trek["trail"]> }) {
   );
 }
 
+/** Today's calendar date in India, whatever the device's zone (spec 44 R6). */
+function istToday(): { y: number; m: number; d: number } {
+  const t = new Date(Date.now() + 330 * 60_000);
+  return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
+}
+
+// Where the sun rises and sets (spec 44 R6): a horizon circle with the two
+// bearings drawn from its centre. The sentence beside it says the same, and is
+// its label, so nothing depends on the drawing.
+function SunCompass({ times, label }: { times: SunTimes; label: string }) {
+  if (times.kind !== "normal") return null;
+  const R = 20;
+  const ray = (bearing: number) => {
+    const a = (bearing * Math.PI) / 180;
+    return { x: 24 + R * Math.sin(a), y: 24 - R * Math.cos(a) };
+  };
+  const rise = ray(times.riseAzimuth);
+  const set = ray(times.setAzimuth);
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      className="h-12 w-12 flex-none text-trail-600 dark:text-trail-300"
+      role="img"
+      aria-label={label}
+    >
+      <circle cx={24} cy={24} r={R} fill="none" stroke="currentColor" strokeOpacity={0.3} />
+      <text x={24} y={8} textAnchor="middle" style={{ fontSize: 6 }} fill="currentColor">
+        N
+      </text>
+      <line
+        x1={24}
+        y1={24}
+        x2={rise.x}
+        y2={rise.y}
+        stroke="#d97706"
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <line
+        x1={24}
+        y1={24}
+        x2={set.x}
+        y2={set.y}
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <circle cx={rise.x} cy={rise.y} r={2.5} fill="#d97706" />
+    </svg>
+  );
+}
+
 // Mean monthly rainfall for the peak's climate cell (spec 20) as a 12-bar
 // micro-chart. One measure, one hue for the bars; the driest stretch is marked
 // by a shaded band BEHIND them rather than by bar colour — dry months are short
 // bars, so colouring them would hide exactly what we want to point at. The
 // season is also stated in text above and the full series sits in the
 // aria-label, so nothing depends on colour alone.
-function RainfallProfile({ monthly }: { monthly: number[] }) {
+function RainfallProfile({ monthly, now }: { monthly: number[]; now?: number }) {
   const dry = driestMonths(monthly);
   const drySet = new Set(dry);
   const max = Math.max(...monthly, 1);
@@ -184,6 +238,22 @@ function RainfallProfile({ monthly }: { monthly: number[] }) {
           />
         );
       })}
+      {now !== undefined && (
+        // This month (spec 44 R7): an outline around its slot, so "where are
+        // we in the year" reads without colour.
+        <rect
+          data-month-now={now}
+          x={now * slot + 0.5}
+          y={0.5}
+          width={slot - 1}
+          height={plotH - 1}
+          rx={2}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1}
+          strokeDasharray="2 1.5"
+        />
+      )}
       {MONTHS.map((m, i) => (
         <text
           key={m}
@@ -259,6 +329,11 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   // Rainfall profile for this peak's climate cell, when we sampled it (spec 20).
   const monthlyRain = CLIMATE[climateCellKey(trek.lat, trek.lng)];
   const wettest = monthlyRain ? wettestMonth(monthlyRain) : undefined;
+  // Computed for today in India, never looked up (spec 44 R6, R7).
+  const today = istToday();
+  const sun = sunTimes(trek.lat, trek.lng, today.y, today.m, today.d);
+  const sunLine = sunSentence(sun);
+  const seasonLine = seasonSentence(monthlyRain, today.m - 1);
 
   // Prefer baked data; fall back to whatever the live fetch found.
   const image = trek.image ?? live.image;
@@ -464,6 +539,12 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
 
         {/* Rainfall — mean monthly totals for this peak's climate cell (spec 20),
             so the "best season" above is shown rather than just asserted. */}
+        {/* Sunrise and sunset today (spec 44 R6). */}
+        <div className="mt-4 flex items-center gap-3 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
+          <SunCompass times={sun} label={sunLine} />
+          <p className="text-sm text-trail-800 dark:text-slate-100">{sunLine}</p>
+        </div>
+
         {monthlyRain && (
           <div className="mt-4 rounded-lg bg-trail-50 p-3 dark:bg-slate-800">
             <div className="flex items-baseline justify-between gap-2">
@@ -476,7 +557,10 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
                 </span>
               )}
             </div>
-            <RainfallProfile monthly={monthlyRain} />
+            <RainfallProfile monthly={monthlyRain} now={today.m - 1} />
+            {seasonLine && (
+              <p className="mt-1 text-xs text-trail-700 dark:text-slate-300">{seasonLine}</p>
+            )}
             <p className="mt-1 text-[11px] text-trail-500 dark:text-slate-400">
               Mean monthly rainfall, 2022–23 (Open-Meteo). The shaded band marks the driest stretch.
             </p>
