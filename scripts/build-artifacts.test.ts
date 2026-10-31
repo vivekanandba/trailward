@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { runBuildSitemap, lastCommitDate } from "./build-sitemap";
 import { runBuildSearchIndex } from "./build-search-index";
 import { runBuildPages } from "./build-pages";
-import { memoryIO } from "./lib/buildIO";
+import { memoryIOWithSlugs as memoryIO } from "./lib/testIO";
+import { memoryIO as plainIO } from "./lib/buildIO";
 import type { Trek } from "../src/lib/trek";
 
 const trek = (over: Partial<Trek> & Pick<Trek, "id" | "name">): Trek => ({
@@ -26,7 +27,11 @@ const TREKS: Trek[] = [
   trek({ id: "d12-1", name: "Unnamed peak (~912 m)", lat: 15, lng: 76 }),
 ];
 
-const P = { treks: "/repo/src/data/treks.json", out: "/repo/public/sitemap.xml" };
+const P = {
+  treks: "/repo/src/data/treks.json",
+  slugs: "/repo/scripts/pages/slugs.json",
+  out: "/repo/public/sitemap.xml",
+};
 const CONTENT = ["about.md", "sources.md"];
 
 describe("sitemap ↔ pages agreement (CON-COV-003 — assert it from BOTH sides)", () => {
@@ -168,5 +173,49 @@ describe("lastCommitDate (spec 35 — lastmod from the DATA's history)", () => {
 
   it("returns undefined outside a git repository instead of throwing", () => {
     expect(lastCommitDate("package.json", "/")).toBeUndefined();
+  });
+});
+
+describe("both builds take each page's URL from the slug registry (spec 35)", () => {
+  // A registered slug that the old order-dependent rules would NOT produce:
+  // if either tool recomputed slugs, it would write or list a different URL.
+  const registry = {
+    "kumara-parvatha-gn-1": { id: "gn-1", lat: 12.6, lng: 75.6 },
+    skandagiri: { id: "skandagiri", lat: 13, lng: 77 },
+  };
+  const seed = {
+    [P.treks]: JSON.stringify(TREKS),
+    [P.slugs]: JSON.stringify(registry),
+    ["/repo/content/about.md"]: "---\ntitle: T\ndescription: D\n---\n\nBody.",
+  };
+
+  it("writes the page, and lists it, at the registered slug", () => {
+    const pages = memoryIO(seed);
+    runBuildPages(pages, "/repo", ["about.md"], "2026-10-31");
+    expect(pages.files.has("/repo/dist/t/kumara-parvatha-gn-1/index.html")).toBe(true);
+    expect(pages.files.has("/repo/dist/t/kumara-parvatha/index.html")).toBe(false);
+
+    const sitemap = memoryIO(seed);
+    runBuildSitemap(sitemap, P, ["about.md"], "2026-10-31");
+    expect(sitemap.files.get(P.out)).toContain("/t/kumara-parvatha-gn-1/");
+  });
+
+  it("refuses to build when a page has no registered slug", () => {
+    const stale = { ...seed, [P.slugs]: JSON.stringify({ skandagiri: registry.skandagiri }) };
+    expect(() => runBuildPages(memoryIO(stale), "/repo", ["about.md"], "x")).toThrow(
+      /gn-1.*npm run build:slugs/,
+    );
+    expect(() => runBuildSitemap(memoryIO(stale), P, ["about.md"], "x")).toThrow(
+      /gn-1.*npm run build:slugs/,
+    );
+  });
+
+  it("refuses to build with no registry at all", () => {
+    const { [P.slugs]: _gone, ...none } = seed;
+    void _gone;
+    // memoryIOWithSlugs would supply one; use the plain fake.
+    expect(() => runBuildPages(plainIO(none), "/repo", ["about.md"], "x")).toThrow(
+      /slugs\.json is missing/,
+    );
   });
 });

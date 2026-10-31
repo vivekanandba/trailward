@@ -51,6 +51,28 @@ and each carries a prominent link that opens the same trek on the live map
 A record whose name starts with "Unnamed" never qualifies: a page titled "Unnamed peak
 (~912 m)" has nothing to rank for and dilutes the rest.
 
+**Where each page lives: the slug registry.** A page's URL is `t/<slug>/`, and the slug is
+recorded once in `scripts/pages/slugs.json` (slug → `{id, lat, lng}`) and kept. The registry is
+a lockfile:
+
+- `npm run build:slugs` (`scripts/build-slugs.ts`) gives each page with no slug its bare slug
+  (`slugFor`, the name folded to ASCII), or `<slug>-<id>` when any record has ever held the bare
+  one. It never deletes an entry and never gives a slug to a different peak: a slug whose page
+  has gone stays reserved.
+- A page whose id is new but which stands within 120 m of a registered record that no longer has
+  a page, **with the same name**, takes over that record's slug. That is a terrain rescan
+  regenerating a `d12-` id for the same summit (spec 27). A different name or a farther point is
+  a different page.
+- `build-pages` and `build-sitemap` only read the registry, through one function
+  (`slugsFromRegistry`), and **refuse to build** when a qualifying page has no slug, when a
+  record has two, or when a slug is not URL-safe. The message names `npm run build:slugs`.
+- Both data workflows (`refresh-data.yml`, `apply-suggestions.yml`) run `build:slugs` and commit
+  the registry with the data, so a deploy never meets an unregistered page.
+- A record that is renamed keeps its slug: a URL that keeps working beats one that matches the
+  new name.
+- The first registry was written from the order-dependent rules it replaces, and equals the
+  3,886 URLs of the live sitemap on 2026-10-31, so no published URL moved.
+
 **Each page contains** the trek name and elevation as a real `<h1>`, the fact table the detail
 panel shows (difficulty, best season, ground cover, relief/slope/prominence, nearest town),
 the historical note when present with its 1908-gazetteer citation, the photo with its required
@@ -73,8 +95,14 @@ section C's PR; the app-shell card (`icons/og.png`) already exists.
 
 ## Edge cases & error states
 
-- Slugs collide (two "Nandi Hills"): the generator appends the record id, and asserts global
-  slug uniqueness before writing — a silently overwritten page is a lost page.
+- Slugs collide (two "Nandi Hills"): the registry gives the later one `<slug>-<id>`, and the
+  generator still asserts global slug uniqueness before writing — a silently overwritten page is
+  a lost page.
+- **Defect fixed (spec 44 register row 17):** slugs used to be recomputed every build from the
+  name and the build order. A page's URL changed when another page of the same name appeared
+  earlier in the order, and the 438 pages with a collision suffix on a `d12-` id died whenever a
+  rescan regenerated the ids. Sorting by id instead would itself have moved 322 live URLs, which
+  is why the fix records URLs rather than computing them.
 - A trek page must not 404 on refresh: these are real files, not SPA routes, so the existing
   `404.html` redirect never sees them.
 - Records are scrubbed between builds (spec 33): pages for records that no longer exist are
@@ -93,6 +121,12 @@ section C's PR; the app-shell card (`icons/og.png`) already exists.
 - `slugFor` is stable, URL-safe, transliterates diacritics, and deduplicates collisions.
 - Generator: writes one file per qualifying trek, cleans stale output, refuses on slug
   collision.
+- `scripts/lib/slugs.test.ts`: a registered slug survives a change of build order; a rescanned
+  record at the same place with the same name takes over its slug; a different name or a point
+  more than 120 m away does not; a retired slug is never reassigned; a free bare slug is used;
+  updating is idempotent; the build refuses an unregistered page, a record with two slugs and an
+  unusable slug; the first registry equals today's slugs; `runBuildSlugs` bootstraps and then
+  only adds.
 - E2E: a generated page returns 200 with the trek name in the served HTML (not injected by
   JS), its canonical is absolute and correct, and its map link deep-links to the app.
 

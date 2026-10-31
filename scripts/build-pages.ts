@@ -17,8 +17,8 @@ import {
   cleanTargetFor,
   contentSlugs,
   qualifyingTreks,
-  slugMap,
 } from "./lib/pages";
+import { SLUGS_FILE, readRegistry, slugsFromRegistry } from "./lib/slugs";
 import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
@@ -41,6 +41,7 @@ const repoRoot = resolve(here, "..");
  */
 export function pagePathsFor(repoRoot: string): {
   treks: string;
+  slugs: string;
   outDir: string;
   distDir: string;
   contentDir: string;
@@ -48,6 +49,7 @@ export function pagePathsFor(repoRoot: string): {
   const root = repoRoot.replace(/\/+$/, "");
   return {
     treks: `${root}/src/data/treks.json`,
+    slugs: `${root}/${SLUGS_FILE}`,
     outDir: cleanTargetFor(root),
     distDir: `${root}/dist`,
     contentDir: `${root}/content`,
@@ -65,7 +67,12 @@ export function runBuildPages(
   const paths = pagePathsFor(repoRoot);
   const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
   const pages = qualifyingTreks(treks);
-  const slugs = slugMap(pages);
+  // Each page's URL comes from the committed registry, never from build order
+  // (spec 35); a page without one refuses the build here, before any write.
+  const slugs = slugsFromRegistry(
+    pages,
+    readRegistry(io.exists(paths.slugs) ? io.readFile(paths.slugs) : undefined),
+  );
 
   // Slug uniqueness is load-bearing: a collision silently overwrites a page.
   if (new Set(slugs.values()).size !== pages.length) {

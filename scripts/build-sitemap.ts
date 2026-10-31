@@ -13,12 +13,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
 import { sitemapXml, type SitemapEntry } from "../src/lib/seo";
-import { contentSlugs, qualifyingTreks, slugMap } from "./lib/pages";
+import { contentSlugs, qualifyingTreks } from "./lib/pages";
+import { SLUGS_FILE, readRegistry, slugsFromRegistry } from "./lib/slugs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 const treksFile = resolve(repoRoot, "src/data/treks.json");
 const outFile = resolve(repoRoot, "public/sitemap.xml");
+const slugsFile = resolve(repoRoot, SLUGS_FILE);
 const contentDir = resolve(repoRoot, "content");
 
 /** ISO date of the last commit that touched a file, or undefined outside git. */
@@ -37,7 +39,7 @@ export function lastCommitDate(file: string, cwd: string): string | undefined {
 /** Emits the sitemap. `lastmod` is injected so the output is deterministic. */
 export function runBuildSitemap(
   io: BuildIO,
-  paths: { treks: string; out: string },
+  paths: { treks: string; slugs: string; out: string },
   contentFiles: string[],
   dataDate?: string,
 ): number {
@@ -45,7 +47,10 @@ export function runBuildSitemap(
   const treks = JSON.parse(io.readFile(paths.treks)) as Trek[];
 
   const pages = qualifyingTreks(treks);
-  const slugs = slugMap(pages);
+  const slugs = slugsFromRegistry(
+    pages,
+    readRegistry(io.exists(paths.slugs) ? io.readFile(paths.slugs) : undefined),
+  );
   const entries: SitemapEntry[] = [
     { path: "/", lastmod: dataDate },
     // Content pages (spec 36) — derived from the same listing build-pages
@@ -68,7 +73,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     runBuildSitemap(
       nodeIO,
-      { treks: treksFile, out: outFile },
+      { treks: treksFile, slugs: slugsFile, out: outFile },
       nodeIO.listDir(contentDir),
       lastCommitDate("src/data/treks.json", repoRoot),
     );
