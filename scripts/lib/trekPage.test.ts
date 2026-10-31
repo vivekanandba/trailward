@@ -118,3 +118,30 @@ describe("esc / unescapeHtml (spec 44 R1)", () => {
     expect(unescapeHtml(esc(raw))).toBe(raw);
   });
 });
+
+describe("renderTrekPage prints as a field card (spec 44 R5)", () => {
+  it("gives the coordinates in degrees-minutes-seconds as well as decimal", () => {
+    expect(html()).toContain("13°30′08″N 77°41′28″E");
+  });
+
+  it("writes the directions URL out in a print-only line, so paper carries it", () => {
+    const h = html();
+    expect(h).toMatch(
+      /<p class="print-only">Directions: https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;destination=13\.5021%2C77\.6911<\/p>/,
+    );
+  });
+
+  it("says how current its data is, not when it was printed: the page runs no script", () => {
+    expect(renderTrekPage(full, "skandagiri", "2026-10-31")).toContain(
+      '<p class="print-only">Data as of 2026-10-31.</p>',
+    );
+    expect(renderTrekPage(full, "skandagiri")).not.toContain("Data as of");
+  });
+
+  it("hides the screen-only chrome in print and shows the print-only lines", () => {
+    const style = html().match(/<style>([\s\S]*?)<\/style>/)![1];
+    expect(style).toMatch(/\.print-only\{display:none\}/);
+    expect(style).toMatch(/@media print\{[\s\S]*?\.cta,\.back\{display:none\}/);
+    expect(style).toMatch(/@media print\{[\s\S]*\.print-only\{display:block\}/);
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import TrekDetail from "./TrekDetail";
 import { DEFAULT_ORIGIN, type Origin, type Trek } from "../lib/trek";
 
@@ -320,5 +320,49 @@ describe("TrekDetail distance (spec 05; spec 44 register row 16)", () => {
     render(<TrekDetail trek={measured} origin={mysuru} onClose={vi.fn()} />);
     expect(screen.getByText(/^~1\d\d km in a straight line$/)).toBeInTheDocument();
     expect(screen.queryByText(/drive/)).not.toBeInTheDocument();
+  });
+});
+
+describe("TrekDetail prints as a field card (spec 44 R5)", () => {
+  it("marks itself as the card and carries a print-only block with the essentials", () => {
+    const { container } = render(
+      <TrekDetail
+        trek={{ ...baseTrek, lat: 13.4192, lng: 77.6836 }}
+        origin={origin}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(container.querySelector('[data-print="card"]')).not.toBeNull();
+    const block = container.querySelector('[data-testid="print-card"]')!;
+    expect(block.className).toMatch(/\bhidden\b/);
+    expect(block.className).toMatch(/\bprint:block\b/);
+    expect(block.textContent).toContain("13°25′09″N 77°41′01″E");
+    expect(block.textContent).toContain(
+      "https://www.google.com/maps/dir/?api=1&destination=13.4192%2C77.6836",
+    );
+    expect(block.textContent).toMatch(/Printed from Trailward on \d{1,2} \w{3} \d{4}/);
+  });
+
+  it("keeps the action buttons off paper", () => {
+    const { container } = render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    const directions = screen.getByRole("link", { name: "Directions" });
+    expect(directions.closest('[data-print="hide"]')).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: /close/i }).closest('[data-print="hide"]'),
+    ).not.toBeNull();
+    void container;
+  });
+
+  it("updates the printed date when the browser is about to print", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-31T06:00:00Z"));
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    expect(screen.getByTestId("print-card").textContent).toContain("31 Oct 2026");
+    vi.setSystemTime(new Date("2026-11-02T06:00:00Z"));
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"));
+    });
+    expect(screen.getByTestId("print-card").textContent).toContain("2 Nov 2026");
+    vi.useRealTimers();
   });
 });

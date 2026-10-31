@@ -3,6 +3,7 @@ import type { HillFeature, Origin, Trek } from "../lib/trek";
 import { distanceFrom, formatTrip, tripDistance } from "../lib/distance";
 import { difficultyColor, difficultyLabel } from "../lib/difficulty";
 import { googleMapsDirectionsUrl } from "../lib/directions";
+import { toDms } from "../lib/coords";
 import { getWeather, type WeatherNow } from "../lib/weather";
 import { toGpx } from "../lib/gpx";
 import { fetchLiveEnrichment, type LiveEnrichment } from "../lib/enrich";
@@ -204,6 +205,16 @@ function RainfallProfile({ monthly }: { monthly: number[] }) {
   );
 }
 
+/** "31 Oct 2026", in India time: the app's clock for dates (spec 44 R5). */
+function printDate(): string {
+  return new Date().toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  });
+}
+
 export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   const [weather, setWeather] = useState<WeatherNow | null>(null);
   const [weatherFailed, setWeatherFailed] = useState(false);
@@ -266,6 +277,15 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   const nearestTown = trek.nearestTown ?? live.nearestTown;
 
   const trip = formatTrip(tripDistance(origin, trek));
+
+  // The date on a printed card is the day it is printed, refreshed as the
+  // browser prepares to print (spec 44 R5).
+  const [printedOn, setPrintedOn] = useState(printDate);
+  useEffect(() => {
+    const onBeforePrint = () => setPrintedOn(printDate());
+    window.addEventListener("beforeprint", onBeforePrint);
+    return () => window.removeEventListener("beforeprint", onBeforePrint);
+  }, []);
   // For discovery peaks with no curated difficulty, colour + label by the
   // terrain-estimated difficulty (kept honest with an "est." prefix).
   const shownDifficulty = trek.difficulty ?? trek.estimatedDifficulty;
@@ -295,7 +315,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-print="card">
       <div className="flex items-start justify-between gap-3 border-b border-trail-100 dark:border-slate-700 p-4">
         <div>
           <h2
@@ -348,6 +368,7 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
         <button
           type="button"
           onClick={onClose}
+          data-print="hide"
           aria-label="Close details"
           className="rounded-md p-2 text-trail-500 dark:text-slate-400 hover:bg-trail-50 dark:hover:bg-slate-800"
         >
@@ -677,7 +698,13 @@ export default function TrekDetail({ trek, origin, onClose }: TrekDetailProps) {
       </div>
 
       <div className="border-t border-trail-100 dark:border-slate-700 p-4">
-        <div className="flex gap-2">
+        {/* Paper carries what the buttons would have done (spec 44 R5). */}
+        <div data-testid="print-card" className="hidden print:block mb-3 text-sm">
+          <p>Coordinates: {toDms(trek.lat, trek.lng)}</p>
+          <p className="break-all">Directions: {googleMapsDirectionsUrl(trek)}</p>
+          <p>Printed from Trailward on {printedOn}</p>
+        </div>
+        <div className="flex gap-2" data-print="hide">
           <a
             href={googleMapsDirectionsUrl(trek)}
             target="_blank"
