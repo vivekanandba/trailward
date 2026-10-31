@@ -22,23 +22,35 @@ const FIELDS = [
   "hillFeatures",
   "protectedArea",
   "heritage",
-  "image", // a curated photo lost to a source that changed shape (spec 10)
-  // A route-service outage drops every curated road distance (they are `run`
-  // fields, never carried stale), and this refuses that commit (spec 10).
-  "distanceKm",
 ] as const;
 
 const TOLERANCE = 0.02; // fraction each count may drop before this fails
 
 export function fieldCounts(treks: Trek[]): Record<string, number> {
-  const counts: Record<string, number> = { records: treks.length };
+  const counts: Record<string, number> = { records: treks.length, curatedImage: 0 };
   for (const f of FIELDS) counts[f] = 0;
   for (const t of treks) {
     for (const f of FIELDS) {
       if (f === "name" ? !t.name.startsWith("Unnamed") : t[f] !== undefined) counts[f]++;
     }
+    // A curated photo lost to a source that changed shape (spec 10). Only the
+    // curated tier: discovery re-fetches its photos best-effort every run, and
+    // that churn is not this incident.
+    if (t.tier === "curated" && t.image !== undefined) counts.curatedImage++;
   }
   return counts;
+}
+
+/**
+ * Curated records without a road distance or drive time. These are `run`
+ * fields, never carried stale (spec 10), so a route-service hiccup drops them
+ * outright; any increase over the committed file is refused, however small,
+ * because there are only 16 and a seed removed takes its record with it.
+ */
+export function missingRouteFacts(treks: Trek[]): number {
+  return treks.filter(
+    (t) => t.tier === "curated" && (t.distanceKm === undefined || t.driveTimeMin === undefined),
+  ).length;
 }
 
 // Hand-curated fields have tiny counts (heritage: 2) where one record moving
@@ -67,20 +79,27 @@ export function driftViolations(
 async function main(): Promise<void> {
   const here = dirname(fileURLToPath(import.meta.url));
   const treksFile = resolve(here, "../src/data/treks.json");
-  const current = fieldCounts(JSON.parse(readFileSync(treksFile, "utf8")) as Trek[]);
+  const now = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
+  const current = fieldCounts(now);
   const headJson = execFileSync("git", ["show", "HEAD:src/data/treks.json"], {
     cwd: here,
     maxBuffer: 1024 * 1024 * 256,
     encoding: "utf8",
   });
-  const baseline = fieldCounts(JSON.parse(headJson) as Trek[]);
+  const head = JSON.parse(headJson) as Trek[];
+  const baseline = fieldCounts(head);
 
   for (const [field, n] of Object.entries(current)) {
     console.log(`[drift] ${field}: ${baseline[field]} → ${n}`);
   }
   const violations = driftViolations(baseline, current);
+  const [routeBefore, routeAfter] = [missingRouteFacts(head), missingRouteFacts(now)];
+  console.log(`[drift] curated records without a route: ${routeBefore} → ${routeAfter}`);
+  if (routeAfter > routeBefore) {
+    violations.push(`curated records without a road distance: ${routeBefore} → ${routeAfter}`);
+  }
   if (violations.length > 0) {
-    console.error(`[drift] enrichment dropped beyond ${TOLERANCE * 100}% tolerance:`);
+    console.error(`[drift] enrichment dropped:`);
     for (const v of violations) console.error(`  ${v}`);
     process.exit(1);
   }

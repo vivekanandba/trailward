@@ -31,14 +31,18 @@ case "$result" in
   *) echo "report-failure: '$result' is not a verdict; nothing to report"; exit 0 ;;
 esac
 
-# The search narrows to candidates (it is fuzzy); the jq filter decides exactly.
-number=$(TITLE="$title" gh issue list --state open --limit 100 \
-  --search "in:title \"$title\"" --json number,title \
-  --jq '[.[] | select(.title == env.TITLE)][0].number // empty')
+# Every open issue, through the REST list rather than search: the search index
+# lags a just-filed issue, so a quick re-run would open a duplicate. The list
+# also covers pull requests, which the filter drops.
+numbers=$(TITLE="$title" gh api --paginate "repos/$GH_REPO/issues?state=open&per_page=100" \
+  --jq '.[] | select(.pull_request == null and .title == env.TITLE) | .number')
+number=$(printf '%s\n' "$numbers" | sed -n 1p)
 
 if [ "$result" = "success" ]; then
-  [ -n "$number" ] || exit 0
-  gh issue close "$number" --comment "Recovered: this scheduled run succeeded: $run"
+  # Every match: a duplicate left open would say the job is still failing.
+  for n in $numbers; do
+    gh issue close "$n" --comment "Recovered: this scheduled run succeeded: $run"
+  done
 elif [ -n "$number" ]; then
   gh issue comment "$number" --body "This scheduled run failed: $run"
 else

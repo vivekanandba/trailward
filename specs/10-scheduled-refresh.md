@@ -43,21 +43,28 @@ pipeline, commits changes, and lets the gated deploy publish them.
     rainfall grid, as `build:climate` does), the road distance and drive time (facts about the
     route from the origin, not the summit), and the discovery-only signals `discoveryScore` and
     `estimatedDifficulty`. One removed from the seed, or not produced this run, is gone. A
-    route-service outage would therefore drop every road distance at once; the drift guard
-    counts `distanceKm`, so that refresh is refused rather than committed.
+    route-service hiccup would therefore drop road distances; the drift guard refuses a
+    refresh with **any** more curated records lacking a road distance or drive time than the
+    committed file (`missingRouteFacts`), since there are only 16 and a tolerance would let
+    five go.
   - **`place`** fields (terrain, land cover, gazetteer, hill features, trail, POIs, gallery)
     keep their previous value when this run produced none, **while the seed is within 120 m of
     where it was** (`CARRYOVER_KM`, `scripts/lib/carryover.ts`, the distance discovery uses for a
     rescanned summit).
-  - **`sources`** (the photo) is kept on the same condition **and** only while the seed cites
-    the same sources. A failed or changed lookup is not evidence the photo is gone; a different
-    article is.
+  - **`sources`** (the photo) is kept on the same condition, only while the seed cites the
+    same sources, **and only when this run's lookup could not say** (CON-DATA-002). A failed
+    fetch, or a title that is now a disambiguation page, is unknown, so the photo stays. An
+    article that answered with no usable photo (removed, relicensed) has none, and it is
+    dropped; so is one from a different article.
 - **Given** a new seed with the id of an existing discovery pin, **then** the curated record
   replaces the pin, taking what was baked for that place, rather than duplicating the id.
 - **Given** a curated record, **then** its keys keep their previous order, so a refresh that
   changed nothing rewrites nothing.
 - **Given** a Wikipedia title that is now a disambiguation page, **when** the build reads it,
-  **then** it takes nothing from it.
+  **then** it takes nothing from it and says so (`disambiguation: true`), which the fold reads
+  as "unknown", not "no photo".
+- **Given** a committed `treks.json` that is not JSON, not an array, or has an entry that is
+  not an object with an id, **then** `build:data` refuses it naming the file, before the fold.
 
 ## Interfaces & data contracts
 
@@ -88,8 +95,10 @@ of treks.json`.
   whoever last edited the cron, so the data simply stopped refreshing. Hence the fold, and the
   issue on failure. The same rerun also showed six curated photos vanishing because their
   Wikipedia lookups stopped returning one (Nandi Hills became a disambiguation page), which the
-  guard did not count. The fold now keeps them, and the guard counts `image` so a bulk photo loss
-  elsewhere is caught (it tolerates up to 5 records, like every field).
+  guard did not count. The fold now keeps them, and the guard counts curated photos
+  (`curatedImage`) so a bulk loss is caught (it tolerates up to 5 records, like every field).
+  Only curated ones: `build:discovery` re-fetches the other 181 photos best-effort every run,
+  and that churn would turn the guard red weekly for no outage.
 
 ## Test cases (TDD checklist)
 
@@ -99,15 +108,21 @@ of treks.json`.
 - A forced validation failure causes a non-zero exit before any commit.
 - `scripts/build-data.test.ts` → `foldCurated`: non-curated records kept exactly; `place` fields
   carried; nothing carried across a corrected position; the photo dropped when the cited article
-  changes; a `run` field (`permitRequired`) dropped when no longer given; key order kept; a
-  removed seed dropped. `runBuildData`: the written file keeps every discovery record.
-- `scripts/sources/parsers.test.ts`: a disambiguation page yields nothing.
-- `scripts/build-tools.test.ts`: the drift guard counts `image` and `distanceKm`, and fails on a
-  bulk photo loss and on every road distance gone.
+  changes or answered with none; a `run` field (`permitRequired`) dropped when no longer given;
+  key order kept; a removed seed dropped. `runBuildData`: the written file keeps every discovery
+  record; a photo is dropped when the article answered with none and kept when the fetch failed
+  or the title is a disambiguation page; a non-JSON file, a non-array and a `null` or id-less
+  entry are each refused by name.
+- `scripts/sources/parsers.test.ts`: a disambiguation page yields nothing but the flag.
+- `scripts/build-tools.test.ts`: the drift guard counts curated photos only, fails on a bulk
+  curated photo loss, and `missingRouteFacts` counts a curated record lacking either route
+  fact.
 - `scripts/report-failure.test.ts` (fake `gh`): opens an issue when none matches, comments on
   the exact-title match, ignores a title that merely contains the words, closes the issue on a
   later success, does nothing on success with none open or for a cancelled or skipped run,
-  narrows the lookup with an `in:title` search, refuses no title.
+  reads every open issue through the paginated REST list (not the lagging search index),
+  ignores a pull request with the same title, closes every duplicate on success, refuses no
+  title.
 - `scripts/build-data.test.ts` also: a best season deleted from the seed is gone; a seed with
   none gets the rainfall-derived one this run, and the live enricher reads the committed grid; a
   promoted pin replaces the discovery record without its discovery score or estimated

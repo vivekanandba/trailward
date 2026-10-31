@@ -146,6 +146,13 @@ describe("foldCurated — the weekly refresh must not wipe the dataset (spec 10)
     expect(fresh[0].image).toEqual(other);
   });
 
+  it("drops the photo when the article answered without one (removed is not unknown)", () => {
+    const image = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const id = BANGALORE_SEED[0].id;
+    const out = foldCurated([{ ...BANGALORE_SEED[0] }], [{ ...prevCurated, image }], new Set([id]));
+    expect(out[0].image).toBeUndefined();
+  });
+
   it("drops a field this run decides when the seed and its enrichers no longer give it", () => {
     // permitRequired can be stated by a curator or scraped; either way this
     // run decides, so removing it from the seed removes it (a hand-kept list
@@ -308,6 +315,42 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
     await expect(runBuildData(io, file, BANGALORE_SEED, BANGALORE_ORIGIN, {})).rejects.toThrow(
       /not an array of treks/,
     );
+  });
+
+  it("refuses, by name, a committed file with an entry that is not a trek", async () => {
+    const file = "/repo/src/data/treks.json";
+    for (const [body, why] of [
+      ["[null]", /entry at index 0 that is not a trek/],
+      ['[{"name":"x"}]', /entry at index 0 that is not a trek/],
+      ["[{", /is not valid JSON/],
+    ] as const) {
+      const io = memoryIO({ [file]: body });
+      await expect(
+        runBuildData(io, file, BANGALORE_SEED, BANGALORE_ORIGIN, {}),
+        body,
+      ).rejects.toThrow(new RegExp(`${file} .*${why.source}`));
+    }
+  });
+
+  it("drops a curated photo when this run's article lookup answered without one", async () => {
+    const file = "/repo/src/data/treks.json";
+    const seed = BANGALORE_SEED[0];
+    const image = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const io = memoryIO({ [file]: JSON.stringify([{ ...seed, image }]) });
+    await runBuildData(io, file, [seed], BANGALORE_ORIGIN, { wiki: async () => ({}) });
+    expect((JSON.parse(io.files.get(file)!) as Trek[])[0].image).toBeUndefined();
+    // A lookup that failed, or a title now a disambiguation page, is not
+    // evidence: the photo stays.
+    for (const wiki of [
+      async () => {
+        throw new Error("503");
+      },
+      async () => ({ disambiguation: true as const }),
+    ]) {
+      const io2 = memoryIO({ [file]: JSON.stringify([{ ...seed, image }]) });
+      await runBuildData(io2, file, [seed], BANGALORE_ORIGIN, { wiki });
+      expect((JSON.parse(io2.files.get(file)!) as Trek[])[0].image).toEqual(image);
+    }
   });
 
   it("writes the curated records alone when there is no file yet", async () => {

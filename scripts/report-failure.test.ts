@@ -11,12 +11,12 @@ const script = resolve(__dirname, "report-failure.sh");
 let dir: string;
 let calls: string;
 
-function fakeGh(openIssues: { number: number; title: string }[]): void {
+function fakeGh(openIssues: { number: number; title: string; pull_request?: object }[]): void {
   writeFileSync(join(dir, "issues.json"), JSON.stringify(openIssues));
   writeFileSync(
     join(dir, "gh"),
     `#!/usr/bin/env bash
-if [ "$1 $2" = "issue list" ]; then
+if [ "$1" = "api" ]; then
   printf '%s\\n' "$*" > "${dir}/list-args"
   # Apply the --jq filter the script passes, as gh would.
   for ((i=1; i<=$#; i++)); do if [ "\${!i}" = "--jq" ]; then j=$((i+1)); q="\${!j}"; fi; done
@@ -97,14 +97,28 @@ describe("report-failure.sh", () => {
     expect(run("Weekly data refresh is failing", "skipped")).toBe("");
   });
 
-  it("narrows the lookup with a title search before the 100-result limit applies", () => {
-    // The limit bounds title matches, not all open issues, so a pile of
-    // name-suggestion issues cannot push the failure issue out of reach.
+  it("reads every open issue through the REST list, not the lagging search index", () => {
+    // A just-filed issue is missing from search for a while, so a quick
+    // re-run would open a duplicate; --paginate means no count can hide it.
     fakeGh([]);
     run("Weekly data refresh is failing");
     const args = readFileSync(join(dir, "list-args"), "utf8");
-    expect(args).toContain('in:title "Weekly data refresh is failing"');
-    expect(args).toMatch(/--limit 100\b/);
+    expect(args).toMatch(/^api --paginate repos\/o\/r\/issues\?state=open/);
+    expect(args).not.toContain("--search");
+  });
+
+  it("never mistakes a pull request with that title for the issue", () => {
+    fakeGh([{ number: 9, title: "Weekly data refresh is failing", pull_request: {} }]);
+    expect(run("Weekly data refresh is failing")).toMatch(/^issue create /);
+  });
+
+  it("closes every open duplicate when a later run succeeds", () => {
+    fakeGh([
+      { number: 7, title: "Weekly data refresh is failing" },
+      { number: 8, title: "Weekly data refresh is failing" },
+    ]);
+    const out = run("Weekly data refresh is failing", "success");
+    expect(out).toMatch(/^issue close 7 --comment .*\nissue close 8 --comment /s);
   });
 
   it("says only that the run failed: what it changed before failing is not known here", () => {
