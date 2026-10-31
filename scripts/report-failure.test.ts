@@ -11,8 +11,15 @@ const script = resolve(__dirname, "report-failure.sh");
 let dir: string;
 let calls: string;
 
-function fakeGh(openIssues: { number: number; title: string; pull_request?: object }[]): void {
-  writeFileSync(join(dir, "issues.json"), JSON.stringify(openIssues));
+type Issue = { number: number; title: string; pull_request?: object; user?: { login: string } };
+
+/** Open issues as the REST list returns them; filed by the workflow's bot unless stated. */
+function fakeGh(openIssues: Issue[]): void {
+  const bot = { login: "github-actions[bot]" };
+  writeFileSync(
+    join(dir, "issues.json"),
+    JSON.stringify(openIssues.map((i) => ({ user: bot, ...i }))),
+  );
   writeFileSync(
     join(dir, "gh"),
     `#!/usr/bin/env bash
@@ -109,6 +116,17 @@ describe("report-failure.sh", () => {
     const args = readFileSync(join(dir, "list-args"), "utf8");
     expect(args).toMatch(/^api --paginate repos\/o\/r\/issues\?state=open/);
     expect(args).not.toContain("--search");
+  });
+
+  it("never touches a same-titled issue a person filed", () => {
+    // A person may track a problem the run cannot see; a green run is not its recovery.
+    const person = { login: "a-maintainer" };
+    fakeGh([{ number: 5, title: "Weekly data refresh is failing", user: person }]);
+    expect(run("Weekly data refresh is failing", "success")).toBe("");
+    expect(run("Weekly data refresh is failing")).toMatch(/^issue create /);
+    expect(readFileSync(join(dir, "list-args"), "utf8")).toContain(
+      "creator=github-actions%5Bbot%5D",
+    );
   });
 
   it("never mistakes a pull request with that title for the issue", () => {

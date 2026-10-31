@@ -3,7 +3,12 @@ import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown, buildIndiaMask, inIndia, isPlausibleSummit } from "./build-detect";
 import { isImplausibleTrek } from "./scrub-implausible";
-import { fieldCounts, driftViolations, missingRouteFacts } from "./check-enrichment-drift";
+import {
+  fieldCounts,
+  driftViolations,
+  missingRouteFacts,
+  routeLosses,
+} from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -222,7 +227,7 @@ describe("enrichment drift guard (spec 31)", () => {
     const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
     const counts = fieldCounts([
       trek({ name: "A", tier: "curated", image: img }),
-      trek({ name: "B", tier: "listed", image: img }),
+      trek({ name: "B", tier: "discovery", image: img }),
       trek({ name: "C", tier: "curated" }),
     ]);
     expect(counts.curatedImage).toBe(1);
@@ -231,12 +236,27 @@ describe("enrichment drift guard (spec 31)", () => {
     expect(driftViolations({ curatedImage: 13 }, { curatedImage: 0 })).toHaveLength(1);
   });
 
-  it("refuses any curated record newly without a road distance or drive time", () => {
+  it("names, per record, each curated record that lost a route fact", () => {
     // `run` fields are never carried stale (spec 10): one OSRM miss drops one record's.
-    const routed = trek({ name: "A", tier: "curated", distanceKm: 60, driveTimeMin: 90 });
-    expect(missingRouteFacts([routed, trek({ name: "D", tier: "listed" })])).toBe(0);
-    expect(missingRouteFacts([trek({ name: "A", tier: "curated", distanceKm: 60 })])).toBe(1);
-    expect(missingRouteFacts([trek({ name: "A", tier: "curated", driveTimeMin: 90 })])).toBe(1);
+    const c = (id: string, over: Record<string, unknown> = {}) =>
+      trek({ id, name: id, tier: "curated", distanceKm: 60, driveTimeMin: 90, ...over });
+    const never = c("never", { distanceKm: undefined }); // had none before either: not a loss
+    const head = [
+      c("a", { distanceKm: undefined, driveTimeMin: undefined }),
+      c("b"),
+      c("gone"),
+      never,
+    ];
+    // a is routed this run and b loses its drive time: the totals match, the guard must not.
+    const now = [
+      c("a"),
+      c("b", { driveTimeMin: undefined }),
+      c("new", { distanceKm: undefined }),
+      never,
+    ];
+    expect(routeLosses(head, now)).toEqual(["b: lost driveTimeMin"]);
+    expect(missingRouteFacts([c("x", { distanceKm: undefined })]).get("x")).toEqual(["distanceKm"]);
+    expect(missingRouteFacts([trek({ id: "d", name: "D", tier: "discovery" })]).size).toBe(0);
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {

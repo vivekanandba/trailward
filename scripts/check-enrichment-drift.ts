@@ -42,15 +42,28 @@ export function fieldCounts(treks: Trek[]): Record<string, number> {
 }
 
 /**
- * Curated records without a road distance or drive time. These are `run`
- * fields, never carried stale (spec 10), so a route-service hiccup drops them
- * outright; any increase over the committed file is refused, however small,
- * because there are only 16 and a seed removed takes its record with it.
+ * Curated records missing a road distance or drive time, by id, naming which.
+ * These are `run` fields, never carried stale (spec 10), so a route-service
+ * hiccup drops them outright. Compared per record, not as a total: one record
+ * routed this run must not hide another that lost its route.
  */
-export function missingRouteFacts(treks: Trek[]): number {
-  return treks.filter(
-    (t) => t.tier === "curated" && (t.distanceKm === undefined || t.driveTimeMin === undefined),
-  ).length;
+export function missingRouteFacts(treks: Trek[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const t of treks) {
+    if (t.tier !== "curated") continue;
+    const gone = (["distanceKm", "driveTimeMin"] as const).filter((f) => t[f] === undefined);
+    if (gone.length > 0) out.set(t.id, gone);
+  }
+  return out;
+}
+
+/** One line per curated record that had both route facts and now lacks one. */
+export function routeLosses(head: Trek[], now: Trek[]): string[] {
+  const before = missingRouteFacts(head);
+  const headIds = new Set(head.map((t) => t.id));
+  return [...missingRouteFacts(now)]
+    .filter(([id]) => headIds.has(id) && !before.has(id))
+    .map(([id, gone]) => `${id}: lost ${gone.join(" and ")}`);
 }
 
 // Hand-curated fields have tiny counts (heritage: 2) where one record moving
@@ -93,11 +106,9 @@ async function main(): Promise<void> {
     console.log(`[drift] ${field}: ${baseline[field]} → ${n}`);
   }
   const violations = driftViolations(baseline, current);
-  const [routeBefore, routeAfter] = [missingRouteFacts(head), missingRouteFacts(now)];
-  console.log(`[drift] curated records without a route: ${routeBefore} → ${routeAfter}`);
-  if (routeAfter > routeBefore) {
-    violations.push(`curated records without a road distance: ${routeBefore} → ${routeAfter}`);
-  }
+  const lost = routeLosses(head, now);
+  console.log(`[drift] curated records that lost a route fact: ${lost.length}`);
+  for (const l of lost) violations.push(`curated route fact ${l}`);
   if (violations.length > 0) {
     console.error(`[drift] enrichment dropped:`);
     for (const v of violations) console.error(`  ${v}`);

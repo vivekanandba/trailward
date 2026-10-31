@@ -117,8 +117,7 @@ describe("parseWikiSummary", () => {
       extract: "Nandi Hills may refer to:",
       originalimage: { source: "https://upload.wikimedia.org/wikipedia/commons/a/a8/X.jpg" },
     });
-    // Flagged rather than empty: "no answer" must not read as "no photo".
-    expect(info).toEqual({ disambiguation: true });
+    expect(info).toEqual({});
   });
 
   it("skips a non-Commons image (can't attribute its license)", () => {

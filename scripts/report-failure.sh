@@ -34,10 +34,13 @@ case "$result" in
 esac
 
 # Every open issue, through the REST list rather than search: the search index
-# lags a just-filed issue, so a quick re-run would open a duplicate. The list
-# also covers pull requests, which the filter drops.
-numbers=$(TITLE="$title" gh api --paginate "repos/$GH_REPO/issues?state=open&per_page=100" \
-  --jq '.[] | select(.pull_request == null and .title == env.TITLE) | .number')
+# lags a just-filed issue, so a quick re-run would open a duplicate. Only the
+# ones this script filed (as the workflow's bot), so a person's issue with the
+# same title is never closed as "recovered"; the list's pull requests drop out.
+numbers=$(TITLE="$title" gh api --paginate \
+  "repos/$GH_REPO/issues?state=open&creator=github-actions%5Bbot%5D&per_page=100" \
+  --jq '.[] | select(.pull_request == null and .title == env.TITLE
+    and .user.login == "github-actions[bot]") | .number')
 number=$(printf '%s\n' "$numbers" | sed -n 1p)
 
 if [ "$result" = "success" ]; then
