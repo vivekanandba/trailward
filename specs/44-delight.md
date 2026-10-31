@@ -53,7 +53,7 @@ that implements each one names its check. R1 is enforced by the tests named unde
 | --- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
 | 0   | Static pages' JSON-LD              | **3,815 of 3,886** pages put a `url` in their structured data that 404s live. `trekJsonLd` built it from `trek.id`, but the page lives at a slug made from the name (`slugFor`, `pages.ts:14`), plus a `-<id>` suffix on a name collision (`slugMap`, `pages.ts:77`)           | **R1, defect**                                              |
 | 1   | Focus                              | `focus-visible` is styled only in `ui/Button.tsx`; seven places set `outline-none`, and five of them add no replacement                                                                                                                                                        | later                                                       |
-| 2   | Print                              | No `@media print` anywhere                                                                                                                                                                                                                                                     | later                                                       |
+| 2   | Print                              | No `@media print` anywhere                                                                                                                                                                                                                                                     | **R5**                                                      |
 | 3   | Social card                        | One global `icons/og.png` for every page                                                                                                                                                                                                                                       | later; waits for row 18                                     |
 | 4   | Size                               | No size budget. JS+CSS in `dist/assets` is 674,629 bytes, of 764,229 with fonts                                                                                                                                                                                                | later; before any other delight                             |
 | 5   | Theme toggle                       | Hard icon swap                                                                                                                                                                                                                                                                 | later                                                       |
@@ -111,6 +111,21 @@ that implements each one names its check. R1 is enforced by the tests named unde
     be read fails, naming what is missing.
   - The fixed sample `t/skandagiri/` stays in the deploy surface for what it checks (the page
     exists and is not a soft 404). Its slug equals its id, so it could never see this defect.
+
+- **R5 — a trek prints as a field card (row 2).**
+  - **In the app,** with a trek open, paper gets its detail as a full-width card: the map, the
+    header, the result list and every button are hidden. A print-only block carries what the
+    buttons would have done: the coordinates in degrees-minutes-seconds (`toDms`,
+    `src/lib/coords.ts`, rounded to the second and zero-padded), the directions URL written out,
+    and "Printed from Trailward on <date>" in India time, refreshed on `beforeprint`. With no
+    trek open, the result list prints. The sheet's inline position is overridden, so a mobile
+    print is not clipped to the screen.
+  - **On a static page,** the facts table gains a DMS row, a print-only line gives the
+    directions URL, and the footer says "Data as of <date>", the date of the last data refresh:
+    the page runs no script, so it cannot know the day it is printed. The call-to-action and the
+    back link are hidden in print.
+  - Playwright's print emulation never fires `beforeprint`, so the date's refresh is unit-tested
+    and the layout is checked in e2e.
 
 ## Constraints learned in review — for the requirements still to be written
 
@@ -187,6 +202,10 @@ npm run build:pages                                 # R1 on every real page (ref
 npx vitest run scripts/lib/deploycheck.test.ts scripts/check-deploy.test.ts  # R1 live check
 npm run e2e:static                                  # R1 on the sampled pages, as served
 npm run check:deploy                                # R1 against the live site, after deploy
+npx vitest run src/lib/coords.test.ts scripts/lib/trekPage.test.ts  # R5: DMS, the static card
+npx vitest run src/components/TrekDetail.test.tsx  # R5: the app's print block and its date
+npx playwright test e2e/print.spec.ts              # R5: the app under print emulation
+npm run e2e:static                                 # R5: a static page under print emulation
 ```
 
 ## Revisions

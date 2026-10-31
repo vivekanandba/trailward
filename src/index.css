@@ -103,6 +103,46 @@
   animation: panel-in 200ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* Print (spec 44 R5): paper gets the trek, not the app. With a trek open, its
+   detail prints as a full-width card; with none, the result list prints. The
+   map, header and buttons never do. !important because the sheet positions
+   itself with inline styles. */
+@media print {
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  [data-print="hide"],
+  .leaflet-container {
+    display: none !important;
+  }
+  body:has([data-print="card"]) [data-print="list"],
+  body:has([data-print="card"]) .print-list {
+    display: none !important;
+  }
+  .print-frame {
+    position: static !important;
+    transform: none !important;
+    height: auto !important;
+    max-width: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+  [data-print="card"],
+  [data-print="card"] * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  [data-testid="sheet"] [aria-label="Resize panel"] {
+    display: none !important;
+  }
+}
+
 /* Motion is an enhancement, never a requirement (spec 33). */
 @media (prefers-reduced-motion: reduce) {
   *,

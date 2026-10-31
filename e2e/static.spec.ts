@@ -170,3 +170,16 @@ test("visual: the about content page", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page).toHaveScreenshot("about-page.png");
 });
+
+test("a trek page prints as a field card (spec 44 R5)", async ({ page }) => {
+  await page.goto("t/skandagiri/");
+  await expect(page.locator(".print-only").first()).toBeHidden();
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator(".cta")).toBeHidden();
+  await expect(page.locator(".back")).toBeHidden();
+  await expect(
+    page.getByText(/^Directions: https:\/\/www\.google\.com\/maps\/dir\//),
+  ).toBeVisible();
+  await expect(page.getByText(/^Data as of \d{4}-\d{2}-\d{2}\.$/)).toBeVisible();
+  await expect(page.getByRole("cell", { name: /\d+°\d{2}′\d{2}″N/ })).toBeVisible();
+});

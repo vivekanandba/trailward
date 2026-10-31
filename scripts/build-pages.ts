@@ -124,7 +124,7 @@ export function runBuildPages(
   // raw TypeError. After this point NOTHING renders: the loop below only writes.
   const trekPages = pages.map((trek) => {
     const slug = slugs.get(trek.id)!;
-    const html = renderTrekPage(trek, slug);
+    const html = renderTrekPage(trek, slug, refreshed);
     // Spec 44 R1, on EVERY real page of EVERY build: the page names its own
     // url, and its structured data names the same one. 3,815 pages once
     // advertised a url that 404s, and no gate looked at the real output.
