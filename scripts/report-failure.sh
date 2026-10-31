@@ -35,12 +35,14 @@ esac
 
 # Every open issue, through the REST list rather than search: the search index
 # lags a just-filed issue, so a quick re-run would open a duplicate. Only the
-# ones this script filed (as the workflow's bot), so a person's issue with the
-# same title is never closed as "recovered"; the list's pull requests drop out.
-numbers=$(TITLE="$title" gh api --paginate \
-  "repos/$GH_REPO/issues?state=open&creator=github-actions%5Bbot%5D&per_page=100" \
+# ones this script filed, known by a marker in the body rather than by the
+# token's login, which nothing here could confirm: a person's issue with the
+# same title is never closed as "recovered". Pull requests drop out.
+marker="<!-- report-failure -->"
+numbers=$(TITLE="$title" MARKER="$marker" gh api --paginate \
+  "repos/$GH_REPO/issues?state=open&per_page=100" \
   --jq '.[] | select(.pull_request == null and .title == env.TITLE
-    and .user.login == "github-actions[bot]") | .number')
+    and ((.body // "") | contains(env.MARKER))) | .number')
 number=$(printf '%s\n' "$numbers" | sed -n 1p)
 
 if [ "$result" = "success" ]; then
@@ -51,5 +53,7 @@ if [ "$result" = "success" ]; then
 elif [ -n "$number" ]; then
   gh issue comment "$number" --body "This scheduled run $what: $run"
 else
-  gh issue create --title "$title" --body "This scheduled run $what: $run"
+  gh issue create --title "$title" --body "This scheduled run $what: $run
+
+$marker"
 fi

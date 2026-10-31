@@ -313,8 +313,8 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
   it("refuses, by name, a committed file with an entry that is not a trek", async () => {
     const file = "/repo/src/data/treks.json";
     for (const [body, why] of [
-      ["[null]", /is not a valid dataset/],
-      ['[{"id":"x"}]', /is not a valid dataset/],
+      ["[null]", /has an entry at index 0 that is not a trek with an id/],
+      ['[{"name":"x"}]', /has an entry at index 0 that is not a trek with an id/],
       ["[{", /is not valid JSON/],
     ] as const) {
       const io = memoryIO({ [file]: body });
@@ -338,9 +338,27 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
     const file = "/repo/src/data/treks.json";
     const seed = BANGALORE_SEED[0];
     const image = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
-    const io = memoryIO({ [file]: JSON.stringify([{ ...seed, image }]) });
-    await runBuildData(io, file, [seed], BANGALORE_ORIGIN, { wiki: async () => ({}) });
-    expect((JSON.parse(io.files.get(file)!) as Trek[])[0].image).toEqual(image);
+    // A lookup that answered without one (as a disambiguation page does), or failed.
+    for (const wiki of [
+      async () => ({}),
+      async () => {
+        throw new Error("503");
+      },
+    ]) {
+      const io = memoryIO({ [file]: JSON.stringify([{ ...seed, image }]) });
+      await runBuildData(io, file, [seed], BANGALORE_ORIGIN, { wiki });
+      expect((JSON.parse(io.files.get(file)!) as Trek[])[0].image).toEqual(image);
+    }
+  });
+
+  it("repairs a committed curated record that a tightened rule rejects", async () => {
+    // The fold replaces curated records, so build:data can fix one the
+    // validator now refuses instead of refusing the whole file.
+    const file = "/repo/src/data/treks.json";
+    const seed = BANGALORE_SEED[0];
+    const io = memoryIO({ [file]: JSON.stringify([{ ...seed, lat: "not a number" }]) });
+    await runBuildData(io, file, [seed], BANGALORE_ORIGIN, {});
+    expect((JSON.parse(io.files.get(file)!) as Trek[])[0].lat).toBe(seed.lat);
   });
 
   it("writes the curated records alone when there is no file yet", async () => {

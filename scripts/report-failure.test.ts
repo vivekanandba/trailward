@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -11,14 +11,14 @@ const script = resolve(__dirname, "report-failure.sh");
 let dir: string;
 let calls: string;
 
-type Issue = { number: number; title: string; pull_request?: object; user?: { login: string } };
+type Issue = { number: number; title: string; pull_request?: object; body?: string };
 
-/** Open issues as the REST list returns them; filed by the workflow's bot unless stated. */
+/** Open issues as the REST list returns them; filed by this script unless a body is given. */
 function fakeGh(openIssues: Issue[]): void {
-  const bot = { login: "github-actions[bot]" };
+  const filed = "This scheduled run failed: x\n\n<!-- report-failure -->";
   writeFileSync(
     join(dir, "issues.json"),
-    JSON.stringify(openIssues.map((i) => ({ user: bot, ...i }))),
+    JSON.stringify(openIssues.map((i) => ({ body: filed, ...i }))),
   );
   writeFileSync(
     join(dir, "gh"),
@@ -120,13 +120,17 @@ describe("report-failure.sh", () => {
 
   it("never touches a same-titled issue a person filed", () => {
     // A person may track a problem the run cannot see; a green run is not its recovery.
-    const person = { login: "a-maintainer" };
-    fakeGh([{ number: 5, title: "Weekly data refresh is failing", user: person }]);
-    expect(run("Weekly data refresh is failing", "success")).toBe("");
-    expect(run("Weekly data refresh is failing")).toMatch(/^issue create /);
-    expect(readFileSync(join(dir, "list-args"), "utf8")).toContain(
-      "creator=github-actions%5Bbot%5D",
-    );
+    for (const body of ["Tracking a data problem by hand", null]) {
+      fakeGh([{ number: 5, title: "Weekly data refresh is failing", body } as never]);
+      rmSync(calls, { force: true });
+      expect(run("Weekly data refresh is failing", "success")).toBe("");
+      expect(run("Weekly data refresh is failing")).toMatch(/^issue create /);
+    }
+  });
+
+  it("marks the issue it files, so it can tell its own from a person's", () => {
+    fakeGh([]);
+    expect(run("Weekly data refresh is failing")).toContain("<!-- report-failure -->");
   });
 
   it("never mistakes a pull request with that title for the issue", () => {

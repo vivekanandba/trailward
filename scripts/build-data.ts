@@ -242,11 +242,16 @@ export async function runBuildData(
     }
   }
   if (!Array.isArray(parsed)) refuse("is not an array of treks");
-  // The whole committed file, validated as the build validates it, so any bad
-  // record is refused here rather than after the enrichment.
-  const committed = validateDataset(parsed as Trek[]);
-  if (!committed.ok) refuse(`is not a valid dataset (${committed.error})`);
-  const existing = parsed as Trek[];
+  // Only what the fold itself needs, located by index. Not the full record
+  // validation: the fold replaces or drops curated records, and that is how
+  // build:data repairs one a tightened rule rejects; the output is validated
+  // in full before it is written.
+  const entries = parsed as unknown[];
+  const bad = entries.findIndex(
+    (t) => typeof t !== "object" || t === null || typeof (t as Trek).id !== "string",
+  );
+  if (bad >= 0) refuse(`has an entry at index ${bad} that is not a trek with an id`);
+  const existing = entries as Trek[];
   const treks = await buildDataset(seeds, origin, enrichers);
   const ds = validateDataset(foldCurated(treks, existing));
   if (!ds.ok) throw new Error(`[build-data] dataset invalid: ${ds.error}`);
