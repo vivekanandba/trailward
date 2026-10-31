@@ -11,19 +11,24 @@ const dir = resolve(__dirname, "../.github/workflows");
 
 interface Job {
   "runs-on"?: unknown;
-  steps?: { run?: string; uses?: string }[];
+  steps?: { id?: string; run?: string; uses?: string; with?: Record<string, unknown> }[];
 }
 
 const jobs = readdirSync(dir)
-  .filter((f) => f.endsWith(".yml"))
+  .filter((f) => /\.ya?ml$/.test(f))
   .flatMap((f) => {
     const wf = load(readFileSync(resolve(dir, f), "utf8")) as { jobs?: Record<string, Job> };
-    return Object.entries(wf.jobs ?? {}).map(([name, job]) => ({ id: `${f}:${name}`, job }));
+    return Object.entries(wf.jobs ?? {}).map(([name, job]) => ({
+      file: f,
+      id: `${f}:${name}`,
+      job,
+    }));
   });
 
-// Any step that installs or runs Playwright, however it is spelt.
+// Any step that installs or runs Playwright, however it is spelt: a command
+// or an action.
 const usesPlaywright = (job: Job): boolean =>
-  (job.steps ?? []).some((s) => /playwright|npm run e2e/.test(s.run ?? ""));
+  (job.steps ?? []).some((s) => /playwright|npm run e2e/.test(`${s.run ?? ""} ${s.uses ?? ""}`));
 
 const playwrightJobs = jobs.filter((j) => usesPlaywright(j.job));
 
@@ -56,5 +61,33 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     const gen = playwrightJobs.find((j) => j.id === "visual-baselines.yml:baselines")!;
     const runs = (gen.job.steps ?? []).map((s) => s.run ?? "").join("\n");
     expect(runs).toMatch(/--update-snapshots=all\b/);
+  });
+
+  it("the browser cache is keyed on the runner image, read in a step", () => {
+    // ${{ env.ImageOS }} is empty in an expression (env holds only
+    // workflow-set variables), which made every key "playwright--<hash>".
+    for (const { id, job } of playwrightJobs) {
+      const cache = (job.steps ?? []).find((s) => s.uses?.startsWith("actions/cache"));
+      if (!cache) continue;
+      const image = (job.steps ?? []).find((s) => s.id === "image");
+      expect(image?.run, id).toMatch(/\$\{?ImageOS\}?-\$\{?ImageVersion\}?/);
+      expect(String(cache.with?.key), id).toContain("${{ steps.image.outputs.id }}");
+      expect(String(cache.with?.key), id).not.toContain("env.ImageOS");
+    }
+  });
+
+  it("the shipped build and the checks run on the image the e2e gates use", () => {
+    // Pinning only the Playwright jobs left the deploy's build on whatever
+    // ubuntu-latest became that week.
+    const image = playwrightJobs[0].job["runs-on"];
+    const shipping = jobs.filter((j) => j.file === "ci.yml" || j.file === "deploy.yml");
+    expect(shipping.filter((j) => j.job["runs-on"] !== image).map((j) => j.id)).toEqual([]);
+  });
+
+  it("the local update command rewrites every screenshot too", () => {
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["e2e:update"]).toMatch(/--update-snapshots=all\b/);
   });
 });

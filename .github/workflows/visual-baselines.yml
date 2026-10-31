@@ -29,10 +29,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The runner's image id is a shell variable, not an expression context, so
+      # read it in a step: browsers built on another image are never restored.
+      - id: image
+        run: echo "id=${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ env.ImageOS }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ steps.image.outputs.id }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       # Both suites carry screenshots: visual.spec.ts covers the app states,
       # static.spec.ts the generated pages served by `vite preview` (spec 42 §C).

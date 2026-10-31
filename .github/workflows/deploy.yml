@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   validate-data:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -28,7 +28,7 @@ jobs:
       - run: npm run validate:data
 
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -44,7 +44,7 @@ jobs:
       - run: npm run format:check
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -65,10 +65,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The runner's image id is a shell variable, not an expression context, so
+      # read it in a step: browsers built on another image are never restored.
+      - id: image
+        run: echo "id=${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ env.ImageOS }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ steps.image.outputs.id }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       # App projects only (desktop chromium + Pixel-7). The static-surface
       # project needs a full production build and runs as its own job, so a
@@ -96,10 +100,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The runner's image id is a shell variable, not an expression context, so
+      # read it in a step: browsers built on another image are never restored.
+      - id: image
+        run: echo "id=${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ env.ImageOS }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ steps.image.outputs.id }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e -- --project=static
       - uses: actions/upload-artifact@v4
@@ -112,7 +120,7 @@ jobs:
 
   build:
     needs: [quality, validate-data, test, e2e, e2e-static]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -128,7 +136,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -144,7 +152,7 @@ jobs:
   # (a 200 is not enough: the SPA shell as a soft 404 passes a status check).
   verify-deploy:
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
