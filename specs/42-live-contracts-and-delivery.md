@@ -143,7 +143,7 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   images in `test-results/`. Baselines come only from the workflow. The config's
   `updateSnapshots` is `none`, so a run that is not asked to update never writes one (a new
   screenshot run locally fails rather than taking its first baseline from this machine's fonts).
-  **Review-enforced, not gated (CON-PROC-011):** a deliberate `-u` run outside the workflow.
+  **Review-enforced, not gated (recorded as such so nobody assumes a gate):** a deliberate `-u` run outside the workflow.
   Three mechanisms were built and dropped in review on #80: a package.json scan and an argument
   parser each missed spellings or refused ordinary runs, and a `globalSetup` check runs only
   after Playwright has cleared `test-results/` and started the servers, destroying the diff
