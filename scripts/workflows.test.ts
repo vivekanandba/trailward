@@ -114,6 +114,24 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     }
   });
 
+  it("no CI run but the baseline generator updates snapshots", () => {
+    // Otherwise every toHaveScreenshot rewrites its baseline and passes, and
+    // the visual gate checks nothing.
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    const updates = /(^|\s)(-u|--update-snapshots)(\s|=|$)/;
+    for (const j of playwrightJobs.filter((j) => j.id !== "visual-baselines.yml:baselines")) {
+      for (const st of j.job.steps ?? []) {
+        const run = st.run ?? "";
+        expect(run, j.id).not.toMatch(updates);
+        for (const m of run.matchAll(/npm run ([\w:-]+)/g)) {
+          expect(pkg.scripts[m[1]] ?? "", `${j.id} → ${m[1]}`).not.toMatch(updates);
+        }
+      }
+    }
+  });
+
   it("the baseline generator rewrites every screenshot, in the suite's two passes", () => {
     // Plain --update-snapshots means "changed": drift inside the tolerance was
     // never refreshed. And one pass with the static project starves the dev

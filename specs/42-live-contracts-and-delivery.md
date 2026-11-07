@@ -143,12 +143,15 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
   images in `test-results/`. Baselines come only from the workflow. The config's
   `updateSnapshots` is `none`, so a run that is not asked to update never writes one (a new
   screenshot run locally fails rather than taking its first baseline from this machine's fonts).
-  **Review-enforced, not gated (recorded as such so nobody assumes a gate):** a deliberate `-u` run outside the workflow.
-  Three mechanisms were built and dropped in review on #80: a package.json scan and an argument
-  parser each missed spellings or refused ordinary runs, and a `globalSetup` check runs only
-  after Playwright has cleared `test-results/` and started the servers, destroying the diff
-  images its own message points to. A worker fixture would need every spec to import a shared
-  `test`; that is a change of its own if it is ever wanted.
+  CI cannot rewrite them either: no Playwright run in any workflow but the baseline generator,
+  and no package script CI calls, passes `-u` or `--update-snapshots`.
+  **Review-enforced, not gated:** a deliberate local `-u` run, and UI mode's or the VS Code
+  extension's "update snapshots" toggle (neither reaches the arguments). Three guards were built
+  and dropped in review on #80: a package.json scan and an argument parser each missed spellings
+  or refused ordinary runs, and a `globalSetup` check runs only after the web servers start, so a
+  refused `--project=static` run paid for the full build first and a server that failed to start
+  hid the refusal. A reporter's `onConfigure` (which sees the resolved mode before anything
+  starts) or a worker fixture (which needs every spec to import a shared `test`) are untried.
   Refreshing them after each intentional UI change is **review-enforced**: no check can tell an
   intended UI change from drift. `=all` may also commit antialiasing-only rewrites; that churn is
   the cost of never keeping a stale baseline.
@@ -190,12 +193,13 @@ CI (this repo is public, so its own CI runs on GitHub-hosted runners, which are 
 
 - `scripts/workflows.test.ts`: the five Playwright jobs named exactly; each on one literal
   `ubuntu-NN.NN` image, the same one, as is every job of `ci.yml` and `deploy.yml`; each sets up
-  browsers only through the shared action, after its checkout; the action reads `/etc/os-release` in a
-  step before every cache step and keys on its output, never `env.` or `ImageVersion`; the
-  baseline generator rewrites with `=all` in two passes; no
-  workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least
+  browsers only through the shared action, after its checkout; the action reads
+  `/etc/os-release` in a step before every cache step and keys on its output, never `env.` or `ImageVersion`; the
+  baseline generator rewrites with `=all` in two passes, and no other workflow's Playwright run,
+  nor a package script one runs, updates snapshots; no workflow runs `npm run e2e -- <flags>`; CI fails on a flaky test; the expect bound is at least
   15 s and no `timeout:` anywhere in e2e is tighter. Each assertion was mutated and failed.
-- `scripts/lib/playwrightServers.test.ts`: the config's `updateSnapshots` is `none`. The module's project names equal the config's. Both `--project` spellings, the space spelling
+- `scripts/lib/playwrightServers.test.ts`: the config's `updateSnapshots` is `none`. The
+  module's project names equal the config's. Both `--project` spellings, the space spelling
   reading every value up to the next flag; app projects start only the dev server, static only
   the preview, all or a mix start both; any name that is not exactly a known project (case,
   wildcard), even beside exact ones, starts both, because Playwright matches loosely and a

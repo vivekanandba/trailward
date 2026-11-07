@@ -5,9 +5,10 @@ const servers = serversFor(process.argv);
 
 // E2E specs live in e2e/. They boot the Vite dev server and drive the real app.
 // visual.spec.ts additionally diffs committed linux screenshot baselines
-// (spec 33). They come only from the "Update visual baselines" workflow, which
-// renders on the pinned CI image (spec 42 §E); a failing local run leaves its
-// actual and diff images in test-results/ to see what changed.
+// (spec 33). They should come only from the "Update visual baselines" workflow,
+// which renders on the pinned CI image (spec 42 §E). Nothing refuses a local
+// -u (review-enforced); updateSnapshots "none" below means nothing is written
+// unless asked. A failing run leaves its actual and diff images in test-results/.
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
