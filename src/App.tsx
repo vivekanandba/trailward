@@ -23,7 +23,7 @@ import { Sheet } from "./components/ui/Sheet";
 import { Scrim } from "./components/ui/Scrim";
 import { IconButton } from "./components/ui/Button";
 import { DESKTOP_QUERY, useMediaQuery } from "./lib/useMediaQuery";
-import { geolocationGranted, locateMe, nudgeSnoozed, snoozeNudge } from "./lib/locate";
+import { geolocationGranted, locateMe, nudgeSnoozed, snoozeNudge, MY_LOCATION } from "./lib/locate";
 import CommandPalette from "./components/CommandPalette";
 import { GUIDED_PATHS, applyPath } from "./lib/paths";
 import type { IndexEntry } from "./lib/search";
@@ -504,7 +504,7 @@ export default function App() {
         <RegionStatsCard
           stats={stats}
           // A live location is "you", not "My location" (spec 44 R8).
-          place={origin.id.startsWith("geo:") ? "you" : origin.name}
+          place={origin.name === MY_LOCATION ? "you" : origin.name}
         />
       )}
       {discoveryCount > 0 && !loadingCells && (

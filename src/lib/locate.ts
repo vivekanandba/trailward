@@ -8,6 +8,9 @@
  */
 import type { Origin } from "./trek";
 
+/** The name the live-location origin carries (presets share its `geo:` ids). */
+export const MY_LOCATION = "My location";
+
 export function locateMe(
   geolocation: Geolocation | undefined = typeof navigator !== "undefined"
     ? navigator.geolocation
@@ -23,7 +26,7 @@ export function locateMe(
         const { latitude: lat, longitude: lng } = pos.coords;
         resolvePos({
           id: `geo:${lat.toFixed(4)},${lng.toFixed(4)}`,
-          name: "My location",
+          name: MY_LOCATION,
           lat,
           lng,
         });
