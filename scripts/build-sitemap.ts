@@ -35,10 +35,17 @@ export function lastCommitDate(
     execFileSync("git", args, { cwd, encoding: "utf8" }).trim(),
 ): string | undefined {
   try {
-    if (git(["rev-parse", "--is-shallow-repository"]) !== "false") return undefined;
+    const shallow = git(["rev-parse", "--is-shallow-repository"]);
+    if (shallow !== "false") {
+      console.warn(`[dates] no data date: shallow clone (is-shallow-repository=${shallow})`);
+      return undefined;
+    }
     const out = git(["log", "-1", "--format=%cs", "--", file]);
-    return /^\d{4}-\d{2}-\d{2}$/.test(out) ? out : undefined;
-  } catch {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(out)) return out;
+    console.warn(`[dates] no data date: git log gave ${JSON.stringify(out.slice(0, 80))}`);
+    return undefined;
+  } catch (err) {
+    console.warn(`[dates] no data date: ${(err as Error).message.split("\n")[0]}`);
     return undefined;
   }
 }

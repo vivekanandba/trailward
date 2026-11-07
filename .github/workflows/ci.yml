@@ -109,6 +109,8 @@ jobs:
           cache: npm
       - run: npm ci
       - uses: ./.github/actions/playwright-setup
+      - name: Data date the build will use (spec 44 R5)
+        run: git rev-parse --is-shallow-repository && git log -1 --format=%cs -- src/data/treks.json
       - run: npm run e2e:static
       # The static project's web server ran `npm run build`, so dist/ is this
       # PR's build: hold it to the size budget (spec 44 D5).
