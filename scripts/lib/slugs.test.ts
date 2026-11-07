@@ -25,12 +25,16 @@ const mk = (id: string, name: string, lat = 13, lng = 77): Trek => ({
   verified: false,
 });
 
+/** The pages are the whole dataset unless a test says otherwise. */
+const upd = (pages: Trek[], reg: SlugRegistry, ids?: Set<string>) =>
+  updateRegistry(pages, reg, ids ?? new Set(pages.map((t) => t.id)));
+
 describe("updateRegistry", () => {
   it("keeps every registered slug for a record that still has a page", () => {
     const reg: SlugRegistry = { "nandi-hills-gn-2": { id: "gn-2", lat: 13, lng: 77 } };
     // gn-2 now comes first in build order, where slugMap would have given it
     // the bare slug — the registry keeps its published URL.
-    const { registry } = updateRegistry([mk("gn-2", "Nandi Hills")], reg);
+    const { registry } = upd([mk("gn-2", "Nandi Hills")], reg);
     expect(registry["nandi-hills-gn-2"].id).toBe("gn-2");
     expect(slugsFromRegistry([mk("gn-2", "Nandi Hills")], registry).get("gn-2")).toBe(
       "nandi-hills-gn-2",
@@ -42,7 +46,7 @@ describe("updateRegistry", () => {
       "kote-betta-d12-1-2": { id: "d12-1-2", lat: 13.0, lng: 77.0 },
     };
     const rescanned = mk("d12-9-9", "Kote Betta", 13.0005, 77.0005); // ~75 m away
-    const { registry, moved } = updateRegistry([rescanned], reg);
+    const { registry, moved } = upd([rescanned], reg);
     expect(registry["kote-betta-d12-1-2"].id).toBe("d12-9-9");
     expect(moved).toEqual(["kote-betta-d12-1-2"]);
   });
@@ -51,7 +55,7 @@ describe("updateRegistry", () => {
     const reg: SlugRegistry = { "kote-betta": { id: "d12-1-2", lat: 13.0, lng: 77.0 } };
     const renamed = mk("d12-9-9", "Hulikal Betta", 13.0005, 77.0005);
     const far = mk("d12-8-8", "Kote Betta", 13.01, 77.0); // ~1.1 km
-    const { registry } = updateRegistry([renamed, far], reg);
+    const { registry } = upd([renamed, far], reg);
     expect(registry["kote-betta"].id).toBe("d12-1-2");
     expect(registry["hulikal-betta"].id).toBe("d12-9-9");
     expect(registry["kote-betta-d12-8-8"].id).toBe("d12-8-8");
@@ -66,13 +70,30 @@ describe("updateRegistry", () => {
     };
     const kote = mk("d12-9-9", "Kote", 13.0005, 77.0005);
     const nandi = mk("d12-8-8", "Nandi", 13.1005, 77.1005);
-    const { registry, moved } = updateRegistry([kote, nandi], reg);
+    const { registry, moved } = upd([kote, nandi], reg);
     expect(moved).toEqual([]);
     expect(registry["kote-betta"].id).toBe("d12-1-2");
     expect(registry["nandi-hills-gn-4"].id).toBe("gn-4");
     // The second-collision form of the same name does re-attach.
-    const again = updateRegistry([mk("d12-7-7", "Nandi", 13.2005, 77.2005)], reg);
+    const again = upd([mk("d12-7-7", "Nandi", 13.2005, 77.2005)], reg);
     expect(again.moved).toEqual(["nandi-gn-7-2"]);
+  });
+
+  it("keeps re-attaching across repeated rescans, whatever id the slug was first given", () => {
+    // The slug keeps its first id suffix while the record's id moves on.
+    let reg: SlugRegistry = { "kote-betta-d12-1-2": { id: "d12-1-2", lat: 13.0, lng: 77.0 } };
+    for (const id of ["d12-5-5", "d12-9-9", "d12-3-3"]) {
+      const r = upd([mk(id, "Kote Betta", 13.0003, 77.0003)], reg);
+      expect(r.moved, id).toEqual(["kote-betta-d12-1-2"]);
+      expect(r.added, id).toEqual([]);
+      reg = r.registry;
+    }
+  });
+
+  it("re-attaches a page whose name has no Latin letters, whose slug is an id", () => {
+    const reg: SlugRegistry = { "d12-1-1": { id: "d12-1-1", lat: 13.0, lng: 77.0 } };
+    const r = upd([mk("d12-7-7", "ಕೋಟೆ", 13.0003, 77.0003)], reg);
+    expect(r.moved).toEqual(["d12-1-1"]);
   });
 
   it("keeps the slug of a record still in the dataset while it has no page", () => {
@@ -80,7 +101,7 @@ describe("updateRegistry", () => {
     // must not take its URL, which waits for the page to come back.
     const reg: SlugRegistry = { "kote-betta": { id: "gn-5", lat: 13.0, lng: 77.0 } };
     const dup = mk("d12-1-1", "Kote Betta", 13.0005, 77.0005);
-    const { registry, moved } = updateRegistry([dup], reg, new Set(["gn-5", "d12-1-1"]));
+    const { registry, moved } = upd([dup], reg, new Set(["gn-5", "d12-1-1"]));
     expect(moved).toEqual([]);
     expect(registry["kote-betta"].id).toBe("gn-5");
   });
@@ -88,21 +109,21 @@ describe("updateRegistry", () => {
   it("never hands a retired slug to a different peak", () => {
     // The page for gn-1 is gone this build; its slug stays reserved.
     const reg: SlugRegistry = { "kote-betta": { id: "gn-1", lat: 20, lng: 80 } };
-    const { registry, added } = updateRegistry([mk("gn-5", "Kote Betta")], reg);
+    const { registry, added } = upd([mk("gn-5", "Kote Betta")], reg);
     expect(registry["kote-betta"].id).toBe("gn-1");
     expect(registry["kote-betta-gn-5"].id).toBe("gn-5");
     expect(added).toEqual(["kote-betta-gn-5"]);
   });
 
   it("gives a new page its bare slug when it is free", () => {
-    const { registry } = updateRegistry([mk("gn-7", "Kumāra Parvatha")], {});
+    const { registry } = upd([mk("gn-7", "Kumāra Parvatha")], {});
     expect(registry["kumara-parvatha"]).toEqual({ id: "gn-7", lat: 13, lng: 77 });
   });
 
   it("is idempotent", () => {
     const pages = [mk("a", "X"), mk("b", "X"), mk("c", "Y")];
-    const once = updateRegistry(pages, {}).registry;
-    const twice = updateRegistry(pages, once);
+    const once = upd(pages, {}).registry;
+    const twice = upd(pages, once);
     expect(twice.registry).toEqual(once);
     expect(twice.added).toEqual([]);
     expect(twice.moved).toEqual([]);
@@ -127,6 +148,14 @@ describe("slugsFromRegistry", () => {
     expect(() => slugsFromRegistry([mk("gn-1", "A")], reg)).toThrow(/not a usable slug/);
   });
 
+  it("refuses two slugs that differ only in case (one directory on macOS)", () => {
+    const reg: SlugRegistry = {
+      "foo-wd-Q1": { id: "wd-Q1", lat: 1, lng: 1 },
+      "foo-wd-q1": { id: "wd-q1", lat: 1, lng: 1 },
+    };
+    expect(() => slugsFromRegistry([mk("wd-Q1", "Foo")], reg)).toThrow(/differ only in case/);
+  });
+
   it("accepts an upper-case Wikidata suffix, as four live URLs have", () => {
     const reg: SlugRegistry = {
       "bandarpunch-wd-Q4854459": { id: "wd-Q4854459", lat: 31, lng: 78 },
@@ -139,6 +168,7 @@ describe("slugsFromRegistry", () => {
 
 describe("readRegistry", () => {
   it("refuses a malformed registry by name", () => {
+    expect(() => readRegistry('{"a": {"id": "gn-1", "lng": 77}}')).toThrow(/"a" has no position/);
     expect(() => readRegistry("[{")).toThrow(/slugs\.json is not valid JSON/);
     expect(() => readRegistry("[]")).toThrow(/slugs\.json is not an object/);
     expect(() => readRegistry('{"a": null}')).toThrow(/"a" has no record id/);

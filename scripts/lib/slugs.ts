@@ -32,13 +32,23 @@ const SLUG = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/;
 // A rescan moves a summit by at most a few DEM pixels (spec 27's carryover).
 const SAME_PLACE_KM = 0.12;
 
-/** The orphan at `slug` was published under the name whose bare slug is `base`. */
-function sameName(slug: string, base: string, orphanId: string): boolean {
+// A record id as it appears in a slug: the shapes the dataset uses today.
+const ID = /^(?:d\d+(?:-\d+)+|gn-\d+|osmx?-\d+|wd-Q\d+)$/;
+// An id suffix, optionally with the `-<n>` a second collision added.
+const ID_SUFFIX = /^(?:d\d+(?:-\d+)+|gn-\d+|osmx?-\d+|wd-Q\d+)(?:-\d+)?$/;
+
+/**
+ * Whether the orphan slug was published under the same name as a page whose
+ * bare slug is `base`: the bare slug itself, or `<base>-<any id>` — any id,
+ * not the orphan's current one, because a slug keeps the id suffix it was
+ * first given while a rescan moves it to a new id, again and again. A name
+ * with no Latin letters has the record id as its bare slug; it matches a slug
+ * that is itself an id.
+ */
+function sameName(slug: string, base: string, nameless: boolean): boolean {
   if (slug === base) return true;
-  const suffixed = `${base}-${orphanId}`;
-  if (slug === suffixed) return true;
-  // `<base>-<id>-<n>`, the form a second collision on the same id took.
-  return slug.startsWith(`${suffixed}-`) && /^\d+$/.test(slug.slice(suffixed.length + 1));
+  if (nameless) return ID.test(slug);
+  return slug.startsWith(`${base}-`) && ID_SUFFIX.test(slug.slice(base.length + 1));
 }
 
 const round5 = (n: number): number => Math.round(n * 1e5) / 1e5;
@@ -70,6 +80,10 @@ export function readRegistry(body: string | undefined): SlugRegistry {
   for (const [slug, e] of Object.entries(reg)) {
     const ok = typeof e === "object" && e !== null && typeof (e as SlugEntry).id === "string";
     if (!ok) throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no record id`);
+    const { lat, lng } = e as SlugEntry;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no position`);
+    }
   }
   return reg as SlugRegistry;
 }
@@ -98,8 +112,8 @@ export function registryFromSlugMap(pages: Trek[], slugs: Map<string, string>): 
 export function updateRegistry(
   pages: Trek[],
   previous: SlugRegistry,
-  /** Every record id in the dataset, page or not. Defaults to the pages'. */
-  datasetIds: ReadonlySet<string> = new Set(pages.map((t) => t.id)),
+  /** Every record id in the dataset, page or not: a record without a page keeps its slug. */
+  datasetIds: ReadonlySet<string>,
 ): { registry: SlugRegistry; added: string[]; moved: string[] } {
   const reg: SlugRegistry = { ...previous };
   const slugOf = new Map(Object.entries(reg).map(([slug, e]) => [e.id, slug]));
@@ -113,7 +127,7 @@ export function updateRegistry(
     const base = slugFor(t);
     const same = [...orphans].find(
       (slug) =>
-        sameName(slug, base, reg[slug].id) && distanceFrom(here(reg[slug]), t) <= SAME_PLACE_KM,
+        sameName(slug, base, base === t.id) && distanceFrom(here(reg[slug]), t) <= SAME_PLACE_KM,
     );
     if (same) {
       reg[same] = entryFor(t);
@@ -137,8 +151,13 @@ export function updateRegistry(
  */
 export function slugsFromRegistry(pages: Trek[], reg: SlugRegistry): Map<string, string> {
   const slugOf = new Map<string, string>();
+  const folded = new Map<string, string>();
   for (const [slug, e] of Object.entries(reg)) {
     if (!SLUG.test(slug)) throw new Error(`[slugs] "${slug}" is not a usable slug`);
+    // Two slugs that differ only in case are one directory on macOS.
+    const twin = folded.get(slug.toLowerCase());
+    if (twin) throw new Error(`[slugs] "${twin}" and "${slug}" differ only in case`);
+    folded.set(slug.toLowerCase(), slug);
     const other = slugOf.get(e.id);
     if (other) throw new Error(`[slugs] ${e.id} has two slugs: ${other}, ${slug}`);
     slugOf.set(e.id, slug);

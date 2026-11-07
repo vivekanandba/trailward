@@ -34,6 +34,7 @@ export function runBuildSlugs(
 
   if (!io.exists(slugsFile)) {
     const first = registryFor(treks);
+    slugsFromRegistry(qualifyingTreks(treks), first); // the build's own check, first
     io.writeFile(slugsFile, formatRegistry(first));
     const total = Object.keys(first).length;
     io.log(`[slugs] wrote the first registry: ${total} slug(s), today's URLs → ${slugsFile}`);

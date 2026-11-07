@@ -62,14 +62,18 @@ a lockfile:
 - A page whose id is new but which stands within 120 m of a registered record that is **gone
   from the dataset**, **with the same name**, takes over that record's slug. That is a terrain
   rescan regenerating a `d12-` id for the same summit (spec 27). "Same name" is exact: the
-  orphan's slug is this page's bare slug, or that plus the orphan's own id suffix (`-<id>`,
-  `-<id>-<n>`), never a slug that merely starts with it ("Kote" does not take `kote-betta`). A
-  different name or a farther point is a different page. A record still in the dataset keeps its
+  orphan's slug is this page's bare slug, or that plus **any** id-shaped suffix (`-d12-…`,
+  `-gn-N`, `-osm-N`, `-osmx-N`, `-wd-QN`, optionally `-<n>`), because a slug keeps the id it was
+  first given while rescans move it to new ids; never a slug that merely starts with the bare
+  slug ("Kote" does not take `kote-betta`). A name with no Latin letters has its id as its bare
+  slug and matches a slug that is itself an id. A different name or a farther point is a
+  different page. A record still in the dataset keeps its
   slug while it has no page, so the URL is waiting when the page returns.
 - `build-pages` and `build-sitemap` only read the registry, through one function
   (`slugsFromRegistry`), and **refuse to build** when a qualifying page has no slug, when a
   record has two, or when a slug is not URL-safe (letters, digits and single hyphens; upper case
-  is allowed, because four live URLs end in a Wikidata id such as `bandarpunch-wd-Q4854459`). The
+  is allowed, because four live URLs end in a Wikidata id such as `bandarpunch-wd-Q4854459`), or
+  when two slugs differ only in case (one directory on a case-insensitive filesystem). The
   message names `npm run build:slugs`. `build:slugs` runs the same check before it writes, so a
   workflow never commits a registry the build refuses, and a malformed registry is refused by
   name.
@@ -130,10 +134,12 @@ section C's PR; the app-shell card (`icons/og.png`) already exists.
   collision.
 - `scripts/lib/slugs.test.ts`: a registered slug survives a change of build order; a rescanned
   record at the same place with the same name takes over its slug; a different name, a name the
-  slug merely starts with, or a point more than 120 m away does not; a record still in the
+  slug merely starts with, or a point more than 120 m away does not; repeated rescans keep
+  re-attaching the same slug; a page with no Latin letters re-attaches by id; a record still in the
   dataset without a page keeps its slug; a retired slug is never reassigned; a free bare slug is
   used; updating is idempotent; the build refuses an unregistered page, a record with two slugs
-  and an unusable slug, and accepts an upper-case Wikidata suffix; a malformed registry is
+  and an unusable slug or a case twin, and accepts an upper-case Wikidata suffix; a malformed
+  registry (including an entry with no position) is
   refused by name; the first registry equals today's slugs; `runBuildSlugs` bootstraps, only
   adds, and refuses to write a registry the build would refuse; and the committed registry gives
   every page of the committed dataset exactly one usable slug.
