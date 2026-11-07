@@ -248,7 +248,8 @@ describe("both builds take each page's URL from the slug registry (spec 35)", ()
     "kumara-parvatha-gn-1": { id: "gn-1", lat: 12.6, lng: 75.6, name: "kumara-parvatha" },
     skandagiri: { id: "skandagiri", lat: 13, lng: 77, name: "skandagiri" },
   };
-  const seed = {
+  const seed: Record<string, string> = {
+    ...FONT_ASSETS,
     [P.treks]: JSON.stringify(TREKS),
     [P.slugs]: JSON.stringify(registry),
     ["/repo/content/about.md"]: "---\ntitle: T\ndescription: D\n---\n\nBody.",

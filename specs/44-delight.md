@@ -124,6 +124,9 @@ that implements each one names its check. R1 is enforced by the tests named unde
   after the build in CI (`e2e-static`) and in the deploy's build job, before upload. The budget
   sits a little above what ships, so a small PR need not touch it; a PR that adds weight raises
   it in review, and one that saves weight lowers it, which is how it ratchets down.
+  The fonts budget went from 95,000 to 200,000 B with the latin-ext faces (row 18): they total
+  193,336 B on disk, but each is fetched only when a name on screen uses a character in its
+  `unicode-range`, so a page of plain Latin names downloads none of them.
 
 - **R3 — keyboard focus is always visible (row 1, rule D4).** One `:focus-visible` rule in
   `index.css` draws a 2 px outline on anything that does not style its own focus. No component
