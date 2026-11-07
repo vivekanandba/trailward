@@ -22,7 +22,7 @@ version it was verified against, and a gate fails the build when they disagree.
 
 ```json
 {
-  "repo": "https://github.com/vivekanandba/constitution",
+  "repo": "https://github.com/vivekanandba/fleet",
   "ref": "main",
   "commit": "<40-char sha>",
   "sha256": "<hash of CONSTITUTION.md at that commit>"
