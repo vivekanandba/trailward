@@ -94,14 +94,13 @@ export default function CommandPalette({
 
   // Nothing matched: offer the nearest names, never a guess (spec 44 R12).
   // Computed only when there are no results, over the named entries.
+  // One suggestion per name: 1,222 names repeat, and a name that several
+  // peaks share is offered once, as a search for all of them.
   const near =
     index && query.trim() && results.length === 0
-      ? nearestNames(
-          query,
-          index.filter((e) => !e.name.startsWith("Unnamed")).map((e) => e.name),
-        )
-          .map((name) => index.find((e) => e.name === name)!)
-          .filter(Boolean)
+      ? nearestNames(query.trim(), [
+          ...new Set(index.filter((e) => !e.name.startsWith("Unnamed")).map((e) => e.name)),
+        ]).map((name) => ({ name, entries: index.filter((e) => e.name === name) }))
       : [];
   const message = failed
     ? "Couldn't load the search index — check your connection."
@@ -170,14 +169,19 @@ export default function CommandPalette({
         )}
         {near.length > 0 && (
           <ul className="px-4 pb-3">
-            {near.map((e) => (
-              <li key={e.id}>
+            {near.map(({ name, entries }) => (
+              <li key={name}>
                 <button
                   type="button"
-                  onClick={() => onChoose(e)}
+                  onClick={() => (entries.length === 1 ? onChoose(entries[0]) : setQuery(name))}
                   className="w-full rounded px-2 py-1.5 text-left text-sm font-medium text-trail-800 hover:bg-trail-50 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
-                  {e.name}
+                  {name}
+                  {entries.length > 1 && (
+                    <span className="ml-1 font-normal text-trail-500 dark:text-slate-400">
+                      ({entries.length} peaks)
+                    </span>
+                  )}
                 </button>
               </li>
             ))}

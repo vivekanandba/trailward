@@ -26,7 +26,7 @@
  *
  * Bump VERSION to invalidate everything after a breaking SW change.
  */
-const VERSION = "v3"; // v3: no skipWaiting (see below), version.json uncached
+const VERSION = "v4"; // v4: sitemap.xml uncached (and old caches holding one dropped); v3: no skipWaiting
 const CACHE = `trailward-${VERSION}`;
 const BASE = "/trailward/";
 
@@ -141,6 +141,9 @@ self.addEventListener("fetch", (event) => {
   // version.json: never cached. Same-origin and not under data/, so without
   // this it lands in the cache-first branch below and freezes.
   if (url.pathname === BASE + "version.json") return;
+  // sitemap.xml: never cached either. The 404 page reads it for "did you
+  // mean", and a cached copy would never offer a page added since (spec 44 R10).
+  if (url.pathname === BASE + "sitemap.xml") return;
 
   if (req.mode === "navigate") {
     // Network-first: fresh HTML when online, cached shell when not.

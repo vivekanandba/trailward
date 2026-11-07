@@ -210,6 +210,8 @@ test("a mistyped trek URL says so and offers the page that was meant (spec 44 R1
   ).toBeVisible();
   const link = page.getByRole("status").getByRole("link");
   await expect(link).toHaveAttribute("href", "/trailward/t/kumara-parvatha/");
+  // It is not the app: no structured data naming the app's URL (spec 44 R1).
+  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
 });
 
 test("any other missing path opens the app with its query (spec 44 R10)", async ({ page }) => {

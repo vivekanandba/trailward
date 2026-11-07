@@ -313,6 +313,11 @@ describe("sw.js fetch routing (spec 43 §A)", () => {
     expect(res).toBeUndefined(); // no respondWith: straight to the network
   });
 
+  it("does not cache sitemap.xml — the 404 page's suggestions must see new pages", async () => {
+    const res = await fire(h, "fetch", { request: request(BASE + "sitemap.xml") });
+    expect(res).toBeUndefined();
+  });
+
   it("leaves cross-origin requests alone — map tiles are not ours to cache", async () => {
     const res = await fire(h, "fetch", {
       request: { url: "https://basemaps.cartocdn.com/x/1/2/3.png", method: "GET", mode: "cors" },

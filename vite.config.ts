@@ -15,7 +15,9 @@ function structuredData(): Plugin {
   return {
     name: "trailward-structured-data",
     apply: "build",
-    transformIndexHtml(html) {
+    transformIndexHtml(html, ctx) {
+      // The 404 page is not the app: it names no URL of its own (spec 44 R1).
+      if (ctx.filename.endsWith("404.html")) return html;
       let total = 0;
       try {
         const idx = JSON.parse(readFileSync("public/data/cells/index.json", "utf8")) as {
