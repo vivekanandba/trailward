@@ -54,7 +54,7 @@ figcaption,.note cite{font-size:.8rem;color:var(--muted)}
 footer{margin-top:3rem;font-size:.85rem;color:var(--muted)}
 ul{padding-left:1.1rem}
 .print-only{display:none}
-@media print{:root{--ink:#000;--bg:#fff;--muted:#333;--card:#fff;--line:#999}.cta,.back{display:none}
+@media print{:root{--ink:#000;--bg:#fff;--muted:#333;--card:#fff;--line:#999}.cta-row,.back{display:none}
 .wrap{max-width:none;padding:0}h1{font-size:1.8rem}figure img{max-height:9cm;width:auto}
 .print-only{display:block}a{text-decoration:none}}
 `.trim();
@@ -145,7 +145,7 @@ export function renderTrekPage(trek: Trek, slug: string, dataAsOf?: string): str
       <p class="sub back"><a href="/trailward/">← Trailward</a></p>
       <h1>${esc(trek.name)}</h1>
       <p class="sub">${esc(description)}</p>
-      <p><a class="cta" href="/trailward/?sel=${esc(trek.id)}">Open on the map →</a></p>
+      <p class="cta-row"><a class="cta" href="/trailward/?sel=${esc(trek.id)}">Open on the map →</a></p>
       ${photo}
       <table>
       ${facts}

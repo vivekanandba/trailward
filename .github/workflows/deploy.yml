@@ -109,6 +109,11 @@ jobs:
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
+        # Full history, no file contents: the pages' "Data as of" and the
+        # sitemap's lastmod come from the data's last commit (spec 44 R5).
+        with:
+          fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-node@v6
         with:
           node-version: 22

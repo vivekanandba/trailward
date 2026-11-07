@@ -5,8 +5,9 @@
  * minute and 60′ into the next degree.
  */
 function part(value: number, pos: string, neg: string): string {
-  const hemi = value < 0 ? neg : pos;
   let total = Math.round(Math.abs(value) * 3600);
+  // From the rounded value: a point that rounds to the equator is N, not S.
+  const hemi = value < 0 && total > 0 ? neg : pos;
   const deg = Math.floor(total / 3600);
   total -= deg * 3600;
   const min = Math.floor(total / 60);

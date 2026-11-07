@@ -29,6 +29,24 @@ test("a selected trek prints as a card: no map, no header, no buttons", async ({
   expect(box!.width).toBeGreaterThan(width * 0.9);
 });
 
+test("a dark-mode page prints light, with no scrim over the card", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("trailward:theme", "dark"));
+  await page.goto("/?sel=skandagiri");
+  await expect(page.getByRole("heading", { name: "Skandagiri", level: 2 })).toBeVisible();
+  // Playwright's print emulation fires no beforeprint; the browser would.
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+  await page.emulateMedia({ media: "print" });
+  expect(await page.evaluate(() => document.documentElement.classList.contains("dark"))).toBe(
+    false,
+  );
+  const ink = await page
+    .getByRole("heading", { name: "Skandagiri", level: 2 })
+    .evaluate((el) => getComputedStyle(el).color);
+  const [r, g, b] = ink.match(/\d+/g)!.map(Number);
+  expect(r + g + b, `heading colour ${ink}`).toBeLessThan(3 * 128); // dark ink
+  for (const scrim of await page.getByTestId("scrim").all()) await expect(scrim).toBeHidden();
+});
+
 test("on screen the print block stays hidden", async ({ page }) => {
   await page.goto("/?sel=skandagiri");
   await expect(page.getByRole("heading", { name: "Skandagiri", level: 2 })).toBeVisible();

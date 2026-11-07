@@ -153,12 +153,18 @@ that implements each one names its check. R1 is enforced by the tests named unde
     buttons would have done: the coordinates in degrees-minutes-seconds (`toDms`,
     `src/lib/coords.ts`, rounded to the second and zero-padded), the directions URL written out,
     and "Printed from Trailward on <date>" in India time, refreshed on `beforeprint`. With no
-    trek open, the result list prints. The sheet's inline position is overridden, so a mobile
-    print is not clipped to the screen.
+    trek open, the result list prints (on desktop; on a phone the list sheet is not yet laid out
+    for paper, recorded as a limit). The sheet's inline position is overridden, so a mobile print
+    of a trek is not clipped to the screen. No scrim prints (a fixed one repeated over every page),
+    a dark-mode page prints in the light theme (the `dark` class comes off on `beforeprint` and
+    returns on `afterprint`), and nothing transitions on paper, so no colour prints mid-ease.
   - **On a static page,** the facts table gains a DMS row, a print-only line gives the
-    directions URL, and the footer says "Data as of <date>", the date of the last data refresh:
-    the page runs no script, so it cannot know the day it is printed. The call-to-action and the
-    back link are hidden in print.
+    directions URL, and the footer says "Data as of <date>", the date of the last commit to
+    `treks.json`: the page runs no script, so it cannot know the day it is printed. A shallow clone
+    gives no date at all rather than its own (its one commit "touched" everything, which dated
+    every page with the deploy day), and the build jobs fetch full history without file contents
+    (`filter: blob:none`); the sitemap's `lastmod` shares that date and the fix. The
+    call-to-action's row and the back link are hidden in print.
   - Playwright's print emulation never fires `beforeprint`, so the date's refresh is unit-tested
     and the layout is checked in e2e.
 

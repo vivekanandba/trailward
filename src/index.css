@@ -138,6 +138,14 @@
    map, header and buttons never do. !important because the sheet positions
    itself with inline styles. */
 @media print {
+  /* Paper has no time: a colour still easing from the dark theme to the light
+     one would print mid-way. */
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
   html,
   body,
   #root {

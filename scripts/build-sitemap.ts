@@ -21,13 +21,22 @@ const treksFile = resolve(repoRoot, "src/data/treks.json");
 const outFile = resolve(repoRoot, "public/sitemap.xml");
 const contentDir = resolve(repoRoot, "content");
 
-/** ISO date of the last commit that touched a file, or undefined outside git. */
-export function lastCommitDate(file: string, cwd: string): string | undefined {
+/**
+ * ISO date of the last commit that touched a file, or undefined outside git
+ * or in a shallow clone. A shallow clone's only commit "touched" every file,
+ * so it would give the checkout's date, not the data's: a 1-commit CI
+ * checkout made every page claim data from the day of the deploy (spec 44 R5).
+ * No date is better than a wrong one (CON-DATA-001).
+ */
+export function lastCommitDate(
+  file: string,
+  cwd: string,
+  git: (args: string[]) => string = (args) =>
+    execFileSync("git", args, { cwd, encoding: "utf8" }).trim(),
+): string | undefined {
   try {
-    const out = execFileSync("git", ["log", "-1", "--format=%cs", "--", file], {
-      cwd,
-      encoding: "utf8",
-    }).trim();
+    if (git(["rev-parse", "--is-shallow-repository"]) !== "false") return undefined;
+    const out = git(["log", "-1", "--format=%cs", "--", file]);
     return /^\d{4}-\d{2}-\d{2}$/.test(out) ? out : undefined;
   } catch {
     return undefined;

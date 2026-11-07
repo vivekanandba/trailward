@@ -11,7 +11,7 @@ import OriginSearch from "./components/OriginSearch";
 import Panel from "./components/Panel";
 import ThemeToggle from "./components/ThemeToggle";
 import { noteUserActions, userHasActed } from "./lib/motion";
-import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
+import { loadTheme, saveTheme, applyTheme, printInLight, type Theme } from "./lib/theme";
 import { regionStats, type RegionStats } from "./lib/regionStats";
 import { feedbackUrl } from "./lib/github";
 import { loadTreksAround } from "./lib/cells";
@@ -104,6 +104,7 @@ export default function App() {
   // Motion answers an action, never a page load (spec 44 register row 6).
   // Listening starts before the first paint can be pressed.
   useState(() => noteUserActions(window));
+  useEffect(() => printInLight(), []);
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);

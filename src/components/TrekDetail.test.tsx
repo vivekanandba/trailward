@@ -344,25 +344,27 @@ describe("TrekDetail prints as a field card (spec 44 R5)", () => {
   });
 
   it("keeps the action buttons off paper", () => {
-    const { container } = render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
     const directions = screen.getByRole("link", { name: "Directions" });
     expect(directions.closest('[data-print="hide"]')).not.toBeNull();
     expect(
       screen.getByRole("button", { name: /close/i }).closest('[data-print="hide"]'),
     ).not.toBeNull();
-    void container;
   });
 
   it("updates the printed date when the browser is about to print", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-10-31T06:00:00Z"));
-    render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
-    expect(screen.getByTestId("print-card").textContent).toContain("31 Oct 2026");
-    vi.setSystemTime(new Date("2026-11-02T06:00:00Z"));
-    act(() => {
-      window.dispatchEvent(new Event("beforeprint"));
-    });
-    expect(screen.getByTestId("print-card").textContent).toContain("2 Nov 2026");
-    vi.useRealTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-31T06:00:00Z"));
+      render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
+      expect(screen.getByTestId("print-card").textContent).toContain("31 Oct 2026");
+      vi.setSystemTime(new Date("2026-11-02T06:00:00Z"));
+      act(() => {
+        window.dispatchEvent(new Event("beforeprint"));
+      });
+      expect(screen.getByTestId("print-card").textContent).toContain("2 Nov 2026");
+    } finally {
+      vi.useRealTimers(); // even when an assertion fails (CON-VER-008)
+    }
   });
 });

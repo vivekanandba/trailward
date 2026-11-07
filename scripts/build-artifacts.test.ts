@@ -156,10 +156,24 @@ describe("lastCommitDate (spec 35 — lastmod from the DATA's history)", () => {
   // vitest runs from the repo root, which is the git work tree we want.
   const repoRoot = process.cwd();
 
-  it("reads an ISO date from this repo's own git history", () => {
+  // A stand-in git: CI's own checkout may be shallow, so the real one cannot
+  // be relied on to answer either way.
+  const fakeGit = (shallow: string, date: string) => (args: string[]) =>
+    args[0] === "rev-parse" ? shallow : date;
+
+  it("reads the ISO date of the last commit that touched the file", () => {
     // A page whose facts did not change must not claim to have changed, or
     // every rebuild invites a recrawl of everything.
-    expect(lastCommitDate("package.json", repoRoot)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(lastCommitDate("src/data/treks.json", repoRoot, fakeGit("false", "2026-09-19"))).toBe(
+      "2026-09-19",
+    );
+  });
+
+  it("gives no date in a shallow clone, whose one commit touched everything", () => {
+    // A 1-commit CI checkout dated every page with the deploy day (spec 44 R5).
+    expect(
+      lastCommitDate("src/data/treks.json", repoRoot, fakeGit("true", "2026-11-07")),
+    ).toBeUndefined();
   });
 
   it("returns undefined for a path git has never seen, rather than today", () => {
