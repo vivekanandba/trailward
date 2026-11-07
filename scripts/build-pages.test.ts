@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { runBuildPages, pagePathsFor } from "./build-pages";
-import { memoryIO } from "./lib/buildIO";
+import { memoryIOWithSlugs as memoryIO } from "./lib/testIO";
 import { parseTrekPage } from "./lib/deploycheck";
 import type { Trek } from "../src/lib/trek";
 
@@ -135,6 +135,7 @@ describe("build-pages run (spec 35/36/40)", () => {
     const p = pagePathsFor("/repo");
     expect(p).toEqual({
       treks: "/repo/src/data/treks.json",
+      slugs: "/repo/scripts/pages/slugs.json",
       outDir: "/repo/dist/t",
       distDir: "/repo/dist",
       contentDir: "/repo/content",

@@ -27,12 +27,14 @@ jobs:
       # refuse to commit if any field count regressed vs the committed data.
       - run: npx tsx scripts/check-enrichment-drift.ts
       - run: npm run build:chunks
+      # Record a URL for every new page; never move an existing one (spec 35).
+      - run: npm run build:slugs
       - name: Commit refreshed data if changed
         run: |
-          if [[ -n "$(git status --porcelain src/data/treks.json public/data)" ]]; then
+          if [[ -n "$(git status --porcelain src/data/treks.json public/data scripts/pages)" ]]; then
             git config user.name "trailward-bot"
             git config user.email "actions@github.com"
-            git add src/data/treks.json public/data
+            git add src/data/treks.json public/data scripts/pages
             git commit -m "chore(data): weekly refresh of treks.json"
             git push
           else

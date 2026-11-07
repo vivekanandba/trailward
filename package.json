@@ -35,6 +35,7 @@
     "validate:data": "tsx scripts/validate-data.ts",
     "build:sitemap": "tsx scripts/build-sitemap.ts",
     "build:pages": "tsx scripts/build-pages.ts",
+    "build:slugs": "tsx scripts/build-slugs.ts",
     "check:links": "tsx scripts/check-links.ts",
     "build:search": "tsx scripts/build-search-index.ts",
     "check:constitution": "tsx scripts/check-constitution.ts",
