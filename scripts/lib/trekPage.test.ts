@@ -141,7 +141,7 @@ describe("renderTrekPage prints as a field card (spec 44 R5)", () => {
   it("hides the screen-only chrome in print and shows the print-only lines", () => {
     const style = html().match(/<style>([\s\S]*?)<\/style>/)![1];
     expect(style).toMatch(/\.print-only\{display:none\}/);
-    expect(style).toMatch(/@media print\{[\s\S]*?\.cta,\.back\{display:none\}/);
+    expect(style).toMatch(/@media print\{[\s\S]*?\.cta-row,\.back\{display:none\}/);
     expect(style).toMatch(/@media print\{[\s\S]*\.print-only\{display:block\}/);
   });
 });
