@@ -74,6 +74,29 @@ export function curatedLosses(head: Trek[], now: Trek[]): string[] {
   return out;
 }
 
+/** What discovery carries over when a lookup misses (PRESERVED_FIELDS). */
+const CARRIED = ["image", "gallery", "highlights", "nearestTown"] as const;
+
+/**
+ * Non-curated records that kept their id but lost a photo, gallery, text or
+ * nearest town. Discovery carries those over when a lookup misses (spec 10),
+ * so any such loss means the carry broke: per record, no tolerance. This is
+ * the cause, caught before its effects: on 2026-11-07, 21 photos went, 16
+ * pages that rested on them went too, and a 17th (Dipadakallu) was pushed out
+ * of its cell's top three by a neighbour that had lost its photo.
+ */
+export function carriedLosses(head: Trek[], now: Trek[]): string[] {
+  const nowById = new Map(now.map((t) => [t.id, t]));
+  const out: string[] = [];
+  for (const t of head) {
+    const n = nowById.get(t.id);
+    if (!n || t.tier === "curated" || n.tier === "curated") continue; // curated: curatedLosses
+    const lost = CARRIED.filter((f) => t[f] !== undefined && n[f] === undefined);
+    if (lost.length > 0) out.push(`${t.id} (${t.name}): lost ${lost.join(", ")}`);
+  }
+  return out;
+}
+
 /**
  * Pages that earned their place on their own (curated, or carrying a photo,
  * text or a history note: `qualifies`) and that this refresh would take down
@@ -81,7 +104,9 @@ export function curatedLosses(head: Trek[], now: Trek[]): string[] {
  * the dataset. A missed best-effort lookup is not a data change (spec 10,
  * spec 35): the 2026-11-07 refresh took down 16 pages this way, Kumara
  * Parvatha among them. A page held only by its rank in its 1° cell may
- * change hands as scores move week to week; that is not counted.
+ * change hands as scores move week to week; that is not counted here, and
+ * a page pushed out by a neighbour's lost photo is caught at the cause, by
+ * carriedLosses.
  */
 export function pagesLost(head: Trek[], now: Trek[]): string[] {
   const nowById = new Map(now.map((t) => [t.id, t]));
@@ -138,6 +163,9 @@ async function main(): Promise<void> {
   const lost = curatedLosses(head, now);
   console.log(`[drift] curated records that lost a kept field: ${lost.length}`);
   for (const l of lost) violations.push(`curated ${l}`);
+  const carried = carriedLosses(head, now);
+  console.log(`[drift] records that lost a carried photo or text: ${carried.length}`);
+  for (const c of carried) violations.push(`carried field ${c}`);
   const gone = pagesLost(head, now);
   console.log(`[drift] published pages lost with their record still here: ${gone.length}`);
   for (const g of gone) violations.push(`published page lost: ${g}`);

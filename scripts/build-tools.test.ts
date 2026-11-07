@@ -3,7 +3,13 @@ import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown, buildIndiaMask, inIndia, isPlausibleSummit } from "./build-detect";
 import { isImplausibleTrek } from "./scrub-implausible";
-import { fieldCounts, driftViolations, curatedLosses, pagesLost } from "./check-enrichment-drift";
+import {
+  fieldCounts,
+  driftViolations,
+  curatedLosses,
+  pagesLost,
+  carriedLosses,
+} from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -307,6 +313,26 @@ describe("enrichment drift guard (spec 31)", () => {
     const before = [ranked("a", 0.9), ranked("b", 0.8), ranked("c", 0.7), ranked("d", 0.6)];
     const after = [ranked("a", 0.9), ranked("b", 0.8), ranked("c", 0.5), ranked("d", 0.6)];
     expect(pagesLost(before, after)).toEqual([]);
+  });
+
+  it("names every record that kept its id but lost a carried photo or text", () => {
+    // Sesha Parvata lost its photo, kept a page by rank, and pushed
+    // Dipadakallu out: only the cause is visible on both.
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const sesha = trek({
+      id: "osm-6",
+      name: "Sesha Parvata",
+      tier: "discovery",
+      image: img,
+      highlights: "A hill.",
+    });
+    expect(carriedLosses([sesha], [{ ...(sesha as Trek), image: undefined }])).toEqual([
+      "osm-6 (Sesha Parvata): lost image",
+    ]);
+    expect(carriedLosses([sesha], [sesha])).toEqual([]);
+    expect(carriedLosses([sesha], [])).toEqual([]); // a record gone is not this check's
+    const cur = trek({ id: "c", name: "C", tier: "curated", image: img });
+    expect(carriedLosses([cur], [{ ...(cur as Trek), image: undefined }])).toEqual([]); // curatedLosses' job
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {

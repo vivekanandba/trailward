@@ -122,7 +122,7 @@ const PRESERVED_FIELDS = [
   "heritage",
   // Fetched best-effort every run (nearest article, nearby Commons photos,
   // nearest town): a lookup that misses this week is not evidence the photo
-  // or text is gone. The 2026-11-07 refresh lost 21 photos this way, and 16
+  // or text is gone. The 2026-11-07 refresh lost 21 photos this way, and 17
   // peaks lost their published page with them (spec 10).
   "image",
   "gallery",
