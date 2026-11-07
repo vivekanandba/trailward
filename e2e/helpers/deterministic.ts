@@ -32,6 +32,18 @@ export async function stubTiles(page: Page): Promise<void> {
   );
 }
 
+/**
+ * Article photos on the static trek pages come from upload.wikimedia.org. The
+ * trek-page screenshot once caught a sliver of one and later the whole photo,
+ * a 23% difference from the network alone (CON-VER-008): serve a committed
+ * flat image instead, so the layout is captured and the remote photo is not.
+ */
+export async function stubPhotos(page: Page): Promise<void> {
+  await page.route(/upload\.wikimedia\.org/, (route) =>
+    route.fulfill({ contentType: "image/png", body: lightTile }),
+  );
+}
+
 const FIXED_WEATHER = {
   current: {
     temperature_2m: 24.5,
