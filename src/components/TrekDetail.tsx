@@ -485,7 +485,6 @@ export default function TrekDetail({
               </a>
             </p>
           )}
-          {onToggleClimbed && <BeenThere climbedOn={climbedOn} onToggle={onToggleClimbed} />}
           {onToggleClimbed && (
             <BeenThere
               // One toggle per peak: its celebration and error belong to this
