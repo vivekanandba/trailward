@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { distanceFrom, formatTrip, tripDistance } from "./distance";
+import { ROAD_ORIGIN, distanceFrom, formatTrip, tripDistance } from "./distance";
 import { DEFAULT_ORIGIN, type Trek } from "./trek";
 
 describe("distanceFrom (haversine, km)", () => {
@@ -67,6 +67,20 @@ describe("tripDistance — a road distance holds only from where it was measured
     expect(tripDistance(nearby, skandagiri).byRoad).toBe(false);
   });
 
+  it("trusts it from the same start point restored at URL precision (within 50 m)", () => {
+    // An origin read back from a 5-decimal URL is ~1 m off; still the same start.
+    const restored = { ...DEFAULT_ORIGIN, lat: DEFAULT_ORIGIN.lat + 0.00001 };
+    expect(tripDistance(restored, skandagiri).byRoad).toBe(true);
+    const sixtyMetres = { ...DEFAULT_ORIGIN, lat: DEFAULT_ORIGIN.lat + 0.00054 };
+    expect(tripDistance(sixtyMetres, skandagiri).byRoad).toBe(false);
+  });
+
+  it("is measured from the origin build-data routes from", async () => {
+    // The two must not drift apart (CON-COV-003).
+    const { BANGALORE_ORIGIN } = await import("../../scripts/seed/bangalore");
+    expect(distanceFrom(ROAD_ORIGIN, BANGALORE_ORIGIN)).toBeLessThan(0.001);
+  });
+
   it("uses the straight line when no road distance was measured", () => {
     const peak = { ...skandagiri, distanceKm: undefined, driveTimeMin: undefined };
     expect(tripDistance(DEFAULT_ORIGIN, peak)).toEqual({
@@ -88,6 +102,10 @@ describe("formatTrip", () => {
       "~68 km by road · 2 h drive",
     );
     expect(formatTrip({ km: 67.6, byRoad: true })).toBe("~68 km by road");
+    // Rounded before splitting: never "1 h 60 min".
+    expect(formatTrip({ km: 100, byRoad: true, driveMin: 119.6 })).toBe(
+      "~100 km by road · 2 h drive",
+    );
     expect(formatTrip({ km: 175.6, byRoad: false })).toBe("~176 km in a straight line");
   });
 });

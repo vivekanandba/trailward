@@ -60,8 +60,10 @@ export function formatTrip(d: TripDistance): string {
   const km = `~${Math.round(d.km)} km`;
   if (!d.byRoad) return `${km} in a straight line`;
   if (d.driveMin === undefined) return `${km} by road`;
-  const h = Math.floor(d.driveMin / 60);
-  const m = Math.round(d.driveMin % 60);
+  // Round first, so 119.6 min reads "2 h", never "1 h 60 min".
+  const total = Math.round(d.driveMin);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   const time = h === 0 ? `${m} min` : m === 0 ? `${h} h` : `${h} h ${m} min`;
   return `${km} by road · ${time} drive`;
 }
