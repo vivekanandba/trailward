@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import TrekDetail from "./TrekDetail";
-import type { Origin, Trek } from "../lib/trek";
+import { DEFAULT_ORIGIN, type Origin, type Trek } from "../lib/trek";
 
 // Weather is a network call; stub it so the detail panel renders offline.
 vi.mock("../lib/weather", async () => {
@@ -304,5 +304,21 @@ describe("TrekDetail GPX export", () => {
     // races the browser's blob fetch and intermittently aborts the download.
     expect(revokeURL).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("TrekDetail distance (spec 05; spec 44 register row 16)", () => {
+  const measured: Trek = { ...baseTrek, distanceKm: 67.6, driveTimeMin: 76 };
+
+  it("says 'by road' with the drive time from the origin it was measured from", () => {
+    render(<TrekDetail trek={measured} origin={DEFAULT_ORIGIN} onClose={vi.fn()} />);
+    expect(screen.getByText("~68 km by road · 1 h 16 min drive")).toBeInTheDocument();
+  });
+
+  it("says 'in a straight line', with no drive time, from anywhere else", () => {
+    const mysuru: Origin = { id: "mysuru", name: "Mysuru", lat: 12.2958, lng: 76.6394 };
+    render(<TrekDetail trek={measured} origin={mysuru} onClose={vi.fn()} />);
+    expect(screen.getByText(/^~1\d\d km in a straight line$/)).toBeInTheDocument();
+    expect(screen.queryByText(/drive/)).not.toBeInTheDocument();
   });
 });

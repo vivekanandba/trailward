@@ -13,7 +13,7 @@ import {
 import L from "leaflet";
 import type { Origin, Trek } from "../lib/trek";
 import { difficultyColor, difficultyLabel } from "../lib/difficulty";
-import { distanceFrom } from "../lib/distance";
+import { distanceFrom, tripDistance } from "../lib/distance";
 import { clusterByGrid } from "../lib/cluster";
 import { loadBasemap, saveBasemap, type Basemap } from "../lib/basemap";
 
@@ -190,7 +190,7 @@ function TrekPin({
   // slate discovery colour (a white fill vanished into the terrain basemap).
   const shownDifficulty = trek.difficulty ?? trek.estimatedDifficulty;
   const color = difficultyColor(shownDifficulty);
-  const km = Math.round(trek.distanceKm ?? distanceFrom(origin, trek));
+  const trip = tripDistance(origin, trek);
   // Size discovery pins by their hidden-gem score so top picks read first.
   const baseRadius =
     isDiscovery && trek.discoveryScore !== undefined ? 6 + Math.round(trek.discoveryScore * 5) : 8;
@@ -239,7 +239,7 @@ function TrekPin({
         <Tooltip direction="top" offset={[0, -6]}>
           <span className="font-semibold">{trek.name}</span>
           <br />
-          {label} · ~{km} km
+          {label} · ~{Math.round(trip.km)} km{trip.byRoad ? " by road" : ""}
           {trek.elevationM ? ` · ${trek.elevationM} m` : ""}
         </Tooltip>
       </CircleMarker>
