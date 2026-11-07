@@ -37,7 +37,18 @@ export function lastCommitDate(
   try {
     const shallow = git(["rev-parse", "--is-shallow-repository"]);
     if (shallow !== "false") {
-      console.warn(`[dates] no data date: shallow clone (is-shallow-repository=${shallow})`);
+      const where = (args: string[]) => {
+        try {
+          return git(args);
+        } catch (err) {
+          return `(${(err as Error).message.split("\n")[0]})`;
+        }
+      };
+      console.warn(
+        `[dates] no data date: shallow clone (is-shallow-repository=${shallow}; ` +
+          `cwd=${cwd}; toplevel=${where(["rev-parse", "--show-toplevel"])}; ` +
+          `git-dir=${where(["rev-parse", "--absolute-git-dir"])})`,
+      );
       return undefined;
     }
     const out = git(["log", "-1", "--format=%cs", "--", file]);
