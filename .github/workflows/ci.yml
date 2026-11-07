@@ -6,8 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+# A superseded push proves nothing about the current head; cancel it.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
+    # Bounded at several times the longest run seen (2.4 min, 2026-10-07..11-07); the default is 6 hours.
+    timeout-minutes: 15
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
@@ -42,6 +49,7 @@ jobs:
       - run: npm run format:check
 
   validate-data:
+    timeout-minutes: 15
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
@@ -53,6 +61,7 @@ jobs:
       - run: npm run validate:data
 
   test:
+    timeout-minutes: 15
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
@@ -66,6 +75,7 @@ jobs:
       - run: npm run coverage
 
   e2e:
+    timeout-minutes: 20
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
@@ -92,6 +102,7 @@ jobs:
           if-no-files-found: ignore
 
   e2e-static:
+    timeout-minutes: 20
     # The generated crawl surface (spec 35): trek pages, robots, sitemap,
     # served by `vite preview` from a real production build at the real base
     # path. Separate job because it pays for that build.

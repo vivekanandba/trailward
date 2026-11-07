@@ -17,8 +17,15 @@ on:
 permissions:
   contents: write
 
+# Two baseline captures for one branch would race on the same commit.
+concurrency:
+  group: baselines-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   baselines:
+    # Under 2 min in every run seen; the default is 6 hours.
+    timeout-minutes: 20
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6

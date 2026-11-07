@@ -7,5 +7,6 @@
   "_note_protected_branches": "empty means the branch gate is OFF. Set [\"main\"] to require a branch per change, as resumefit does.",
   "determinism": true,
   "migrations": false,
-  "artifacts": true
+  "artifacts": true,
+  "private": false
 }
