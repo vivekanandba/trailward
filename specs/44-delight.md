@@ -125,8 +125,10 @@ that implements each one names its check. R1 is enforced by the tests named unde
   sits a little above what ships, so a small PR need not touch it; a PR that adds weight raises
   it in review, and one that saves weight lowers it, which is how it ratchets down.
   The fonts budget went from 95,000 to 200,000 B with the latin-ext faces (row 18): they total
-  193,336 B on disk, but each is fetched only when a name on screen uses a character in its
-  `unicode-range`, so a page of plain Latin names downloads none of them.
+  193,336 B on disk. The browser itself fetches a latin-ext face only for a name that needs it,
+  but the offline service worker (spec 43) precaches every asset the CSS names on its first
+  install, so in practice each device downloads them once (~104 KB): the price of ā ī ū ṭ in the
+  app's own type for 1,944 page names, paid knowingly.
 
 - **R3 — keyboard focus is always visible (row 1, rule D4).** One `:focus-visible` rule in
   `index.css` draws a 2 px outline on anything that does not style its own focus. No component

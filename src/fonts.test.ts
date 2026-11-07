@@ -38,8 +38,14 @@ const covers = (family: string, cp: number): boolean =>
 // Latin-script letters: Latin Extended-A/B and Latin Extended Additional.
 // Indic and other scripts fall back to the system by design (no Latin font
 // carries them), and are not this test's business.
+// Combining marks too: after NFC, "Ḍā̃ḍā" keeps U+0303 as its own code point.
+// U+0307 (dot above) is in none of the bundled files, so it falls back by
+// necessity, not by a missing range (spec 08 records it).
+const FONTS_LACK = new Set([0x307]);
 const isLatinExtended = (cp: number): boolean =>
-  (cp >= 0x100 && cp <= 0x24f) || (cp >= 0x1e00 && cp <= 0x1eff);
+  (cp >= 0x100 && cp <= 0x24f) ||
+  (cp >= 0x1e00 && cp <= 0x1eff) ||
+  (cp >= 0x300 && cp <= 0x36f && !FONTS_LACK.has(cp));
 
 describe("bundled fonts cover the names we show (spec 08)", () => {
   it("each family has a latin and a latin-ext face, every file present", () => {

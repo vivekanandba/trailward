@@ -46,6 +46,9 @@ polish phase must satisfy.
   detail), `Slider`, `SearchInput`, `Button`. Each documented with states.
 - **Layout:** desktop = map + left filter rail + right detail; mobile = full-map with bottom
   sheet for list/filters/detail.
+  The latin-ext ranges also take the combining marks the files carry (U+0300–0301, U+0303–0304,
+  U+0308–0309, U+0323), so a tilde over ā ("Ḍā̃ḍā", six names) stays in the app's type. U+0307
+  (dot above, one name) is in none of the files and falls back by necessity.
 
 ## Edge cases & error states
 
