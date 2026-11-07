@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { cellKeyFor, cellKeysAround, loadTreksAround, resetCellCache } from "./cells";
+import {
+  cellKeyFor,
+  cellKeysAround,
+  loadCellsReport,
+  loadTreksAround,
+  resetCellCache,
+} from "./cells";
 
 beforeEach(resetCellCache);
 
@@ -63,5 +69,37 @@ describe("loadTreksAround", () => {
     fail = false;
     const second = await loadTreksAround(12.5, 77.9, 60, getJson);
     expect(second.map((t) => t.id).sort()).toEqual(["late", "ok"]);
+  });
+});
+
+describe("loadCellsReport — an empty list is not proof of an empty radius (spec 44 R11)", () => {
+  it("counts the cells it could not fetch, alongside the treks it could", async () => {
+    resetCellCache();
+    const getJson = async (path: string) => {
+      if (path.endsWith("/index.json")) return { cells: { "12_77": 1, "13_77": 1 } };
+      if (path.endsWith("/13_77.json")) throw new Error("HTTP 503");
+      return [
+        {
+          id: "a",
+          name: "A",
+          lat: 12.5,
+          lng: 77.5,
+          tier: "discovery",
+          sources: [],
+          verified: false,
+        },
+      ];
+    };
+    const r = await loadCellsReport(12.97, 77.59, 100, getJson);
+    expect(r.treks.map((t) => t.id)).toEqual(["a"]);
+    expect(r.wanted).toBe(2);
+    expect(r.missing).toBe(1);
+  });
+
+  it("reports nothing missing when every cell arrived", async () => {
+    resetCellCache();
+    const getJson = async (path: string) =>
+      path.endsWith("/index.json") ? { cells: { "12_77": 1 } } : [];
+    expect((await loadCellsReport(12.97, 77.59, 50, getJson)).missing).toBe(0);
   });
 });

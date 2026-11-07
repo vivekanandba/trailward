@@ -10,19 +10,23 @@ vi.mock("./components/TrekMap", () => ({
 }));
 
 vi.mock("./lib/cells", () => ({
-  loadTreksAround: async () => [
-    {
-      id: "skandagiri",
-      name: "Skandagiri",
-      lat: 13.5021,
-      lng: 77.6911,
-      tier: "curated",
-      difficulty: "Moderate",
-      elevationM: 1350,
-      sources: ["https://en.wikipedia.org/wiki/Skandagiri"],
-      verified: true,
-    },
-  ],
+  loadCellsReport: async () => ({
+    wanted: 1,
+    missing: 0,
+    treks: [
+      {
+        id: "skandagiri",
+        name: "Skandagiri",
+        lat: 13.5021,
+        lng: 77.6911,
+        tier: "curated",
+        difficulty: "Moderate",
+        elevationM: 1350,
+        sources: ["https://en.wikipedia.org/wiki/Skandagiri"],
+        verified: true,
+      },
+    ],
+  }),
 }));
 
 beforeEach(() => localStorage.clear());

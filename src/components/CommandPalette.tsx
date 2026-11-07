@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { searchIndex, type IndexEntry } from "../lib/search";
+import { nearestNames } from "../lib/nearest";
 import { useDialogFocus } from "../lib/useDialogFocus";
 import { Scrim } from "./ui/Scrim";
 
@@ -91,11 +92,23 @@ export default function CommandPalette({
     }
   };
 
+  // Nothing matched: offer the nearest names, never a guess (spec 44 R12).
+  // Computed only when there are no results, over the named entries.
+  // One suggestion per name: 1,222 names repeat, and a name that several
+  // peaks share is offered once, as a search for all of them.
+  const near =
+    index && query.trim() && results.length === 0
+      ? nearestNames(query.trim(), [
+          ...new Set(index.filter((e) => !e.name.startsWith("Unnamed")).map((e) => e.name)),
+        ]).map((name) => ({ name, entries: index.filter((e) => e.name === name) }))
+      : [];
   const message = failed
     ? "Couldn't load the search index — check your connection."
-    : query.trim() && index && results.length === 0
-      ? "Nothing matches — try a name like 'Savandurga' or 'Kumara'."
-      : "";
+    : near.length > 0
+      ? "Nothing matches exactly. Did you mean:"
+      : query.trim() && index && results.length === 0
+        ? "Nothing matches — try a name like 'Savandurga' or 'Kumara'."
+        : "";
 
   return (
     <>
@@ -153,6 +166,26 @@ export default function CommandPalette({
           <p role="status" className="px-4 py-3 text-sm text-trail-500 dark:text-slate-400">
             {message}
           </p>
+        )}
+        {near.length > 0 && (
+          <ul className="px-4 pb-3">
+            {near.map(({ name, entries }) => (
+              <li key={name}>
+                <button
+                  type="button"
+                  onClick={() => (entries.length === 1 ? onChoose(entries[0]) : setQuery(name))}
+                  className="w-full rounded px-2 py-1.5 text-left text-sm font-medium text-trail-800 hover:bg-trail-50 dark:text-slate-100 dark:hover:bg-slate-800"
+                >
+                  {name}
+                  {entries.length > 1 && (
+                    <span className="ml-1 font-normal text-trail-500 dark:text-slate-400">
+                      ({entries.length} peaks)
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
         <p className="border-t border-trail-100 px-4 py-2 text-xs text-trail-400 dark:border-slate-700 dark:text-slate-500">
           ↑↓ navigate · enter open · esc close

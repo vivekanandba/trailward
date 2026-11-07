@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Not found — Trailward</title>
+    <!--
+      GitHub Pages serves this for any missing path under /trailward/ (spec 44
+      R10). A missing trek page stays here to say so and offer the closest
+      slug; any other path goes into the app with its query and hash. The
+      decisions are in src/notFound.ts, tested.
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: #1c3927;
+        --bg: #f0f7f1;
+        --muted: #4b5f52;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #e6eeea;
+          --bg: #0f172a;
+          --muted: #9fb3a6;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 36rem;
+        margin: 0 auto;
+        padding: 3rem 1.25rem;
+      }
+      a {
+        color: inherit;
+      }
+      .cta {
+        display: inline-block;
+        background: #2f6b3f;
+        color: #fff;
+        text-decoration: none;
+        padding: 0.7rem 1.1rem;
+        border-radius: 0.6rem;
+        font-weight: 600;
+      }
+      .muted {
+        color: var(--muted);
+      }
+    </style>
+    <script type="module" src="/src/notFoundMain.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1>There is no trek page at this address.</h1>
+      <p id="suggestion" role="status" class="muted">
+        It may have been mistyped, or the summit may have been renamed.
+      </p>
+      <p><a class="cta" href="/trailward/">Open the map →</a></p>
+    </main>
+  </body>
+</html>

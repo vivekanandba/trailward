@@ -88,4 +88,39 @@ describe("CommandPalette (spec 38)", () => {
     fireEvent.change(await screen.findByRole("combobox"), { target: { value: "zzzzz" } });
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/nothing matches/i));
   });
+
+  it("offers the nearest names as buttons when nothing matches (spec 44 R12)", async () => {
+    const { onChoose } = setup();
+    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "skandagri" } });
+    const near = await screen.findByRole("button", { name: "Skandagiri" });
+    expect(screen.getByRole("status")).toHaveTextContent(/did you mean/i);
+    fireEvent.click(near);
+    expect(onChoose).toHaveBeenCalledWith(INDEX[1]);
+  });
+
+  it("offers a name several peaks share once, as a search for all of them", async () => {
+    const shared: IndexEntry[] = [
+      { id: "nk-1", name: "Nalla Konda", lat: 14, lng: 78, score: 0.5 },
+      { id: "nk-2", name: "Nalla Konda", lat: 15, lng: 79, score: 0.4 },
+      { id: "nk-3", name: "Nalla Konda", lat: 16, lng: 80, score: 0.3 },
+    ];
+    const { onChoose } = setup({ loadIndex: async () => shared });
+    const box = await screen.findByRole("combobox");
+    fireEvent.change(box, { target: { value: "Nalla Kondaa" } });
+    const offers = await screen.findAllByRole("button", { name: /Nalla Konda/ });
+    expect(offers).toHaveLength(1); // not three identical buttons
+    expect(offers[0]).toHaveTextContent("(3 peaks)");
+    fireEvent.click(offers[0]);
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(box).toHaveValue("Nalla Konda"); // the search now lists all three
+  });
+
+  it("offers none when nothing is close: a guess is not an answer", async () => {
+    setup();
+    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "zzzzz" } });
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/nothing matches/i));
+    expect(
+      screen.queryByRole("button", { name: /Skandagiri|Nandi|Kumara/ }),
+    ).not.toBeInTheDocument();
+  });
 });

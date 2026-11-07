@@ -15,7 +15,9 @@ function structuredData(): Plugin {
   return {
     name: "trailward-structured-data",
     apply: "build",
-    transformIndexHtml(html) {
+    transformIndexHtml(html, ctx) {
+      // The 404 page is not the app: it names no URL of its own (spec 44 R1).
+      if (ctx.filename.endsWith("404.html")) return html;
       let total = 0;
       try {
         const idx = JSON.parse(readFileSync("public/data/cells/index.json", "utf8")) as {
@@ -46,6 +48,9 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      // The 404 page is built, not copied from public/, so its matcher is the
+      // tested src/notFound.ts rather than an inline copy (spec 44 R10).
+      input: { main: "index.html", notFound: "404.html" },
       output: {
         // One stable vendor chunk (react + leaflet stacks): app-code edits no
         // longer invalidate the ~300 KB of rarely-changing dependencies in

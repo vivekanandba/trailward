@@ -194,6 +194,36 @@ that implements each one names its check. R1 is enforced by the tests named unde
   jumps. Leaflet stops a flight the moment the person drags. The contract test also reads
   Leaflet's `duration`, which is in seconds.
 
+- **R10 — a missing page says so (row 10).** `404.html` is built by vite from the repo root,
+  not copied from `public/`, so its decisions are the tested `src/notFound.ts`:
+  - a missing trek page (`/t/<slug>/`) stays on the 404 page, says there is no trek page at that
+    address, and, when one slug in the sitemap is clearly closest (`bestMatch`), offers it as a
+    link. A tie, or a match under the similarity floor, offers nothing: a guess is not an answer.
+    Offline or without a sitemap the page keeps its plain message;
+  - any other missing path goes into the app, handing it the query and hash as before (the app
+    then writes its own state into the URL, so a deep link's filters survive).
+- **R11 — an empty list is honest and actionable (row 11).** When filters leave nothing, the
+  list offers "Widen to N km" (double the radius, capped at the largest), which does what the
+  advice says. When cells of the area failed to load (`loadCellsReport` counts them), the list
+  does not claim the radius is empty: it says how many parts could not load and offers to try
+  again, and does not offer widening, which would load more of what is failing.
+- **R12 — a search with no match offers the nearest names (row 12).** The palette lists up to
+  three named summits whose folded names are at least 75% similar (`nearestNames`), as buttons;
+  under that it offers none. Unnamed entries are never offered. A no-match keystroke costs about
+  26 ms over the 19k names (folding memoised, edit distance bounded and stopped early).
+- **R13 — an unnamed summit invites a name (row 13).** Under the title of any summit named
+  "Unnamed …", a line says no one has given it a name we know of yet, and "Name this summit"
+  opens the prefilled suggestion of specs 28/29.
+- **R14 — offline is said, and only what the cache holds is promised (row 14).** A note says the
+  app is offline, that areas already opened on this device still show their peaks, and that
+  anything new, photos, weather and the map background need a connection. It reads
+  `navigator.onLine` at mount, because an installed app can open already offline with no
+  `offline` event; it clears on `online`. It does not mention area downloads, which spec 43 §D
+  has not built.
+- **R15 — the console says where things come from, once (row 15).** `src/lib/greeting.ts` logs
+  one `console.info` naming the open data and the repository, with no counts that could
+  disagree with what loaded; the app logs nothing else on load.
+
 ## Constraints learned in review — for the requirements still to be written
 
 Not requirements. These are facts about today's code that review established, recorded so the PR
@@ -282,6 +312,12 @@ npm run e2e:static                                 # R5: a static page under pri
 npx vitest run src/lib/sun.test.ts                  # R6: against the USNO fixture
 npx vitest run src/lib/voice.test.ts                # R6–R8: sentences, sparse records
 npx vitest run src/components/TrekDetail.test.tsx src/App.test.tsx  # R6–R8 rendered
+
+npx vitest run src/notFound.test.ts src/notFoundMain.test.ts src/lib/nearest.test.ts  # R10, R12
+npx vitest run src/lib/cells.test.ts src/components/TrekList.test.tsx   # R11
+npx vitest run src/components/CommandPalette.test.tsx src/components/TrekDetail.test.tsx  # R12, R13
+npx vitest run src/components/OfflineNote.test.tsx src/lib/greeting.test.ts  # R14, R15
+npx playwright test e2e/blank.spec.ts && npm run e2e:static  # R10, R11, R14, R15 in a browser
 ```
 
 ## Revisions

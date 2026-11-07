@@ -11,30 +11,34 @@ vi.mock("./components/TrekMap", () => ({
 // The app fetches spatial cell files at runtime (spec 30); mock the loader
 // with two curated records so the load→state flow still runs for real.
 vi.mock("./lib/cells", () => ({
-  loadTreksAround: async () => [
-    {
-      id: "skandagiri",
-      name: "Skandagiri",
-      lat: 13.5021,
-      lng: 77.6911,
-      cityId: "bangalore",
-      tier: "curated",
-      difficulty: "Moderate",
-      sources: ["https://en.wikipedia.org/wiki/Skandagiri"],
-      verified: true,
-    },
-    {
-      id: "nandi-hills",
-      name: "Nandi Hills",
-      lat: 13.3702,
-      lng: 77.6835,
-      cityId: "bangalore",
-      tier: "curated",
-      difficulty: "Easy",
-      sources: ["https://en.wikipedia.org/wiki/Nandi_Hills,_Karnataka"],
-      verified: true,
-    },
-  ],
+  loadCellsReport: async () => ({
+    wanted: 1,
+    missing: 0,
+    treks: [
+      {
+        id: "skandagiri",
+        name: "Skandagiri",
+        lat: 13.5021,
+        lng: 77.6911,
+        cityId: "bangalore",
+        tier: "curated",
+        difficulty: "Moderate",
+        sources: ["https://en.wikipedia.org/wiki/Skandagiri"],
+        verified: true,
+      },
+      {
+        id: "nandi-hills",
+        name: "Nandi Hills",
+        lat: 13.3702,
+        lng: 77.6835,
+        cityId: "bangalore",
+        tier: "curated",
+        difficulty: "Easy",
+        sources: ["https://en.wikipedia.org/wiki/Nandi_Hills,_Karnataka"],
+        verified: true,
+      },
+    ],
+  }),
 }));
 
 beforeEach(() => {

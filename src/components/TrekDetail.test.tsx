@@ -235,10 +235,36 @@ describe("TrekDetail naming actions for detected pins (spec 28)", () => {
     expect(screen.getByText(/terrain-detected · unverified/)).toBeInTheDocument();
   });
 
+  it("invites a name right under the title of an unnamed summit (spec 44 R13)", () => {
+    render(<TrekDetail trek={detTrek} origin={origin} onClose={vi.fn()} />);
+    const invite = screen.getByRole("link", { name: "Name this summit" });
+    expect(invite.getAttribute("href")).toBe(
+      screen.getByRole("link", { name: /know this hill's name/i }).getAttribute("href"),
+    );
+    expect(
+      screen.getByText(/No one has given this summit a name we know of yet/),
+    ).toBeInTheDocument();
+  });
+
+  it("invites a name for every unnamed form, not only terrain-detected pins", () => {
+    for (const name of ["Unnamed hill (~640 m)", "Unnamed Peak"]) {
+      const { unmount } = render(
+        <TrekDetail
+          trek={{ ...baseTrek, name, tier: "discovery" }}
+          origin={origin}
+          onClose={vi.fn()}
+        />,
+      );
+      expect(screen.getByRole("link", { name: "Name this summit" })).toBeInTheDocument();
+      unmount();
+    }
+  });
+
   it("shows neither action for ordinary (named-source) pins", () => {
     render(<TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} />);
     expect(screen.queryByRole("link", { name: /look up on google maps/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /know this hill's name/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Name this summit" })).not.toBeInTheDocument();
   });
 });
 
