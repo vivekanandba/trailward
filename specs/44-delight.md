@@ -234,6 +234,11 @@ that implements each one names its check. R1 is enforced by the tests named unde
   reopening a ticked peak shows it ticked without the celebration. "Peaks I've been to" filters
   the list and map to the ticked peaks, carried in the URL as `mine=1`.
 
+- **R17 — a trek's link shows that trek (row 3).** Curated pages and the top 100 hidden gems
+  get their own social card, typographic and built only from the record's fields (D1); every
+  other page, and any name in a script the card font lacks, keeps the global card. Specified in
+  spec 35 §E.
+
 ## Constraints learned in review — for the requirements still to be written
 
 Not requirements. These are facts about today's code that review established, recorded so the PR
@@ -332,6 +337,8 @@ npx playwright test e2e/blank.spec.ts && npm run e2e:static  # R10, R11, R14, R1
 npx vitest run src/lib/climbed.test.ts src/lib/filters.test.ts src/lib/urlState.test.ts  # R16
 npx vitest run src/components/TrekDetail.test.tsx    # R16: the toggle, its date, its failure
 npx playwright test e2e/delight.spec.ts              # R16: survives a reload, the filter finds it
+
+npx vitest run scripts/lib/socialCard.test.ts scripts/build-pages.test.ts  # R17
 ```
 
 ## Revisions

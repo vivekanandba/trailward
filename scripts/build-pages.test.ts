@@ -319,3 +319,31 @@ describe("build-pages run (spec 35/36/40)", () => {
     expect([...b.files.entries()].sort()).toEqual([...a.files.entries()].sort());
   });
 });
+
+describe("build-pages social cards (spec 35 §E, spec 44 R17)", () => {
+  it("gives a curated page its own card and points its og:image at it", () => {
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-10-31");
+    const png = io.bytes.get("/repo/dist/t/skandagiri/card.png");
+    expect(png && [...png.subarray(0, 4)]).toEqual([137, 80, 78, 71]);
+    expect(io.files.get("/repo/dist/t/skandagiri/index.html")).toContain(
+      'property="og:image" content="https://vivekanandba.github.io/trailward/t/skandagiri/card.png"',
+    );
+  });
+
+  it("leaves a page outside the carded set on the global card", () => {
+    const io = seeded();
+    runBuildPages(io, ROOT, ["about.md"], "2026-10-31");
+    expect(io.bytes.has("/repo/dist/t/kumara-parvatha/card.png")).toBe(false);
+    expect(io.files.get("/repo/dist/t/kumara-parvatha/index.html")).toContain(
+      'content="https://vivekanandba.github.io/trailward/icons/og.png"',
+    );
+  });
+
+  it("removes a card whose page is gone, with the clean rebuild", () => {
+    const io = seeded();
+    io.writeFile("/repo/dist/t/old/card.png", new Uint8Array([1, 2, 3]));
+    runBuildPages(io, ROOT, ["about.md"], "2026-10-31");
+    expect(io.bytes.has("/repo/dist/t/old/card.png")).toBe(false);
+  });
+});
