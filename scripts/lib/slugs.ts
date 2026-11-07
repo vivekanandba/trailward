@@ -25,10 +25,21 @@ export interface SlugEntry {
 /** slug → the record published there. Keys are unique by construction. */
 export type SlugRegistry = Record<string, SlugEntry>;
 
-const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// URL-safe. Upper case is allowed: four live URLs end in a Wikidata id
+// (`bandarpunch-wd-Q4854459`), and a published URL is never rewritten.
+const SLUG = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/;
 
 // A rescan moves a summit by at most a few DEM pixels (spec 27's carryover).
 const SAME_PLACE_KM = 0.12;
+
+/** The orphan at `slug` was published under the name whose bare slug is `base`. */
+function sameName(slug: string, base: string, orphanId: string): boolean {
+  if (slug === base) return true;
+  const suffixed = `${base}-${orphanId}`;
+  if (slug === suffixed) return true;
+  // `<base>-<id>-<n>`, the form a second collision on the same id took.
+  return slug.startsWith(`${suffixed}-`) && /^\d+$/.test(slug.slice(suffixed.length + 1));
+}
 
 const round5 = (n: number): number => Math.round(n * 1e5) / 1e5;
 const entryFor = (t: Trek): SlugEntry => ({ id: t.id, lat: round5(t.lat), lng: round5(t.lng) });
@@ -47,7 +58,20 @@ export function readRegistry(body: string | undefined): SlugRegistry {
   if (body === undefined) {
     throw new Error(`[slugs] ${SLUGS_FILE} is missing — run npm run build:slugs`);
   }
-  return JSON.parse(body) as SlugRegistry;
+  let reg: unknown;
+  try {
+    reg = JSON.parse(body);
+  } catch (err) {
+    throw new Error(`[slugs] ${SLUGS_FILE} is not valid JSON (${(err as Error).message})`);
+  }
+  if (typeof reg !== "object" || reg === null || Array.isArray(reg)) {
+    throw new Error(`[slugs] ${SLUGS_FILE} is not an object of slug → record`);
+  }
+  for (const [slug, e] of Object.entries(reg)) {
+    const ok = typeof e === "object" && e !== null && typeof (e as SlugEntry).id === "string";
+    if (!ok) throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no record id`);
+  }
+  return reg as SlugRegistry;
 }
 
 /** The first registry: today's URLs, exactly as `slugMap` published them. */
@@ -62,18 +86,24 @@ export function registryFromSlugMap(pages: Trek[], slugs: Map<string, string>): 
  *
  * - A page whose id is registered keeps its slug.
  * - A page whose id is new, at the same place (≤ 120 m) and with the same name
- *   as a registered record that no longer has a page, takes over that slug:
- *   a rescan regenerated the id of the same summit.
+ *   as a registered record that is gone from the dataset, takes over that
+ *   slug: a rescan regenerated the id of the same summit. "Same name" means
+ *   the orphan's slug is exactly this page's bare slug, or that slug plus the
+ *   orphan's own id suffix — not merely a slug that starts with it.
+ * - A record still in the dataset keeps its slug even while it has no page,
+ *   so its URL is waiting when the page comes back.
  * - Otherwise it gets its bare slug if no record ever held it, else
  *   `<slug>-<id>`. A retired slug is never handed to a different peak.
  */
 export function updateRegistry(
   pages: Trek[],
   previous: SlugRegistry,
+  /** Every record id in the dataset, page or not. Defaults to the pages'. */
+  datasetIds: ReadonlySet<string> = new Set(pages.map((t) => t.id)),
 ): { registry: SlugRegistry; added: string[]; moved: string[] } {
   const reg: SlugRegistry = { ...previous };
   const slugOf = new Map(Object.entries(reg).map(([slug, e]) => [e.id, slug]));
-  const live = new Set(pages.map((t) => t.id));
+  const live = new Set([...datasetIds, ...pages.map((t) => t.id)]);
   const orphans = new Set(Object.keys(reg).filter((slug) => !live.has(reg[slug].id)));
   const added: string[] = [];
   const moved: string[] = [];
@@ -83,8 +113,7 @@ export function updateRegistry(
     const base = slugFor(t);
     const same = [...orphans].find(
       (slug) =>
-        (slug === base || slug.startsWith(`${base}-`)) &&
-        distanceFrom(here(reg[slug]), t) <= SAME_PLACE_KM,
+        sameName(slug, base, reg[slug].id) && distanceFrom(here(reg[slug]), t) <= SAME_PLACE_KM,
     );
     if (same) {
       reg[same] = entryFor(t);

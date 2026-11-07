@@ -59,13 +59,20 @@ a lockfile:
   (`slugFor`, the name folded to ASCII), or `<slug>-<id>` when any record has ever held the bare
   one. It never deletes an entry and never gives a slug to a different peak: a slug whose page
   has gone stays reserved.
-- A page whose id is new but which stands within 120 m of a registered record that no longer has
-  a page, **with the same name**, takes over that record's slug. That is a terrain rescan
-  regenerating a `d12-` id for the same summit (spec 27). A different name or a farther point is
-  a different page.
+- A page whose id is new but which stands within 120 m of a registered record that is **gone
+  from the dataset**, **with the same name**, takes over that record's slug. That is a terrain
+  rescan regenerating a `d12-` id for the same summit (spec 27). "Same name" is exact: the
+  orphan's slug is this page's bare slug, or that plus the orphan's own id suffix (`-<id>`,
+  `-<id>-<n>`), never a slug that merely starts with it ("Kote" does not take `kote-betta`). A
+  different name or a farther point is a different page. A record still in the dataset keeps its
+  slug while it has no page, so the URL is waiting when the page returns.
 - `build-pages` and `build-sitemap` only read the registry, through one function
   (`slugsFromRegistry`), and **refuse to build** when a qualifying page has no slug, when a
-  record has two, or when a slug is not URL-safe. The message names `npm run build:slugs`.
+  record has two, or when a slug is not URL-safe (letters, digits and single hyphens; upper case
+  is allowed, because four live URLs end in a Wikidata id such as `bandarpunch-wd-Q4854459`). The
+  message names `npm run build:slugs`. `build:slugs` runs the same check before it writes, so a
+  workflow never commits a registry the build refuses, and a malformed registry is refused by
+  name.
 - Both data workflows (`refresh-data.yml`, `apply-suggestions.yml`) run `build:slugs` and commit
   the registry with the data, so a deploy never meets an unregistered page.
 - A record that is renamed keeps its slug: a URL that keeps working beats one that matches the
@@ -122,11 +129,14 @@ section C's PR; the app-shell card (`icons/og.png`) already exists.
 - Generator: writes one file per qualifying trek, cleans stale output, refuses on slug
   collision.
 - `scripts/lib/slugs.test.ts`: a registered slug survives a change of build order; a rescanned
-  record at the same place with the same name takes over its slug; a different name or a point
-  more than 120 m away does not; a retired slug is never reassigned; a free bare slug is used;
-  updating is idempotent; the build refuses an unregistered page, a record with two slugs and an
-  unusable slug; the first registry equals today's slugs; `runBuildSlugs` bootstraps and then
-  only adds.
+  record at the same place with the same name takes over its slug; a different name, a name the
+  slug merely starts with, or a point more than 120 m away does not; a record still in the
+  dataset without a page keeps its slug; a retired slug is never reassigned; a free bare slug is
+  used; updating is idempotent; the build refuses an unregistered page, a record with two slugs
+  and an unusable slug, and accepts an upper-case Wikidata suffix; a malformed registry is
+  refused by name; the first registry equals today's slugs; `runBuildSlugs` bootstraps, only
+  adds, and refuses to write a registry the build would refuse; and the committed registry gives
+  every page of the committed dataset exactly one usable slug.
 - E2E: a generated page returns 200 with the trek name in the served HTML (not injected by
   JS), its canonical is absolute and correct, and its map link deep-links to the app.
 

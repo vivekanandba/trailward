@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { registryFromSlugMap, slugsFromRegistry, updateRegistry, type SlugRegistry } from "./slugs";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import {
+  readRegistry,
+  registryFromSlugMap,
+  slugsFromRegistry,
+  updateRegistry,
+  type SlugRegistry,
+} from "./slugs";
+import { qualifyingTreks } from "./pages";
 import type { Trek } from "../../src/lib/trek";
 import { memoryIO } from "./buildIO";
 import { runBuildSlugs } from "../build-slugs";
@@ -48,6 +57,34 @@ describe("updateRegistry", () => {
     expect(registry["kote-betta-d12-8-8"].id).toBe("d12-8-8");
   });
 
+  it("re-attaches only on the same name, not a name the slug merely starts with", () => {
+    // "Kote" would take /t/kote-betta/ and "Nandi" /t/nandi-hills-gn-4/ by prefix.
+    const reg: SlugRegistry = {
+      "kote-betta": { id: "d12-1-2", lat: 13.0, lng: 77.0 },
+      "nandi-hills-gn-4": { id: "gn-4", lat: 13.1, lng: 77.1 },
+      "nandi-gn-7-2": { id: "gn-7", lat: 13.2, lng: 77.2 },
+    };
+    const kote = mk("d12-9-9", "Kote", 13.0005, 77.0005);
+    const nandi = mk("d12-8-8", "Nandi", 13.1005, 77.1005);
+    const { registry, moved } = updateRegistry([kote, nandi], reg);
+    expect(moved).toEqual([]);
+    expect(registry["kote-betta"].id).toBe("d12-1-2");
+    expect(registry["nandi-hills-gn-4"].id).toBe("gn-4");
+    // The second-collision form of the same name does re-attach.
+    const again = updateRegistry([mk("d12-7-7", "Nandi", 13.2005, 77.2005)], reg);
+    expect(again.moved).toEqual(["nandi-gn-7-2"]);
+  });
+
+  it("keeps the slug of a record still in the dataset while it has no page", () => {
+    // gn-5 dropped below the page bar this build; a same-named rescan nearby
+    // must not take its URL, which waits for the page to come back.
+    const reg: SlugRegistry = { "kote-betta": { id: "gn-5", lat: 13.0, lng: 77.0 } };
+    const dup = mk("d12-1-1", "Kote Betta", 13.0005, 77.0005);
+    const { registry, moved } = updateRegistry([dup], reg, new Set(["gn-5", "d12-1-1"]));
+    expect(moved).toEqual([]);
+    expect(registry["kote-betta"].id).toBe("gn-5");
+  });
+
   it("never hands a retired slug to a different peak", () => {
     // The page for gn-1 is gone this build; its slug stays reserved.
     const reg: SlugRegistry = { "kote-betta": { id: "gn-1", lat: 20, lng: 80 } };
@@ -89,6 +126,34 @@ describe("slugsFromRegistry", () => {
     const reg: SlugRegistry = { "Bad Slug": { id: "gn-1", lat: 13, lng: 77 } };
     expect(() => slugsFromRegistry([mk("gn-1", "A")], reg)).toThrow(/not a usable slug/);
   });
+
+  it("accepts an upper-case Wikidata suffix, as four live URLs have", () => {
+    const reg: SlugRegistry = {
+      "bandarpunch-wd-Q4854459": { id: "wd-Q4854459", lat: 31, lng: 78 },
+    };
+    expect(slugsFromRegistry([mk("wd-Q4854459", "Bandarpunch")], reg).get("wd-Q4854459")).toBe(
+      "bandarpunch-wd-Q4854459",
+    );
+  });
+});
+
+describe("readRegistry", () => {
+  it("refuses a malformed registry by name", () => {
+    expect(() => readRegistry("[{")).toThrow(/slugs\.json is not valid JSON/);
+    expect(() => readRegistry("[]")).toThrow(/slugs\.json is not an object/);
+    expect(() => readRegistry('{"a": null}')).toThrow(/"a" has no record id/);
+  });
+});
+
+describe("the committed registry against the committed dataset (CON-COV-003)", () => {
+  it("gives every real page exactly one usable slug", () => {
+    // Fixtures make their own registries; this is the pair the build reads.
+    const root = resolve(__dirname, "../..");
+    const treks = JSON.parse(readFileSync(resolve(root, "src/data/treks.json"), "utf8")) as Trek[];
+    const reg = readRegistry(readFileSync(resolve(root, "scripts/pages/slugs.json"), "utf8"));
+    const pages = qualifyingTreks(treks);
+    expect(slugsFromRegistry(pages, reg).size).toBe(pages.length);
+  }, 60_000);
 });
 
 describe("registryFromSlugMap — the first registry records today's URLs exactly", () => {
@@ -122,6 +187,16 @@ describe("runBuildSlugs", () => {
       "kote-betta",
       "kote-betta-gn-2",
     ]);
+  });
+
+  it("refuses to write a registry the build would refuse", () => {
+    const io = memoryIO({
+      [P.treks]: JSON.stringify(treks),
+      [P.slugs]: JSON.stringify({ "Bad Slug": { id: "gn-9", lat: 1, lng: 1 } }),
+    });
+    const before = io.files.get(P.slugs);
+    expect(() => runBuildSlugs(io, "/repo")).toThrow(/not a usable slug/);
+    expect(io.files.get(P.slugs)).toBe(before);
   });
 
   it("adds a new page and leaves every existing slug alone", () => {

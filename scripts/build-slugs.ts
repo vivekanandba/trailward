@@ -17,9 +17,10 @@ import { qualifyingTreks } from "./lib/pages";
 import {
   SLUGS_FILE,
   formatRegistry,
+  readRegistry,
   registryFor,
+  slugsFromRegistry,
   updateRegistry,
-  type SlugRegistry,
 } from "./lib/slugs";
 
 export function runBuildSlugs(
@@ -39,8 +40,12 @@ export function runBuildSlugs(
     return { added: Object.keys(first), moved: [], total };
   }
 
-  const previous = JSON.parse(io.readFile(slugsFile)) as SlugRegistry;
-  const { registry, added, moved } = updateRegistry(qualifyingTreks(treks), previous);
+  const previous = readRegistry(io.readFile(slugsFile));
+  const pages = qualifyingTreks(treks);
+  const ids = new Set(treks.map((t) => t.id));
+  const { registry, added, moved } = updateRegistry(pages, previous, ids);
+  // What the build will check, checked before the workflow commits it.
+  slugsFromRegistry(pages, registry);
   io.writeFile(slugsFile, formatRegistry(registry));
   const total = Object.keys(registry).length;
   io.log(`[slugs] ${added.length} added, ${moved.length} re-attached, ${total} in all`);
