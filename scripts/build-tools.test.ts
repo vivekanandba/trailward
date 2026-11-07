@@ -330,6 +330,16 @@ describe("enrichment drift guard (spec 31)", () => {
       "osm-6 (Sesha Parvata): lost image",
     ]);
     expect(carriedLosses([sesha], [sesha])).toEqual([]);
+    // Every carried field, a history note included: it earns a page as well.
+    const note = { text: "A fort in 1908.", source: "Imperial Gazetteer of India", year: 1908 };
+    const full = { ...(sesha as Trek), historicalNote: note, nearestTown: "Somwarpet" };
+    expect(
+      carriedLosses([full], [{ ...full, historicalNote: undefined, nearestTown: undefined }]),
+    ).toEqual(["osm-6 (Sesha Parvata): lost historicalNote and nearestTown"]);
+    // A record promoted to curated is curatedLosses' to judge.
+    expect(
+      carriedLosses([sesha], [{ ...(sesha as Trek), tier: "curated", image: undefined }]),
+    ).toEqual([]);
     expect(carriedLosses([sesha], [])).toEqual([]); // a record gone is not this check's
     const cur = trek({ id: "c", name: "C", tier: "curated", image: img });
     expect(carriedLosses([cur], [{ ...(cur as Trek), image: undefined }])).toEqual([]); // curatedLosses' job

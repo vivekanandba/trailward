@@ -11,7 +11,7 @@
  * A region whose essential fetch fails is skipped — its prior records are left
  * intact, never silently emptied; enrichment is best-effort per peak.
  */
-import { CARRYOVER_KM } from "./lib/carryover";
+import { CARRYOVER_KM, DISCOVERY_CARRIED } from "./lib/carryover";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -113,22 +113,8 @@ export function dedupeAgainstCurated(discovery: Trek[], curated: Trek[]): Trek[]
 // build:hillfeatures) — this pipeline regenerates discovery records wholesale,
 // so without carrying these over, every weekly cron run would silently wipe
 // them until someone re-ran the hand tools.
-const PRESERVED_FIELDS = [
-  "bestSeason",
-  "landCover",
-  "historicalNote",
-  "hillFeatures",
-  "protectedArea",
-  "heritage",
-  // Fetched best-effort every run (nearest article, nearby Commons photos,
-  // nearest town): a lookup that misses this week is not evidence the photo
-  // or text is gone. The 2026-11-07 refresh lost 21 photos this way, and 17
-  // peaks lost their published page with them (spec 10).
-  "image",
-  "gallery",
-  "highlights",
-  "nearestTown",
-] as const;
+// The list lives in lib/carryover.ts, shared with the drift guard (spec 10).
+const PRESERVED_FIELDS = DISCOVERY_CARRIED;
 
 /**
  * Copy hand-baked enrichment from the previous dataset onto freshly

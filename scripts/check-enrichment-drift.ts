@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
-import { photoCarries } from "./lib/carryover";
+import { DISCOVERY_CARRIED, photoCarries } from "./lib/carryover";
 import { qualifies, qualifyingTreks } from "./lib/pages";
 
 const FIELDS = [
@@ -74,12 +74,10 @@ export function curatedLosses(head: Trek[], now: Trek[]): string[] {
   return out;
 }
 
-/** What discovery carries over when a lookup misses (PRESERVED_FIELDS). */
-const CARRIED = ["image", "gallery", "highlights", "nearestTown"] as const;
-
 /**
- * Non-curated records that kept their id but lost a photo, gallery, text or
- * nearest town. Discovery carries those over when a lookup misses (spec 10),
+ * Non-curated records that kept their id but lost any field discovery
+ * carries (photo, gallery, text, history note, nearest town, land cover…).
+ * Discovery carries those over when a lookup misses (spec 10),
  * so any such loss means the carry broke: per record, no tolerance. This is
  * the cause, caught before its effects: on 2026-11-07, 21 photos went, 16
  * pages that rested on them went too, and a 17th (Dipadakallu) was pushed out
@@ -91,8 +89,8 @@ export function carriedLosses(head: Trek[], now: Trek[]): string[] {
   for (const t of head) {
     const n = nowById.get(t.id);
     if (!n || t.tier === "curated" || n.tier === "curated") continue; // curated: curatedLosses
-    const lost = CARRIED.filter((f) => t[f] !== undefined && n[f] === undefined);
-    if (lost.length > 0) out.push(`${t.id} (${t.name}): lost ${lost.join(", ")}`);
+    const lost = DISCOVERY_CARRIED.filter((f) => t[f] !== undefined && n[f] === undefined);
+    if (lost.length > 0) out.push(`${t.id} (${t.name}): lost ${lost.join(" and ")}`);
   }
   return out;
 }
