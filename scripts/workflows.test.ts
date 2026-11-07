@@ -200,6 +200,8 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
       const publish = steps.find((st) => /gh workflow run deploy\.yml/.test(st.run ?? ""));
       expect(publish, `${f} dispatches the deploy`).toBeDefined();
       expect(publish?.if, f).toMatch(/steps\.land\.outputs\.pushed == 'true'/);
+      const perms = (wf as { permissions?: Record<string, string> }).permissions ?? {};
+      expect(perms.actions, `${f} may dispatch the deploy`).toBe("write");
     }
   });
 

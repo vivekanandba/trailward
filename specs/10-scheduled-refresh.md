@@ -27,8 +27,8 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - **Given** the run landed its commit, **then** it dispatches the deploy: a push made with the
   workflow's own token starts no other workflow, so the data would otherwise sit on main
   unpublished until a person pushed.
-- **Given** a commit happens, **when** pushed to `main`, **then** the gated deploy workflow (09)
-  runs and republishes only if data + tests pass.
+- **Given** the data landed on `main`, **then** the dispatched deploy workflow (09) builds and
+  publishes it; the bot's push alone would start nothing.
 - **Given** `workflow_dispatch`, **when** triggered manually, **then** the same refresh runs.
 - **Given** any scheduled workflow (refresh, name suggestions, link check, live API check),
   **when** its work job ends, **then** a separate `report-failure` job reports the result: a
@@ -108,7 +108,7 @@ of treks.json`.
 - No changes this week → no commit, no redeploy (logged "No data changes").
 - Validation fails after build → job fails **before** committing; last good data stays live.
 - Source outage → pipeline skips optional fields (per 02); only a structural failure blocks.
-- Avoid infinite loops: the data-commit triggers deploy, not another refresh.
+- Avoid infinite loops: landing data dispatches the deploy, not another refresh.
 
 - **Incident, 2026-08-10 → 2026-10-26: every weekly run failed and nobody saw it.** `build:data`
   wrote `treks.json` with only the 16 curated records, so `build:discovery` preserved enrichment

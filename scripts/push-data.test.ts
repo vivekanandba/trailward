@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -23,15 +23,19 @@ function clone(to: string): string {
 }
 
 function push(recheck: string): { status: number | null; out: string } {
-  const r = spawnSync("bash", [script, "chore(data): refresh", recheck, "data.json"], {
-    cwd: runner,
-    env: {
-      ...process.env,
-      GITHUB_REF_NAME: "main",
-      GITHUB_OUTPUT: join(runner, "..", "gh-output"),
+  const r = spawnSync(
+    "bash",
+    [script, "chore(data): refresh", recheck, "data.json", "--", "derived.txt"],
+    {
+      cwd: runner,
+      env: {
+        ...process.env,
+        GITHUB_REF_NAME: "main",
+        GITHUB_OUTPUT: join(runner, "..", "gh-output"),
+      },
+      encoding: "utf8",
     },
-    encoding: "utf8",
-  });
+  );
   return { status: r.status, out: `${r.stdout}${r.stderr}` };
 }
 
@@ -44,6 +48,7 @@ beforeEach(() => {
   const seed = clone(join(dir, "seed"));
   writeFileSync(join(seed, "data.json"), "old\n");
   writeFileSync(join(seed, "code.txt"), "v1\n");
+  writeFileSync(join(seed, "derived.txt"), "from old\n");
   git(seed, "add", ".");
   git(seed, "commit", "-q", "-m", "seed");
   git(seed, "push", "-q", "origin", "HEAD:main");
@@ -88,6 +93,29 @@ describe("push-data.sh", () => {
     expect(r.status).not.toBe(0);
     expect(existsSync(join(runner, "..", "gh-output"))).toBe(false); // nothing to publish
     expect(mainHas("data.json")).toBe("old\n");
+  });
+
+  it("rebuilds a derived file main regenerated meanwhile, instead of refusing", () => {
+    // Derived files are main's; only this run's source data is carried over.
+    writeFileSync(join(runner, "data.json"), "new\n");
+    writeFileSync(join(runner, "derived.txt"), "from new (old code)\n");
+    writeFileSync(join(other, "derived.txt"), "regenerated on main\n");
+    git(other, "commit", "-qam", "regenerate");
+    git(other, "push", "-q");
+    const r = push('printf "from %s" "$(cat data.json)" > derived.txt');
+    expect(r.status, r.out).toBe(0);
+    expect(mainHas("data.json")).toBe("new\n");
+    expect(mainHas("derived.txt")).toBe("from new");
+  });
+
+  it("says a refused push is refused, and does not retry it as a race", () => {
+    writeFileSync(join(remote, "hooks", "pre-receive"), "#!/bin/sh\necho protected >&2\nexit 1\n");
+    chmodSync(join(remote, "hooks", "pre-receive"), 0o755);
+    writeFileSync(join(runner, "data.json"), "new\n");
+    const r = push("true");
+    expect(r.status).not.toBe(0);
+    expect(r.out).toMatch(/push refused:.*protected/s);
+    expect(r.out).not.toMatch(/raced/);
   });
 
   it("refuses when the branch changed the same data", () => {

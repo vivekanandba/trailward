@@ -33,17 +33,17 @@ jobs:
       - run: npm run apply:names
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: npm run build:chunks
-      # A named pin may earn a page; record its URL (spec 35).
-      - run: npm run build:slugs
+      # Chunks, and a URL for a named pin that earns a page (spec 35); the same
+      # npm script the landing step reruns on top of a moved main.
+      - run: npm run derive:data
       # Lands on whatever main became while this ran: if it moved, the data is
       # re-derived and re-checked on top of it first (spec 10).
       - name: Commit applied names
         id: land
         run: >-
           scripts/push-data.sh "chore(names): apply community name suggestions"
-          "npm ci && npm run build:chunks && npm run build:slugs && npm run validate:data"
-          scripts/detected src/data/treks.json public/data scripts/pages
+          "npm ci && npm run derive:data && npm run validate:data"
+          scripts/detected src/data/treks.json -- public/data scripts/pages
       # A push with the workflow's own token starts no other workflow, so the
       # data would sit on main unpublished until a person pushed; a dispatch
       # does start one (spec 10, spec 09).
