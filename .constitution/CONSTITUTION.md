@@ -171,6 +171,34 @@ CON-PROC-004 gets you the first round; this one tells you when to stop. Trust a 
 only after mutating the code it guards and watching it fail (CON-PROC-005 applied to a test
 written after the code) — several that could not fail were found exactly that way.
 
+### CON-PROC-011 · A rule with no enforcing mechanism is a wish
+Any rule worth stating is worth wiring to a gate. When you write a principle, name the
+check that fails when it is broken; if none exists, build it or record the rule as
+unenforced — never leave the reader to infer which. Ported from the fleet constitution's
+Article I (2026-10-03), whose own incident was that rules kept being restated in project
+after project rather than checked. Every rule here names what enforces it for this reason.
+
+### CON-PROC-012 · Partial is not done
+A contract four-fifths met stays `planned`. Do not mark something shipped because most of
+the sentence is true; if the remainder is separable, split the contract deliberately in the
+spec rather than softening what it said. Incident (viveka): `VIV-MEDIA-003` requires an
+experience to record "status, rating, feelings, notes and journal relationships" — the
+first four exist, there is no journal relationship field, and it stays planned. A spec gate
+can check that a contract *has* evidence, never that the evidence is honest, so this one is
+enforced by review. Ported from Article III (2026-10-03).
+
+### CON-PROC-013 · A learning in one project is promoted to the fleet
+This is the rule the others depend on. When something is learned that is not specific to
+one codebase, write it **here**, in the same change that acts on it locally: act in the
+project that surfaced it, amend this document citing the incident, and note in the
+project's own guide that it inherits the rule. A learning left in one repository has to be
+re-taught by hand in every other. Incident: viveka's contract-registry gate was designed
+and built from scratch in August 2026, weeks after wealth-weave had shipped the same idea
+as `WW-SPEC-0001`; neither repository knew about the other and the work was done twice.
+Enforced by `~/data-dash/fleet-audit.sh` and the weekly `tools/harvest.py`, which report
+which projects carry the rules and whether their specs pass the shared checker. Ported from
+Article X (2026-10-03).
+
 ---
 
 ## CON-SEC — Secrets and security

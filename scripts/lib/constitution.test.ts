@@ -13,7 +13,7 @@ import {
 } from "./constitution";
 
 const VALID = JSON.stringify({
-  repo: "https://github.com/vivekanandba/constitution",
+  repo: "https://github.com/vivekanandba/fleet",
   ref: "main",
   commit: "76d7593abcdef0123456789abcdef0123456789a",
   sha256: "03ab3c86dc3032cadd24daa0b1e0da6e41cd956c9aaed3d1043e678d232bb821",
@@ -44,7 +44,7 @@ describe("findLocalPaths (spec 39 — the local clone must never be referenced)"
   });
 
   it("accepts the remote URL and ordinary prose", () => {
-    expect(findLocalPaths("https://github.com/vivekanandba/constitution")).toEqual([]);
+    expect(findLocalPaths("https://github.com/vivekanandba/fleet")).toEqual([]);
     expect(findLocalPaths("the engineering constitution defines CON-VER-001")).toEqual([]);
   });
 });
@@ -145,7 +145,7 @@ describe("decodeGhContent (spec 39 — base64 must be joined before decoding)", 
 
 describe("nextLock — commit and sha256 move together (spec 39)", () => {
   const lock = {
-    repo: "https://github.com/vivekanandba/constitution",
+    repo: "https://github.com/vivekanandba/fleet",
     ref: "main",
     commit: "0".repeat(40),
     sha256: "a".repeat(64),
@@ -201,7 +201,7 @@ describe("parseCommitSha (spec 39)", () => {
 
 describe("fetchRemote (spec 39) — the fetch policy", () => {
   const lock = {
-    repo: "https://github.com/vivekanandba/constitution",
+    repo: "https://github.com/vivekanandba/fleet",
     ref: "main",
     commit: "0".repeat(40),
     sha256: "a".repeat(64),

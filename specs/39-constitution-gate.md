@@ -5,8 +5,8 @@
 
 ## Purpose
 
-Machine-wide engineering rules live in a separate repository. Today this repo reaches them
-through a **local clone** — `~/.claude/CLAUDE.md` is a symlink into `~/data-dash/constitution`,
+Machine-wide engineering rules live in a separate repository, `vivekanandba/fleet`. When this
+spec was written this repo reached them through a **local clone** — `~/.claude/CLAUDE.md` is a symlink into `~/data-dash/constitution`,
 and `CLAUDE.md` names that path in prose. That clone is a working copy: at the time of writing
 it sat on branch `tools/cost-report` with uncommitted edits, while `origin/main` was three
 commits ahead. The rules a session loads could therefore differ from the rules the team agreed,
@@ -22,7 +22,7 @@ version it was verified against, and a gate fails the build when they disagree.
 
 ```json
 {
-  "repo": "https://github.com/vivekanandba/constitution",
+  "repo": "https://github.com/vivekanandba/fleet",
   "ref": "main",
   "commit": "<40-char sha>",
   "sha256": "<hash of CONSTITUTION.md at that commit>"
@@ -89,6 +89,7 @@ when a token is present. Whichever lands, only the fetch function changes.
 
 ## Out of scope
 
-Editing the constitution repo (another session owns its migration to remote); vendoring the
+Editing the constitution repo (it now lives at `vivekanandba/fleet`, the old
+`vivekanandba/constitution` name redirecting to it; amendments land there through review); vendoring the
 skills; enforcing rules' _content_ — this gate enforces that the rules are correctly referenced
 and unchanged, not that the code obeys them.
