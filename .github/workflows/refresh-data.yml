@@ -38,3 +38,17 @@ jobs:
           else
             echo "No data changes this run."
           fi
+
+  # A red scheduled run emails only whoever last edited the cron (spec 10):
+  # file a failure, close the issue on the next success.
+  report-failure:
+    needs: refresh
+    # Only main's runs speak for production; a dispatch on a branch does not.
+    if: always() && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/report-failure.yml
+    with:
+      title: "Weekly data refresh is failing"
+      result: ${{ needs.refresh.result }}

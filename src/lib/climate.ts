@@ -67,6 +67,19 @@ export function bestSeasonFrom(monthly: MonthlyRain): string | undefined {
   return dry.length === 1 ? `${start} (driest)` : `${start}–${end} (driest)`;
 }
 
+/**
+ * The best season for a point from a rainfall grid, or undefined where the grid
+ * has no cell or the cell no clear dry season. The one derivation both
+ * build:climate and build:data use, so they cannot disagree (spec 20, spec 10).
+ */
+export function seasonFor(
+  grid: Record<string, MonthlyRain>,
+  point: { lat: number; lng: number },
+): string | undefined {
+  const monthly = grid[climateCellKey(point.lat, point.lng)];
+  return monthly ? bestSeasonFrom(monthly) : undefined;
+}
+
 /** Wettest month index + amount, for an "avoid" hint. */
 export function wettestMonth(monthly: MonthlyRain): { month: string; mm: number } | undefined {
   if (monthly.length !== 12) return undefined;

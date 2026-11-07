@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
+import { photoCarries } from "./lib/carryover";
 
 const FIELDS = [
   "name", // counted as non-"Unnamed" — a naming regression is a data loss too
@@ -35,6 +36,37 @@ export function fieldCounts(treks: Trek[]): Record<string, number> {
     }
   }
   return counts;
+}
+
+/**
+ * Fields a weekly refresh never legitimately removes from a curated record:
+ * the road distance and drive time (`run` fields, never carried stale, so a
+ * route-service hiccup drops them outright) and the photo (carried unless the
+ * seed moves more than 120 m or cites other sources, both reviewed edits, not
+ * refresh events; six were once lost to a source that changed shape). Spec 10.
+ */
+const CURATED_KEPT = ["distanceKm", "driveTimeMin", "image"] as const;
+
+/**
+ * One line per curated field that the committed record had and this one
+ * lacks, compared per record and per field with no tolerance: there are only
+ * 16, and a count would let one record's gain hide another's loss. A record
+ * new to the file or to the curated tier, or a field it never had, is not a loss.
+ */
+export function curatedLosses(head: Trek[], now: Trek[]): string[] {
+  const before = new Map(head.map((t) => [t.id, t]));
+  const out: string[] = [];
+  for (const t of now) {
+    const prev = before.get(t.id);
+    // Curated then and now: a pin promoted this run never had curated facts.
+    if (t.tier !== "curated" || prev?.tier !== "curated") continue;
+    // A photo the fold dropped on purpose (the seed moved, or cites other
+    // sources) is the fold's own rule, not a loss.
+    const kept = CURATED_KEPT.filter((f) => f !== "image" || photoCarries(prev, t));
+    const lost = kept.filter((f) => prev[f] !== undefined && t[f] === undefined);
+    if (lost.length > 0) out.push(`${t.id}: lost ${lost.join(" and ")}`);
+  }
+  return out;
 }
 
 // Hand-curated fields have tiny counts (heritage: 2) where one record moving
@@ -63,20 +95,25 @@ export function driftViolations(
 async function main(): Promise<void> {
   const here = dirname(fileURLToPath(import.meta.url));
   const treksFile = resolve(here, "../src/data/treks.json");
-  const current = fieldCounts(JSON.parse(readFileSync(treksFile, "utf8")) as Trek[]);
+  const now = JSON.parse(readFileSync(treksFile, "utf8")) as Trek[];
+  const current = fieldCounts(now);
   const headJson = execFileSync("git", ["show", "HEAD:src/data/treks.json"], {
     cwd: here,
     maxBuffer: 1024 * 1024 * 256,
     encoding: "utf8",
   });
-  const baseline = fieldCounts(JSON.parse(headJson) as Trek[]);
+  const head = JSON.parse(headJson) as Trek[];
+  const baseline = fieldCounts(head);
 
   for (const [field, n] of Object.entries(current)) {
     console.log(`[drift] ${field}: ${baseline[field]} → ${n}`);
   }
   const violations = driftViolations(baseline, current);
+  const lost = curatedLosses(head, now);
+  console.log(`[drift] curated records that lost a kept field: ${lost.length}`);
+  for (const l of lost) violations.push(`curated ${l}`);
   if (violations.length > 0) {
-    console.error(`[drift] enrichment dropped beyond ${TOLERANCE * 100}% tolerance:`);
+    console.error(`[drift] enrichment dropped:`);
     for (const v of violations) console.error(`  ${v}`);
     process.exit(1);
   }

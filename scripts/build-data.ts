@@ -9,11 +9,15 @@
  * real (network) enrichers and writes the file. Enrichment is best-effort: a
  * source that errors is skipped for that field, never failing the whole run.
  */
-import { writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Origin, Trek } from "../src/lib/trek";
 import { validateDataset, validateTrek } from "../src/lib/trek";
+import { distanceFrom } from "../src/lib/distance";
+import { nodeIO, type BuildIO } from "./lib/buildIO";
+import { CARRYOVER_KM, photoCarries } from "./lib/carryover";
+import { seasonFor, type MonthlyRain } from "../src/lib/climate";
+import climateGrid from "../src/data/climate.json";
 import { mergeTrek } from "./sources/merge";
 import { BANGALORE_ORIGIN, BANGALORE_SEED } from "./seed/bangalore";
 import { fetchElevations } from "./sources/elevation";
@@ -33,6 +37,8 @@ export interface Enrichers {
   wiki?(seed: Trek): Promise<WikiInfo | undefined>;
   /** Scraped difficulty/permit/fee from an allowlisted page. */
   scrape?(seed: Trek): Promise<Partial<Trek>>;
+  /** Best season from the committed rainfall grid, for a seed that states none. */
+  season?(seed: Trek): string | undefined;
 }
 
 async function safe<T>(p: Promise<T> | undefined, label: string): Promise<T | undefined> {
@@ -73,6 +79,11 @@ export async function buildDataset(
     const elevation = await safe(enrichers.elevation?.(seed), `elevation(${seed.id})`);
     if (elevation !== undefined) parts.push({ elevationM: elevation });
 
+    // Derived this run, as build:climate would, so bestSeason stays a `run`
+    // field; the seed's own season wins by its precedence in `parts`.
+    const season = enrichers.season?.(seed);
+    if (season) parts.push({ bestSeason: season });
+
     const merged = mergeTrek(parts);
     const res = validateTrek(merged);
     if (!res.ok) {
@@ -86,6 +97,191 @@ export async function buildDataset(
   return ds.treks;
 }
 
+/**
+ * Who decides each field of a curated record on a refresh (spec 10). A
+ * `Record` over every key of Trek, so a new field fails to compile until it is
+ * classified here: a hand-kept list of names silently missed five.
+ *
+ * - `run`: this run alone decides — the seed, then this run's enrichers. A
+ *   field removed from the seed is removed; one an enricher supplied before
+ *   and not this time is dropped too, because a curator may have removed it.
+ * - `place`: baked for the summit's location by another tool (terrain, land
+ *   cover, gazetteer, hill features). Kept unless this run produced a value,
+ *   and only while the seed still points at the same place. Road distance is
+ *   NOT here: it is a fact about the route from the origin, so it is `run`,
+ *   and the drift guard refuses a refresh that lost it wholesale.
+ * - `sources`: the photo, taken from the article the seed cites. Kept only
+ *   while the place AND the cited sources are unchanged. A lookup that came
+ *   back without one is not evidence the photo is gone: that is how six were
+ *   lost when the source changed shape (spec 10). A photo whose article
+ *   dropped it stays until a curator changes the seed's sources; a dead
+ *   image URL is the weekly link check's to find.
+ */
+type Owner = "run" | "place" | "sources";
+const OWNER: Record<keyof Trek, Owner> = {
+  id: "run",
+  name: "run",
+  lat: "run",
+  lng: "run",
+  cityId: "run",
+  tier: "run",
+  sources: "run",
+  verified: "run",
+  detected: "run",
+  elevationM: "run",
+  difficulty: "run",
+  type: "run",
+  permitRequired: "run",
+  entryFee: "run",
+  nightTrek: "run",
+  highlights: "run",
+  nearestTown: "run",
+  trailLengthKm: "run",
+  trailType: "run",
+  durationHrs: "run",
+  // Discovery-tier signals; a curated record has a curator's difficulty and
+  // is not a "hidden gem", so a promoted pin's must not follow it.
+  discoveryScore: "run",
+  estimatedDifficulty: "run",
+  // The seed's, else derived this run from the committed rainfall grid, so a
+  // season the curator deleted is gone and a seed with none still gets one.
+  bestSeason: "run",
+  // Facts about the route from the origin, not about the summit: a stale one
+  // must not outlive the run that could not measure it.
+  distanceKm: "run",
+  driveTimeMin: "run",
+  reliefM: "place",
+  prominenceProxyM: "place",
+  meanSlopeDeg: "place",
+  terrainConfidence: "place",
+  trail: "place",
+  pois: "place",
+  gallery: "place",
+  altNames: "place",
+  landCover: "place",
+  historicalNote: "place",
+  protectedArea: "place",
+  heritage: "place",
+  hillFeatures: "place",
+  image: "sources",
+};
+
+/** `next`'s fields, in `prev`'s key order (then any new keys), so a refresh diffs cleanly. */
+function inKeyOrderOf(prev: Trek, next: Record<string, unknown>): Trek {
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(prev)) if (k in next) out[k] = next[k];
+  for (const k of Object.keys(next)) if (!(k in out)) out[k] = next[k];
+  return out as unknown as Trek;
+}
+
+/**
+ * Fold freshly built curated records into the committed dataset (spec 10).
+ * build-data owns only the curated tier; every other record is kept exactly,
+ * because build:discovery reads this file as the previous dataset and preserves
+ * enrichment from it. A curated record keeps `place` and `sources` fields this
+ * run did not produce, under the conditions in OWNER. Curated records whose
+ * seed is gone are dropped.
+ */
+export function foldCurated(built: Trek[], existing: Trek[]): Trek[] {
+  // Every tier: a seed that promotes a discovery pin to curated takes over
+  // that record (and what was baked for its place) rather than duplicating it.
+  const prevById = new Map(existing.map((t) => [t.id, t]));
+  const builtIds = new Set(built.map((t) => t.id));
+  const curated = built.map((t) => {
+    const prev = prevById.get(t.id);
+    if (!prev) return t;
+    const fresh = Object.fromEntries(Object.entries(t).filter(([, v]) => v !== undefined));
+    // A seed whose coordinates moved further than discovery's rescan distance
+    // (spec 27) describes a different point; nothing baked for the old one carries.
+    const samePlace = distanceFrom(prev, t) <= CARRYOVER_KM;
+    const keep = (k: string): boolean => {
+      const owner = OWNER[k as keyof Trek];
+      if (owner === "place") return samePlace;
+      if (owner === "sources") {
+        return photoCarries(prev, t);
+      }
+      return false; // "run", or a key Trek does not declare
+    };
+    const carried = Object.fromEntries(
+      Object.entries(prev).filter(([k, v]) => !(k in fresh) && v !== undefined && keep(k)),
+    );
+    return inKeyOrderOf(prev, { ...fresh, ...carried });
+  });
+  return [...curated, ...existing.filter((t) => keptByFold(t, builtIds))];
+}
+
+/**
+ * Whether the fold keeps a committed record exactly as it is: any record not
+ * curated that no seed rebuilds. Curated records are rebuilt or dropped. The
+ * one rule, used by the fold and by runBuildData's check before enrichment.
+ */
+export function keptByFold(t: Trek, rebuiltIds: ReadonlySet<string>): boolean {
+  return t.tier !== "curated" && !rebuiltIds.has(t.id);
+}
+
+/**
+ * The whole build:data run against a filesystem (spec 10), so the fold that
+ * main() writes is tested, not only the fold function: the original bug lived
+ * here, in a write that replaced the file instead of folding into it.
+ */
+export async function runBuildData(
+  io: BuildIO,
+  file: string,
+  seeds: Trek[],
+  origin: Origin,
+  enrichers: Enrichers,
+): Promise<{ curated: number; total: number }> {
+  // A malformed file must read as invalid, by name, not crash the fold, and
+  // before minutes of rate-limited enrichment rather than after.
+  const refuse = (why: string): never => {
+    throw new Error(`[build-data] ${file} ${why} — refusing to fold into it`);
+  };
+  let parsed: unknown = [];
+  if (io.exists(file)) {
+    try {
+      parsed = JSON.parse(io.readFile(file));
+    } catch (err) {
+      refuse(`is not valid JSON (${(err as Error).message})`);
+    }
+  }
+  if (!Array.isArray(parsed)) refuse("is not an array of treks");
+  // What the fold reads, and every record it keeps exactly (keptByFold, its
+  // own rule), checked here and located by index. A curated record is rebuilt
+  // or dropped, so a tightened rule it breaks is repaired, not refused.
+  const entries = parsed as unknown[];
+  // Seed ids stand in for the ids buildDataset returns: it yields exactly one
+  // record per seed or throws.
+  const rebuilt = new Set(seeds.map((s) => s.id));
+  const seen = new Map<string, number>();
+  entries.forEach((t, i) => {
+    if (typeof t !== "object" || t === null || typeof (t as Trek).id !== "string") {
+      refuse(`has an entry at index ${i} that is not a trek with an id`);
+    }
+    // The fold looks records up by id, so a second copy would silently win.
+    const id = (t as Trek).id;
+    if (seen.has(id)) refuse(`has id '${id}' at index ${seen.get(id)} and again at ${i}`);
+    seen.set(id, i);
+    if (!keptByFold(t as Trek, rebuilt)) return;
+    const res = validateTrek(t);
+    if (!res.ok) refuse(`has an invalid record at index ${i}: ${res.error}`);
+  });
+  const existing = entries as Trek[];
+  const treks = await buildDataset(seeds, origin, enrichers);
+  const ds = validateDataset(foldCurated(treks, existing));
+  if (!ds.ok) {
+    // Everything the fold keeps exactly was checked above, so this is a field
+    // it carried (place or photo) onto a rebuilt or promoted record.
+    throw new Error(
+      `[build-data] folding into ${file} gives an invalid dataset, nothing written: ${ds.error}`,
+    );
+  }
+  io.writeFile(file, JSON.stringify(ds.treks) + "\n");
+  io.log(
+    `[build-data] ${treks.length} curated treks folded into ${ds.treks.length} records → ${file}`,
+  );
+  return { curated: treks.length, total: ds.treks.length };
+}
+
 // ---- CLI shell: wire the real network enrichers and write the file. ---------
 
 export function liveEnrichers(): Enrichers {
@@ -97,6 +293,7 @@ export function liveEnrichers(): Enrichers {
       return m;
     },
     route: (origin, seed) => fetchRoute(origin, { lat: seed.lat, lng: seed.lng }),
+    season: (seed) => seasonFor(climateGrid as Record<string, MonthlyRain>, seed),
     wiki: async (seed) => {
       const title = seed.sources.map(titleFromWikiUrl).find((t): t is string => Boolean(t));
       return title ? fetchWiki(title) : undefined;
@@ -112,12 +309,9 @@ export function liveEnrichers(): Enrichers {
 
 async function main(): Promise<void> {
   console.log(`[build-data] building from ${BANGALORE_SEED.length} curated seeds…`);
-  const treks = await buildDataset(BANGALORE_SEED, BANGALORE_ORIGIN, liveEnrichers());
-
   const here = dirname(fileURLToPath(import.meta.url));
-  const out = resolve(here, "../src/data/treks.json");
-  writeFileSync(out, JSON.stringify(treks, null, 2) + "\n", "utf8");
-  console.log(`[build-data] wrote ${treks.length} validated treks → ${out}`);
+  const file = resolve(here, "../src/data/treks.json");
+  await runBuildData(nodeIO, file, BANGALORE_SEED, BANGALORE_ORIGIN, liveEnrichers());
 }
 
 // Run only when invoked directly (not when imported by tests).
