@@ -7,6 +7,8 @@
  * pages must render standalone, and shipping 600 KB of React to show a fact
  * table would be absurd.
  */
+import { toDms } from "../../src/lib/coords";
+import { googleMapsDirectionsUrl } from "../../src/lib/directions";
 import type { Trek } from "../../src/lib/trek";
 import { absoluteUrl, jsonLdScript, trekJsonLd } from "../../src/lib/seo";
 
@@ -51,6 +53,10 @@ figcaption,.note cite{font-size:.8rem;color:var(--muted)}
 .note p{margin:0 0 .5rem}
 footer{margin-top:3rem;font-size:.85rem;color:var(--muted)}
 ul{padding-left:1.1rem}
+.print-only{display:none}
+@media print{:root{--ink:#000;--bg:#fff;--muted:#333;--card:#fff;--line:#999}.cta-row,.back{display:none}
+.wrap{max-width:none;padding:0}h1{font-size:1.8rem}figure img{max-height:9cm;width:auto}
+.print-only{display:block}a{text-decoration:none}}
 `.trim();
 
 /** A fact row, omitted entirely when the record lacks the fact. `false` is
@@ -60,7 +66,13 @@ const row = (label: string, value?: string | number | false): string =>
     ? ""
     : `<tr><th>${esc(label)}</th><td>${esc(String(value))}</td></tr>`;
 
-export function renderTrekPage(trek: Trek, slug: string): string {
+/**
+ * A trek's static page (spec 35). It prints as a field card (spec 44 R5): the
+ * coordinates in degrees-minutes-seconds, the directions URL written out, and
+ * the date of the data it shows (the last refresh of treks.json) — a static
+ * page runs no script, so it cannot know the day it is printed.
+ */
+export function renderTrekPage(trek: Trek, slug: string, dataAsOf?: string): string {
   const canonical = absoluteUrl(`t/${slug}/`);
   const kind = trek.difficulty ?? trek.estimatedDifficulty;
   const title = `${trek.name}${trek.elevationM ? ` (${trek.elevationM} m)` : ""} — Trailward`;
@@ -82,6 +94,7 @@ export function renderTrekPage(trek: Trek, slug: string): string {
     row("Mean slope", trek.meanSlopeDeg !== undefined && `${trek.meanSlopeDeg}°`),
     row("Night trek", trek.nightTrek === true && "Popular"),
     row("Coordinates", `${trek.lat.toFixed(4)}, ${trek.lng.toFixed(4)}`),
+    row("Coordinates (DMS)", toDms(trek.lat, trek.lng)),
   ]
     .filter(Boolean)
     .join("\n      ");
@@ -129,17 +142,19 @@ export function renderTrekPage(trek: Trek, slug: string): string {
   </head>
   <body>
     <main class="wrap">
-      <p class="sub"><a href="/trailward/">← Trailward</a></p>
+      <p class="sub back"><a href="/trailward/">← Trailward</a></p>
       <h1>${esc(trek.name)}</h1>
       <p class="sub">${esc(description)}</p>
-      <p><a class="cta" href="/trailward/?sel=${esc(trek.id)}">Open on the map →</a></p>
+      <p class="cta-row"><a class="cta" href="/trailward/?sel=${esc(trek.id)}">Open on the map →</a></p>
       ${photo}
       <table>
       ${facts}
       </table>
       ${note}
+      <p class="print-only">Directions: ${esc(googleMapsDirectionsUrl(trek))}</p>
       ${sources}
       <footer>
+        ${dataAsOf ? `<p class="print-only">Data as of ${esc(dataAsOf)}.</p>` : ""}
         <p>
           Facts are computed from open data (GeoNames, OpenStreetMap, ESA WorldCover,
           Open-Meteo, Copernicus elevation tiles) and are <strong>unverified</strong> unless

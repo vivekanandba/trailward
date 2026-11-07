@@ -11,7 +11,7 @@ import OriginSearch from "./components/OriginSearch";
 import Panel from "./components/Panel";
 import ThemeToggle from "./components/ThemeToggle";
 import { noteUserActions, userHasActed } from "./lib/motion";
-import { loadTheme, saveTheme, applyTheme, type Theme } from "./lib/theme";
+import { loadTheme, saveTheme, applyTheme, printInLight, type Theme } from "./lib/theme";
 import { regionStats, type RegionStats } from "./lib/regionStats";
 import { feedbackUrl } from "./lib/github";
 import { loadTreksAround } from "./lib/cells";
@@ -104,6 +104,7 @@ export default function App() {
   // Motion answers an action, never a page load (spec 44 register row 6).
   // Listening starts before the first paint can be pressed.
   useState(() => noteUserActions(window));
+  useEffect(() => printInLight(), []);
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
@@ -554,6 +555,7 @@ export default function App() {
       {/* Header */}
       <header
         ref={headerRef}
+        data-print="hide"
         className="flex flex-wrap items-center gap-3 border-b border-trail-100 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
       >
         <div className="flex items-center gap-2">
@@ -605,6 +607,7 @@ export default function App() {
         /* Desktop: rail + map, detail as a non-modal slide-over with a visual scrim. */
         <div className="flex min-h-0 flex-1 flex-row">
           <aside
+            data-print="list"
             ref={asideRef}
             className="flex min-h-0 w-80 flex-none flex-col overflow-y-auto border-r border-trail-100 dark:border-slate-700"
           >
@@ -617,21 +620,21 @@ export default function App() {
           </aside>
 
           <main className="relative min-h-0 flex-1">
-            <div ref={mapRef} className="h-full w-full">
+            <div ref={mapRef} className="h-full w-full" data-print="hide">
               {trekMap}
             </div>
             {selected && (
               <>
                 {/* Visual-only frosting over the MAP (spec 33): the panel reads
                     as a layer, while pins stay clickable to switch the detail. */}
-                <Scrim pointerEvents={false} className="absolute inset-0 z-[1001]" />
+                <Scrim pointerEvents={false} className="absolute inset-0 z-[1001] print:hidden" />
                 <Panel
                   onClose={() => setSelectedId(undefined)}
                   labelledBy="trek-detail-title"
                   modal={false}
                   // Slides in only when opened by an action; a `?sel=` deep link
                   // shows it in place (spec 44 register row 6).
-                  className={`${panelEnter ? "panel-enter " : ""}absolute inset-y-0 right-0 z-[1010] w-full max-w-sm overflow-hidden border-l border-trail-100 bg-white shadow-2xl focus-visible:-outline-offset-2 dark:border-slate-700 dark:bg-slate-900`}
+                  className={`${panelEnter ? "panel-enter " : ""}print-frame absolute inset-y-0 right-0 z-[1010] w-full max-w-sm overflow-hidden border-l border-trail-100 bg-white shadow-2xl focus-visible:-outline-offset-2 dark:border-slate-700 dark:bg-slate-900`}
                 >
                   <TrekDetail
                     trek={selected}
@@ -647,7 +650,7 @@ export default function App() {
         /* Mobile: full-height map behind a results sheet; filters and detail
            are modal sheet layers (spec 33 / spec 08's bottom-sheet contract). */
         <div className="relative min-h-0 flex-1">
-          <div ref={mapRef} className="h-full w-full">
+          <div ref={mapRef} className="h-full w-full" data-print="hide">
             {trekMap}
           </div>
 
@@ -659,6 +662,7 @@ export default function App() {
             // here pushed the skip link out of reach on mobile entirely.
             autoFocus={false}
             labelledBy="results-sheet-title"
+            className="print-list"
           >
             <div className="flex items-center gap-2 border-b border-trail-100 px-4 pb-2 dark:border-slate-700">
               <h2
@@ -724,6 +728,7 @@ export default function App() {
               modal
               onClose={() => setSelectedId(undefined)}
               labelledBy="trek-detail-title"
+              className="print-frame"
             >
               <TrekDetail
                 trek={selected}

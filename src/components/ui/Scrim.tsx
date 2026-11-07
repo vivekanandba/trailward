@@ -20,7 +20,8 @@ export function Scrim({
       aria-hidden="true"
       onClick={onClick}
       className={
-        "bg-black/30 backdrop-blur-[2px] transition-opacity duration-200 " +
+        // Never on paper: a fixed scrim repeats over every printed page (spec 44 R5).
+        "bg-black/30 backdrop-blur-[2px] transition-opacity duration-200 print:hidden " +
         `${pointerEvents ? "" : "pointer-events-none "}${className}`
       }
     />
