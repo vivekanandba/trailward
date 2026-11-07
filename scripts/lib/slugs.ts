@@ -14,7 +14,7 @@
  */
 import type { Trek } from "../../src/lib/trek";
 import { distanceFrom } from "../../src/lib/distance";
-import { qualifyingTreks, slugFor, slugMap } from "./pages";
+import { foldName, qualifyingTreks, slugFor, slugMap } from "./pages";
 
 export interface SlugEntry {
   id: string;
@@ -37,8 +37,12 @@ const SLUG = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/;
 // A rescan moves a summit by at most a few DEM pixels (spec 27's carryover).
 const SAME_PLACE_KM = 0.12;
 
-/** A page's name folded as slugFor folds it, without its id fallback: "" when nameless. */
-export const nameKey = (t: Trek): string => slugFor({ ...t, id: "" });
+/**
+ * The name a slug is matched on: the name folded as its slug folds it, or,
+ * for a name with no Latin letters, `~` and the name itself, so two different
+ * non-Latin names never count as the same.
+ */
+export const nameKey = (t: Trek): string => foldName(t.name) || `~${t.name.normalize("NFC")}`;
 
 const round5 = (n: number): number => Math.round(n * 1e5) / 1e5;
 const entryFor = (t: Trek): SlugEntry => ({
@@ -77,8 +81,13 @@ export function readRegistry(body: string | undefined): SlugRegistry {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no position`);
     }
-    if (typeof (e as SlugEntry).name !== "string") {
-      throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no recorded name`);
+    const name = (e as SlugEntry).name;
+    // Folded (as a slug folds it), or `~` and a name with no Latin letters.
+    if (
+      typeof name !== "string" ||
+      !(/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || /^~./.test(name))
+    ) {
+      throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no recorded name in folded form`);
     }
   }
   return reg as SlugRegistry;
@@ -121,23 +130,38 @@ export function updateRegistry(
   // on a case-insensitive filesystem, so a new slug avoids both.
   const taken = new Set(Object.keys(reg).map((k) => k.toLowerCase()));
 
+  // A live page's entry follows its record, so a rename (build:names) is the
+  // name the next rescan is matched on.
   for (const t of pages) {
-    if (slugOf.has(t.id)) continue;
+    const slug = slugOf.get(t.id);
+    if (slug && JSON.stringify(reg[slug]) !== JSON.stringify(entryFor(t))) reg[slug] = entryFor(t);
+  }
+
+  // Every same-named (page, orphan) pair within 120 m, nearest first, ties by
+  // slug then id: one rule, not build order, decides which page gets which
+  // URL, so two same-named neighbours cannot swap.
+  const fresh = pages.filter((t) => !slugOf.has(t.id));
+  const pairs: { d: number; slug: string; t: Trek }[] = [];
+  for (const t of fresh) {
     const key = nameKey(t);
-    let same: string | undefined;
-    let nearest = SAME_PLACE_KM;
     for (const slug of orphans) {
-      if (reg[slug].name !== key) continue;
-      const d = distanceFrom({ ...t, lat: reg[slug].lat, lng: reg[slug].lng }, t);
-      if (d <= nearest) [same, nearest] = [slug, d];
+      const e = reg[slug];
+      if (e.name !== key) continue;
+      const d = distanceFrom({ id: "", name: "", lat: e.lat, lng: e.lng }, t);
+      if (d <= SAME_PLACE_KM) pairs.push({ d, slug, t });
     }
-    if (same) {
-      reg[same] = entryFor(t);
-      orphans.delete(same);
-      slugOf.set(t.id, same);
-      moved.push(same);
-      continue;
-    }
+  }
+  pairs.sort((a, b) => a.d - b.d || a.slug.localeCompare(b.slug) || a.t.id.localeCompare(b.t.id));
+  for (const { slug, t } of pairs) {
+    if (!orphans.has(slug) || slugOf.has(t.id)) continue;
+    reg[slug] = entryFor(t);
+    orphans.delete(slug);
+    slugOf.set(t.id, slug);
+    moved.push(slug);
+  }
+
+  for (const t of fresh) {
+    if (slugOf.has(t.id)) continue;
     const base = slugFor(t);
     // The bare slug, else `<slug>-<id>`, else `<slug>-<id>-<n>`: the first free in any case.
     let slug = base;

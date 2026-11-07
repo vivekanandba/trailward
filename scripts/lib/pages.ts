@@ -11,14 +11,18 @@
 import type { Trek } from "../../src/lib/trek";
 
 /** URL-safe, lowercase, diacritics folded. Falls back to the record id. */
-export function slugFor(trek: Trek): string {
-  const slug = trek.name
+/** A name folded to its URL form: "Kumāra Parvatha" → "kumara-parvatha"; "" if no Latin letters. */
+export function foldName(name: string): string {
+  return name
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // strip combining marks: Kumāra → Kumara
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return slug || trek.id;
+}
+
+export function slugFor(trek: Trek): string {
+  return foldName(trek.name) || trek.id;
 }
 
 const hasProse = (t: Trek): boolean =>

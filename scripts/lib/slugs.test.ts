@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  nameKey,
   readRegistry,
   registryFromSlugMap,
   slugsFromRegistry,
@@ -97,7 +98,9 @@ describe("updateRegistry", () => {
   });
 
   it("re-attaches a page whose name has no Latin letters, whose slug is an id", () => {
-    const reg: SlugRegistry = { "d12-1-1": { id: "d12-1-1", lat: 13.0, lng: 77.0, name: "" } };
+    const reg: SlugRegistry = {
+      "d12-1-1": { id: "d12-1-1", lat: 13.0, lng: 77.0, name: "~ಕೋಟೆ" },
+    };
     const r = upd([mk("d12-7-7", "ಕೋಟೆ", 13.0003, 77.0003)], reg);
     expect(r.moved).toEqual(["d12-1-1"]);
   });
@@ -106,7 +109,7 @@ describe("updateRegistry", () => {
     // 15 curated ids are their slugified names (kunti-betta, nandi-hills, …).
     const reg: SlugRegistry = {
       "kunti-betta-d12-1-2": { id: "d12-1-2", lat: 13.0, lng: 77.0, name: "kunti-betta" },
-      "d12-5-5": { id: "d12-5-5", lat: 13.0, lng: 77.0, name: "" },
+      "d12-5-5": { id: "d12-5-5", lat: 13.0, lng: 77.0, name: "~ಕೋಟೆ" },
     };
     const curated = mk("kunti-betta", "Kunti Betta", 13.0003, 77.0003);
     const r = upd([curated], reg);
@@ -133,6 +136,41 @@ describe("updateRegistry", () => {
     const r = upd([mk("wd-Q1", "Foo")], reg);
     expect(r.added).toEqual(["foo-wd-Q1-2"]);
     expect(() => slugsFromRegistry([mk("wd-Q1", "Foo")], r.registry)).not.toThrow();
+  });
+
+  it("gives each URL to its nearest same-named page, whatever the build order", () => {
+    // x @13.0000 and y @13.0009 lose their records; the new pages are 22 m
+    // past x's mid-point and 11 m from y. Greedy build order swapped them.
+    const reg: SlugRegistry = {
+      "kote-betta": { id: "x", lat: 13.0, lng: 77.0, name: "kote-betta" },
+      "kote-betta-y": { id: "y", lat: 13.0009, lng: 77.0, name: "kote-betta" },
+    };
+    for (const order of [
+      ["d12-1", "d12-2"],
+      ["d12-2", "d12-1"],
+    ]) {
+      const at = { "d12-1": 13.0006, "d12-2": 13.001 } as Record<string, number>;
+      const pages = order.map((id) => mk(id, "Kote Betta", at[id], 77.0));
+      const { registry } = upd(pages, reg);
+      expect(registry["kote-betta-y"].id, order.join()).toBe("d12-2");
+      expect(registry["kote-betta"].id, order.join()).toBe("d12-1");
+    }
+  });
+
+  it("follows a rename, so the next rescan matches the new name", () => {
+    const reg: SlugRegistry = {
+      "kote-betta": { id: "gn-1", lat: 13, lng: 77, name: "kote-betta" },
+    };
+    const renamed = upd([mk("gn-1", "Kote Betta Fort", 13, 77)], reg).registry;
+    expect(renamed["kote-betta"].name).toBe("kote-betta-fort");
+    const r = upd([mk("d12-9-9", "Kote Betta Fort", 13.0003, 77)], renamed);
+    expect(r.moved).toEqual(["kote-betta"]);
+  });
+
+  it("never matches two different names with no Latin letters", () => {
+    const reg: SlugRegistry = { "d12-1-1": { id: "d12-1-1", lat: 13, lng: 77, name: "~ಬೆಟ್ಟ" } };
+    const r = upd([mk("d12-7-7", "ಕೋಟೆ", 13.0003, 77)], reg);
+    expect(r.moved).toEqual([]);
   });
 
   it("keeps the slug of a record still in the dataset while it has no page", () => {
@@ -220,6 +258,10 @@ describe("readRegistry", () => {
     expect(() => readRegistry('{"a": {"id": "gn-1", "lat": 1, "lng": 77}}')).toThrow(
       /"a" has no recorded name/,
     );
+    // A hand edit that is not folded would never match a rescan.
+    expect(() =>
+      readRegistry('{"a": {"id": "gn-1", "lat": 1, "lng": 77, "name": "Kote Betta"}}'),
+    ).toThrow(/"a" has no recorded name in folded form/);
     expect(() => readRegistry("[{")).toThrow(/slugs\.json is not valid JSON/);
     expect(() => readRegistry("[]")).toThrow(/slugs\.json is not an object/);
     expect(() => readRegistry('{"a": null}')).toThrow(/"a" has no record id/);
@@ -234,6 +276,13 @@ describe("the committed registry against the committed dataset (CON-COV-003)", (
     const reg = readRegistry(readFileSync(resolve(root, "scripts/pages/slugs.json"), "utf8"));
     const pages = qualifyingTreks(treks);
     expect(slugsFromRegistry(pages, reg).size).toBe(pages.length);
+    // Each entry's recorded name is its record's (CON-COV-003: the migration's gate).
+    const byId = new Map(treks.map((t) => [t.id, t]));
+    const wrong = Object.entries(reg).filter(([, e]) => {
+      const t = byId.get(e.id);
+      return t !== undefined && e.name !== nameKey(t);
+    });
+    expect(wrong.slice(0, 5)).toEqual([]);
   }, 60_000);
 });
 
@@ -273,7 +322,7 @@ describe("runBuildSlugs", () => {
   it("refuses to write a registry the build would refuse", () => {
     const io = memoryIO({
       [P.treks]: JSON.stringify(treks),
-      [P.slugs]: JSON.stringify({ "Bad Slug": { id: "gn-9", lat: 1, lng: 1, name: "Bad Slug" } }),
+      [P.slugs]: JSON.stringify({ "Bad Slug": { id: "gn-9", lat: 1, lng: 1, name: "bad-slug" } }),
     });
     const before = io.files.get(P.slugs);
     expect(() => runBuildSlugs(io, "/repo")).toThrow(/not a usable slug/);
