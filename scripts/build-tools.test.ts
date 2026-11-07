@@ -300,6 +300,13 @@ describe("enrichment drift guard (spec 31)", () => {
     ).toEqual(["osm-1 (Kumara Parvatha)"]);
     // A record gone from the dataset takes its page with it: not this check's.
     expect(pagesLost([peak, ...others], others)).toEqual([]);
+    // Rank churn is not a loss: a page held only by its place in the cell's
+    // top three may change hands when a neighbour's score moves.
+    const ranked = (id: string, score: number) =>
+      trek({ id, name: id, tier: "discovery", lat: 13.5, lng: 76.5, discoveryScore: score });
+    const before = [ranked("a", 0.9), ranked("b", 0.8), ranked("c", 0.7), ranked("d", 0.6)];
+    const after = [ranked("a", 0.9), ranked("b", 0.8), ranked("c", 0.5), ranked("d", 0.6)];
+    expect(pagesLost(before, after)).toEqual([]);
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {

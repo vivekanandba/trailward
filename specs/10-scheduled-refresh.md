@@ -97,9 +97,11 @@ pipeline, commits changes, and lets the gated deploy publish them.
 
 - **Given** a refresh would take down a published page whose record is still in the dataset (a
   best-effort lookup missed its photo or text this week), **then** the drift guard refuses it
-  (`pagesLost`); and discovery carries a photo, gallery, text and nearest town over when a lookup
+  (`pagesLost`: a page that earned its place by its own photo, text or note and lost it; a page
+  held only by its rank in its 1° cell may change hands week to week and is not counted), photo
+  and text counts are held to the drift tolerance, and discovery carries a photo, gallery, text and nearest town over when a lookup
   misses (`PRESERVED_FIELDS`). Incident, 2026-11-07: the first refresh to land in twelve weeks
-  dropped 21 photos and 22 published pages with them (Kumara Parvatha among them). The deploy's
+  dropped 21 photos, and 16 published pages that rested on them (Kumara Parvatha among them). The deploy's
   own 404 test caught it, so nothing shipped; the data commit was reverted.
 
 ## Interfaces & data contracts

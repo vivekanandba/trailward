@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
 import { photoCarries } from "./lib/carryover";
-import { qualifyingTreks } from "./lib/pages";
+import { qualifies, qualifyingTreks } from "./lib/pages";
 
 const FIELDS = [
   "name", // counted as non-"Unnamed" — a naming regression is a data loss too
@@ -24,6 +24,10 @@ const FIELDS = [
   "hillFeatures",
   "protectedArea",
   "heritage",
+  // Carried over by discovery when a lookup misses (spec 10), so a bulk drop
+  // means the carry broke: 21 photos went in one refresh before it existed.
+  "image",
+  "highlights",
 ] as const;
 
 const TOLERANCE = 0.02; // fraction each count may drop before this fails
@@ -71,18 +75,23 @@ export function curatedLosses(head: Trek[], now: Trek[]): string[] {
 }
 
 /**
- * Published pages this refresh would take down although their record is
- * still in the dataset: a page is a URL people may have linked, and losing
- * it because a best-effort lookup missed this week is not a data change
- * (spec 10, spec 35). The 2026-11-07 refresh dropped 23 this way, by losing
- * the photos that earned them their page. A record gone from the dataset
- * takes its page with it, and that is not counted here.
+ * Pages that earned their place on their own (curated, or carrying a photo,
+ * text or a history note: `qualifies`) and that this refresh would take down
+ * because that photo or text went missing, although the record is still in
+ * the dataset. A missed best-effort lookup is not a data change (spec 10,
+ * spec 35): the 2026-11-07 refresh took down 16 pages this way, Kumara
+ * Parvatha among them. A page held only by its rank in its 1° cell may
+ * change hands as scores move week to week; that is not counted.
  */
 export function pagesLost(head: Trek[], now: Trek[]): string[] {
-  const nowIds = new Set(now.map((t) => t.id));
+  const nowById = new Map(now.map((t) => [t.id, t]));
   const after = new Set(qualifyingTreks(now).map((t) => t.id));
-  return qualifyingTreks(head)
-    .filter((t) => nowIds.has(t.id) && !after.has(t.id))
+  return head
+    .filter((t) => qualifies(t))
+    .filter((t) => {
+      const n = nowById.get(t.id);
+      return n !== undefined && !qualifies(n) && !after.has(t.id);
+    })
     .map((t) => `${t.id} (${t.name})`);
 }
 
