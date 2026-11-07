@@ -36,7 +36,15 @@ jobs:
             git config user.email "actions@github.com"
             git add src/data/treks.json public/data scripts/pages
             git commit -m "chore(data): weekly refresh of treks.json"
-            git push
+            # A long run outlives merges to main: replay this commit on top of
+            # them, so the push is not rejected (spec 10). A conflict fails here,
+            # loudly, and the reporter files it.
+            for attempt in 1 2 3; do
+              git pull --rebase origin "$GITHUB_REF_NAME" || { git rebase --abort; exit 1; }
+              git push && break # a push race: pull again and retry
+              [ "$attempt" = 3 ] && exit 1
+              sleep 10
+            done
           else
             echo "No data changes this run."
           fi

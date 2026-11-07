@@ -173,6 +173,25 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     }
   });
 
+  it("a scheduled job that pushes to main rebases first (spec 10)", () => {
+    // The 2026-11-07 refresh built and checked its data for 2.5 h, then lost
+    // it all to a rejected push because main had moved meanwhile.
+    for (const f of ["refresh-data.yml", "apply-suggestions.yml"]) {
+      const runs = jobs
+        .filter((j) => j.id.startsWith(`${f}:`))
+        .flatMap((j) => j.job.steps ?? [])
+        .map((st) => st.run ?? "")
+        .filter((r) => /git push/.test(r));
+      expect(runs.length, f).toBeGreaterThan(0);
+      for (const r of runs) {
+        const pull = r.indexOf('git pull --rebase origin "$GITHUB_REF_NAME"');
+        expect(pull, `${f} pulls with rebase`).toBeGreaterThan(-1);
+        expect(r.indexOf("git push", pull), `${f} pushes after the pull`).toBeGreaterThan(pull);
+        expect(r, `${f} aborts a conflicted rebase`).toMatch(/git rebase --abort/);
+      }
+    }
+  });
+
   it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {
     // npm appends extra arguments only to the LAST command of a compound
     // script: `npm run e2e -- --project=static` ran the app suite, then static

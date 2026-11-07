@@ -15,6 +15,10 @@ pipeline, commits changes, and lets the gated deploy publish them.
 
 - **Given** the schedule `0 2 * * 1` (Mondays 02:00 UTC), **when** it fires, **then** the workflow
   runs `build:data`, validates the output, and **commits `treks.json` only if it changed**.
+- **Given** main moved while the run built its data (a refresh takes hours), **when** it pushes,
+  **then** it first replays its commit on top of main and retries a push race; a real conflict
+  aborts the rebase and fails the run, which the reporter files. Incident, 2026-11-07: the first
+  refresh to pass every check in twelve weeks lost its data to a rejected push.
 - **Given** a commit happens, **when** pushed to `main`, **then** the gated deploy workflow (09)
   runs and republishes only if data + tests pass.
 - **Given** `workflow_dispatch`, **when** triggered manually, **then** the same refresh runs.
