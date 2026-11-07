@@ -35,13 +35,16 @@ const SLUG = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/;
 const SAME_PLACE_KM = 0.12;
 
 /**
- * The name a slug is matched on: the name folded as its slug folds it when
- * that keeps a Latin letter, else `~` and the name itself (NFC), so two
- * different names with no Latin letters ("ಕೋಟೆ 2", "ಬೆಟ್ಟ 2") never match.
+ * The name a slug is matched on. A name with any non-Latin letter keys as `~`
+ * and the name itself (NFC, case and spacing normalised), so "ಕೋಟೆ 2A" and
+ * "ಬೆಟ್ಟ 2A" never match, as their folds ("2a") would. Any other name keys as
+ * its fold ("Kote Betta" → "kote-betta", "1075" → "1075"); an empty one as "~".
  */
 export const nameKey = (t: Trek): string => {
-  const folded = foldName(t.name);
-  return /[a-z]/.test(folded) ? folded : `~${t.name.normalize("NFC")}`;
+  if (/(?!\p{Script=Latin})\p{L}/u.test(t.name)) {
+    return `~${t.name.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase()}`;
+  }
+  return foldName(t.name) || "~";
 };
 
 const round5 = (n: number): number => Math.round(n * 1e5) / 1e5;
@@ -83,7 +86,7 @@ export function readRegistry(body: string | undefined): SlugRegistry {
     }
     const name = (e as SlugEntry).name;
     // Folded (as a slug folds it), or `~` and a name with no Latin letters.
-    const folded = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) && /[a-z]/.test(name);
+    const folded = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name);
     if (typeof name !== "string" || !(folded || name.startsWith("~"))) {
       throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no recorded name in folded form`);
     }
@@ -143,12 +146,15 @@ export function updateRegistry(
 
   // A rescan's new page takes an orphan's URL only when the match is
   // unambiguous: the same name within 120 m, and neither side has another
-  // such candidate. When two same-named summits are rescanned together no
-  // rule can tell which is which, so their URLs retire rather than risk
-  // pointing at a different peak.
+  // such candidate among all new records, pages or not. When two same-named
+  // summits are rescanned together no rule can tell which is which, so their
+  // URLs retire rather than risk pointing at a different peak.
   const fresh = pages.filter((t) => !slugOf.has(t.id));
+  const unslugged = new Map(
+    [...dataset, ...pages].filter((t) => !slugOf.has(t.id)).map((t) => [t.id, t]),
+  );
   const pairs: { slug: string; t: Trek }[] = [];
-  for (const t of fresh) {
+  for (const t of unslugged.values()) {
     const key = nameKey(t);
     for (const slug of orphans) {
       const e = reg[slug];
@@ -157,9 +163,16 @@ export function updateRegistry(
       if (d <= SAME_PLACE_KM) pairs.push({ slug, t });
     }
   }
-  const count = (k: string) => pairs.filter((p) => p.slug === k || p.t.id === k).length;
+  // Counted per side: a slug can equal an id, so they need separate tallies.
+  const perSlug = new Map<string, number>();
+  const perRecord = new Map<string, number>();
   for (const { slug, t } of pairs) {
-    if (count(slug) !== 1 || count(t.id) !== 1) continue;
+    perSlug.set(slug, (perSlug.get(slug) ?? 0) + 1);
+    perRecord.set(t.id, (perRecord.get(t.id) ?? 0) + 1);
+  }
+  const isPage = new Set(fresh.map((t) => t.id));
+  for (const { slug, t } of pairs) {
+    if (perSlug.get(slug) !== 1 || perRecord.get(t.id) !== 1 || !isPage.has(t.id)) continue;
     reg[slug] = entryFor(t);
     orphans.delete(slug);
     slugOf.set(t.id, slug);

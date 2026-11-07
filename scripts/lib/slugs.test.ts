@@ -170,6 +170,26 @@ describe("updateRegistry", () => {
     expect(r.registry["kote-betta-y"].id).toBe("d12-2");
   });
 
+  it("tallies slugs and ids separately, so a slug equal to an id is not a false tie", () => {
+    const reg: SlugRegistry = {
+      "d12-5-5": { id: "d12-7-7", lat: 13, lng: 77, name: "~" },
+      "kote-betta": { id: "gone", lat: 14, lng: 77, name: "kote-betta" },
+    };
+    const r = upd([mk("d12-9-9", "", 13.0002, 77), mk("d12-5-5", "Kote Betta", 14.0002, 77)], reg);
+    expect(r.moved.sort()).toEqual(["d12-5-5", "kote-betta"]);
+  });
+
+  it("counts a same-named new record without a page as a rival candidate", () => {
+    // d12-R is 11 m from the orphan, the page d12-P ~100 m: nobody can tell.
+    const reg: SlugRegistry = {
+      "kote-betta": { id: "x", lat: 13.0, lng: 77.0, name: "kote-betta" },
+    };
+    const page = mk("d12-P", "Kote Betta", 13.0009, 77);
+    const rival = mk("d12-R", "Kote Betta", 13.0001, 77);
+    const r = upd([page], reg, [page, rival]);
+    expect(r.moved).toEqual([]);
+  });
+
   it("follows a rename of a record that has no page", () => {
     const reg: SlugRegistry = {
       "kote-betta": { id: "gn-1", lat: 13, lng: 77, name: "kote-betta" },
@@ -179,9 +199,14 @@ describe("updateRegistry", () => {
     expect(r.followed).toEqual(["kote-betta"]);
   });
 
-  it("keys a name with no Latin letters by itself, digits and all", () => {
+  it("keys a name with any non-Latin letter by itself, digits and all", () => {
     expect(nameKey(mk("a", "ಕೋಟೆ 2"))).toBe("~ಕೋಟೆ 2");
     expect(nameKey(mk("a", "ಬೆಟ್ಟ 2"))).not.toBe(nameKey(mk("a", "ಕೋಟೆ 2")));
+    expect(nameKey(mk("a", "ಕೋಟೆ 2A"))).not.toBe(nameKey(mk("a", "ಬೆಟ್ಟ 2A")));
+    expect(nameKey(mk("a", "ಕೋಟೆ Hill"))).not.toBe(nameKey(mk("a", "ಬೆಟ್ಟ Hill")));
+    // Spacing is not identity; a digits-only name keys by its fold.
+    expect(nameKey(mk("a", " ಕೋಟೆ  2 "))).toBe(nameKey(mk("a", "ಕೋಟೆ 2")));
+    expect(nameKey(mk("a", "1075 "))).toBe("1075");
     expect(nameKey(mk("a", ""))).toBe("~");
     expect(() =>
       readRegistry(JSON.stringify({ "gn-77": { id: "gn-77", lat: 1, lng: 1, name: "~" } })),
@@ -358,6 +383,19 @@ describe("runBuildSlugs", () => {
     const before = io.files.get(P.slugs);
     expect(() => runBuildSlugs(io, "/repo")).toThrow(/not a usable slug/);
     expect(io.files.get(P.slugs)).toBe(before);
+  });
+
+  it("passes the whole dataset, so a page-less record's rename is followed", () => {
+    const io = memoryIO({ [P.treks]: JSON.stringify(treks) });
+    runBuildSlugs(io, "/repo");
+    // gn-2 is renamed to an unnamed placeholder, which earns no page.
+    const renamed = mk("gn-2", "Unnamed peak (~900 m)", 14, 78);
+    io.writeFile(P.treks, JSON.stringify([treks[0], renamed]));
+    const r = runBuildSlugs(io, "/repo");
+    const after = JSON.parse(io.files.get(P.slugs)!) as SlugRegistry;
+    expect(after["kote-betta-gn-2"].id).toBe("gn-2"); // kept while it has no page
+    expect(after["kote-betta-gn-2"].name).toBe("unnamed-peak-900-m");
+    expect(r.followed).toEqual(["kote-betta-gn-2"]);
   });
 
   it("adds a new page and leaves every existing slug alone", () => {

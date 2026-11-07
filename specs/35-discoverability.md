@@ -61,12 +61,13 @@ a lockfile:
   has gone stays reserved.
 - A page whose id is new but which stands within 120 m of a registered record that is **gone
   from the dataset**, **under the same name**, takes over that record's slug **when the match is
-  unambiguous**: neither the page nor the orphan has another such candidate. That is a terrain
+  unambiguous**: neither the page nor the orphan has another such candidate among all new records,
+  with or without a page. That is a terrain
   rescan regenerating a `d12-` id for the same summit (spec 27). When two same-named summits are
   rescanned together no rule can tell which is which, so their old URLs retire rather than risk
-  pointing at a different peak. Each entry records its record's name (`nameKey`: the folded name
-  when it keeps a Latin letter, else `~` and the name itself, so two different names with no
-  Latin letters never match), and every entry whose record still exists follows its name and
+  pointing at a different peak. Each entry records its record's name (`nameKey`: a name with any
+  non-Latin letter keys as `~` and the name itself, case and spacing normalised, so two different
+  such names never match; any other name keys as its fold), and every entry whose record still exists follows its name and
   position, page or not, so a rename is the name the next rescan matches on (provided
   `build:slugs` runs between the rename and the rescan, as both data workflows do). The match is
   on that recorded name, never on the slug's text. A record still in the dataset keeps its slug

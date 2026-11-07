@@ -26,7 +26,7 @@ import {
 export function runBuildSlugs(
   io: BuildIO,
   repoRoot: string,
-): { added: string[]; moved: string[]; total: number } {
+): { added: string[]; moved: string[]; followed: string[]; total: number } {
   const root = repoRoot.replace(/\/+$/, "");
   const treksFile = `${root}/src/data/treks.json`;
   const slugsFile = `${root}/${SLUGS_FILE}`;
@@ -39,7 +39,7 @@ export function runBuildSlugs(
     io.writeFile(slugsFile, formatRegistry(first));
     const total = Object.keys(first).length;
     io.log(`[slugs] wrote the first registry: ${total} slug(s), today's URLs → ${slugsFile}`);
-    return { added: Object.keys(first), moved: [], total };
+    return { added: Object.keys(first), moved: [], followed: [], total };
   }
 
   const previous = readRegistry(io.readFile(slugsFile));
@@ -53,7 +53,7 @@ export function runBuildSlugs(
       `${followed.length} following a renamed or moved record, ${total} in all`,
   );
   for (const s of moved) io.log(`[slugs] re-attached ${s} → ${registry[s].id}`);
-  return { added, moved, total };
+  return { added, moved, followed, total };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
