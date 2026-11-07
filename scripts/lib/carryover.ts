@@ -2,7 +2,8 @@
  * How far a record may move and still be the same summit: a terrain rescan
  * shifts a detected peak by at most a few DEM pixels (spec 27). Shared by
  * discovery's preservation, build:data's fold and the drift guard, in a module
- * of its own so none loads another's dependencies to read one rule.
+ * of its own so none loads another's dependencies to read one rule. It also
+ * holds DISCOVERY_CARRIED, the fields discovery carries and the refresh guards.
  */
 import type { Trek } from "../../src/lib/trek";
 import { distanceFrom } from "../../src/lib/distance";
@@ -24,3 +25,26 @@ export function photoCarries(prev: Trek, next: Trek): boolean {
     JSON.stringify(sourcesOf(prev)) === JSON.stringify(sourcesOf(next))
   );
 }
+
+/**
+ * What discovery carries from the previous dataset when this run did not
+ * produce it (spec 10, spec 25). One list, shared with the drift guard: a
+ * same-id record that lost any of these means the carry broke.
+ */
+export const DISCOVERY_CARRIED = [
+  "bestSeason",
+  "landCover",
+  "historicalNote",
+  "hillFeatures",
+  "protectedArea",
+  "heritage",
+  // Fetched best-effort every run (nearest article, nearby Commons photos,
+  // nearest town): a lookup that misses this week is not evidence the photo
+  // or text is gone. The 2026-11-07 refresh lost 21 photos this way: 16
+  // pages that rested on them went too, and a neighbour's lost photo pushed
+  // a 17th out of its cell (spec 10).
+  "image",
+  "gallery",
+  "highlights",
+  "nearestTown",
+] as const;

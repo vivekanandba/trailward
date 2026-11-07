@@ -46,7 +46,7 @@
     "e2e:app": "playwright test --project=chromium --project=mobile",
     "e2e:static": "playwright test --project=static",
     "derive:data": "npm run build:chunks && npm run build:slugs",
-    "check:refresh": "npm run validate:data && tsx scripts/check-enrichment-drift.ts"
+    "check:refresh": "npm run validate:data && tsx scripts/check-enrichment-drift.ts --refresh"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

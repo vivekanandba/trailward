@@ -95,6 +95,19 @@ pipeline, commits changes, and lets the gated deploy publish them.
   over, so one of those that fails is refused by the full validation of the folded output before
   the write, after enrichment, which names the record. A duplicate id is refused early.
 
+- **Given** a refresh would take down a published page whose record is still in the dataset (a
+  best-effort lookup missed its photo or text this week), **then** the drift guard refuses it
+  (`carriedLosses`, in the weekly refresh only: any non-curated record that kept its id but lost
+  a field discovery carries, `DISCOVERY_CARRIED` (photo, gallery, text, history note, nearest
+  town, land cover and the rest), per record, which is the cause; the hand-run rebakes of spec 32
+  clear some of those on purpose and keep the count tolerance; and `pagesLost`: a page that earned its place by its own photo, text or note and lost it; a page
+  held only by its rank in its 1° cell may change hands week to week and is not counted), photo
+  and text counts are held to the drift tolerance, and discovery carries a photo, gallery, text and nearest town over when a lookup
+  misses (`DISCOVERY_CARRIED`, `scripts/lib/carryover.ts`). Incident, 2026-11-07: the first refresh to land in twelve weeks
+  dropped 21 photos, 16 published pages that rested on them (Kumara Parvatha among them), and a
+  17th pushed out of its cell's top three by a neighbour that had lost its photo. The deploy's
+  own 404 test caught it, so nothing shipped; the data commit was reverted.
+
 ## Interfaces & data contracts
 
 - `.github/workflows/refresh-data.yml` (`permissions: contents: write`): checkout → setup-node →
