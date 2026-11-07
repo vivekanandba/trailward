@@ -164,15 +164,25 @@ describe("lastCommitDate (spec 35 — lastmod from the DATA's history)", () => {
   it("reads the ISO date of the last commit that touched the file", () => {
     // A page whose facts did not change must not claim to have changed, or
     // every rebuild invites a recrawl of everything.
-    expect(lastCommitDate("src/data/treks.json", repoRoot, fakeGit("false", "2026-09-19"))).toBe(
+    expect(
+      lastCommitDate("src/data/treks.json", repoRoot, fakeGit("false", "2026-09-19"), {}),
+    ).toBe("2026-09-19");
+  });
+
+  it("takes the date the workflow passes in, when it is a date", () => {
+    const git = fakeGit("true", "2026-11-07"); // shallow: git alone would give nothing
+    expect(lastCommitDate("f", repoRoot, git, { TRAILWARD_DATA_DATE: "2026-09-19" })).toBe(
       "2026-09-19",
     );
+    // Anything else is ignored, never trusted as a date.
+    expect(lastCommitDate("f", repoRoot, git, { TRAILWARD_DATA_DATE: "" })).toBeUndefined();
+    expect(lastCommitDate("f", repoRoot, git, { TRAILWARD_DATA_DATE: "soon" })).toBeUndefined();
   });
 
   it("gives no date in a shallow clone, whose one commit touched everything", () => {
     // A 1-commit CI checkout dated every page with the deploy day (spec 44 R5).
     expect(
-      lastCommitDate("src/data/treks.json", repoRoot, fakeGit("true", "2026-11-07")),
+      lastCommitDate("src/data/treks.json", repoRoot, fakeGit("true", "2026-11-07"), {}),
     ).toBeUndefined();
   });
 

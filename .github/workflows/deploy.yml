@@ -119,6 +119,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: The data's date, read once with the full history (spec 44 R5)
+        run: echo "TRAILWARD_DATA_DATE=$(git log -1 --format=%cs -- src/data/treks.json)" >> "$GITHUB_ENV"
       - run: npm run build
       # Delight pays its weight: the shipped bytes against size-budget.json (spec 44 D5).
       - run: npm run check:size

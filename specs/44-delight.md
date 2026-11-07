@@ -163,7 +163,10 @@ that implements each one names its check. R1 is enforced by the tests named unde
     `treks.json`: the page runs no script, so it cannot know the day it is printed. A shallow clone
     gives no date at all rather than its own (its one commit "touched" everything, which dated
     every page with the deploy day), and the build jobs fetch full history without file contents
-    (`filter: blob:none`); the sitemap's `lastmod` shares that date and the fix. The
+    (`filter: blob:none`) and read the date once in a plain step, passing it to the build as
+    `TRAILWARD_DATA_DATE`: inside Playwright's web server on GitHub's runner, git reported the
+    full clone as shallow while a plain step in the same job saw it whole (cause not found). The
+    sitemap's `lastmod` shares that date and the fix. The
     call-to-action's row and the back link are hidden in print.
   - Playwright's print emulation never fires `beforeprint`, so the date's refresh is unit-tested
     and the layout is checked in e2e.

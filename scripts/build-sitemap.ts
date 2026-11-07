@@ -27,28 +27,25 @@ const contentDir = resolve(repoRoot, "content");
  * so it would give the checkout's date, not the data's: a 1-commit CI
  * checkout made every page claim data from the day of the deploy (spec 44 R5).
  * No date is better than a wrong one (CON-DATA-001).
+ *
+ * `TRAILWARD_DATA_DATE`, when set to a date, wins: the workflows read the date
+ * with git in a plain step and pass it in, because inside Playwright's web
+ * server on GitHub's runner git reported the full clone as shallow (the cause
+ * was not found; a plain step in the same job saw it whole).
  */
 export function lastCommitDate(
   file: string,
   cwd: string,
   git: (args: string[]) => string = (args) =>
     execFileSync("git", args, { cwd, encoding: "utf8" }).trim(),
+  env: Record<string, string | undefined> = process.env,
 ): string | undefined {
+  const given = env.TRAILWARD_DATA_DATE;
+  if (given && /^\d{4}-\d{2}-\d{2}$/.test(given)) return given;
   try {
     const shallow = git(["rev-parse", "--is-shallow-repository"]);
     if (shallow !== "false") {
-      const where = (args: string[]) => {
-        try {
-          return git(args);
-        } catch (err) {
-          return `(${(err as Error).message.split("\n")[0]})`;
-        }
-      };
-      console.warn(
-        `[dates] no data date: shallow clone (is-shallow-repository=${shallow}; ` +
-          `cwd=${cwd}; toplevel=${where(["rev-parse", "--show-toplevel"])}; ` +
-          `git-dir=${where(["rev-parse", "--absolute-git-dir"])})`,
-      );
+      console.warn(`[dates] no data date: shallow clone (is-shallow-repository=${shallow})`);
       return undefined;
     }
     const out = git(["log", "-1", "--format=%cs", "--", file]);
