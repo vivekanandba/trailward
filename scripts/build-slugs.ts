@@ -13,12 +13,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import { nodeIO, type BuildIO } from "./lib/buildIO";
 import type { Trek } from "../src/lib/trek";
-import { qualifyingTreks } from "./lib/pages";
+import { qualifyingTreks, slugMap } from "./lib/pages";
 import {
   SLUGS_FILE,
   formatRegistry,
   readRegistry,
-  registryFor,
+  registryFromSlugMap,
   slugsFromRegistry,
   updateRegistry,
 } from "./lib/slugs";
@@ -31,10 +31,11 @@ export function runBuildSlugs(
   const treksFile = `${root}/src/data/treks.json`;
   const slugsFile = `${root}/${SLUGS_FILE}`;
   const treks = JSON.parse(io.readFile(treksFile)) as Trek[];
+  const pages = qualifyingTreks(treks);
 
   if (!io.exists(slugsFile)) {
-    const first = registryFor(treks);
-    slugsFromRegistry(qualifyingTreks(treks), first); // the build's own check, first
+    const first = registryFromSlugMap(pages, slugMap(pages));
+    slugsFromRegistry(pages, first); // the build's own check, first
     io.writeFile(slugsFile, formatRegistry(first));
     const total = Object.keys(first).length;
     io.log(`[slugs] wrote the first registry: ${total} slug(s), today's URLs → ${slugsFile}`);
@@ -42,7 +43,6 @@ export function runBuildSlugs(
   }
 
   const previous = readRegistry(io.readFile(slugsFile));
-  const pages = qualifyingTreks(treks);
   const ids = new Set(treks.map((t) => t.id));
   const { registry, added, moved } = updateRegistry(pages, previous, ids);
   // What the build will check, checked before the workflow commits it.

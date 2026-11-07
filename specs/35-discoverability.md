@@ -60,15 +60,15 @@ a lockfile:
   one. It never deletes an entry and never gives a slug to a different peak: a slug whose page
   has gone stays reserved.
 - A page whose id is new but which stands within 120 m of a registered record that is **gone
-  from the dataset**, **with the same name**, takes over that record's slug. That is a terrain
-  rescan regenerating a `d12-` id for the same summit (spec 27). "Same name" is exact: the
-  orphan's slug is this page's bare slug, or that plus **any** id-shaped suffix (`-d12-…`,
-  `-gn-N`, `-osm-N`, `-osmx-N`, `-wd-QN`, optionally `-<n>`), because a slug keeps the id it was
-  first given while rescans move it to new ids; never a slug that merely starts with the bare
-  slug ("Kote" does not take `kote-betta`). A name with no Latin letters has its id as its bare
-  slug and matches a slug that is itself an id. A different name or a farther point is a
-  different page. A record still in the dataset keeps its
-  slug while it has no page, so the URL is waiting when the page returns.
+  from the dataset**, **published under the same name**, takes over that record's slug (the
+  nearest, if two qualify). That is a terrain rescan regenerating a `d12-` id for the same summit
+  (spec 27). Each registry entry records the name it was published under, folded as its slug
+  folds it (`""` for a name with no Latin letters), and the match is on that recorded name, not on
+  the slug's text: so a slug keeps re-attaching across any number of rescans whatever id suffix
+  it carries, "Kote" never takes `kote-betta`, and a curated record whose id is its slug is not
+  mistaken for a nameless one. A different name or a farther point is a different page. A record
+  still in the dataset keeps its slug while it has no page, so the URL is waiting when the page
+  returns. A new slug never differs only in case from one already held.
 - `build-pages` and `build-sitemap` only read the registry, through one function
   (`slugsFromRegistry`), and **refuse to build** when a qualifying page has no slug, when a
   record has two, or when a slug is not URL-safe (letters, digits and single hyphens; upper case
@@ -135,11 +135,13 @@ section C's PR; the app-shell card (`icons/og.png`) already exists.
 - `scripts/lib/slugs.test.ts`: a registered slug survives a change of build order; a rescanned
   record at the same place with the same name takes over its slug; a different name, a name the
   slug merely starts with, or a point more than 120 m away does not; repeated rescans keep
-  re-attaching the same slug; a page with no Latin letters re-attaches by id; a record still in the
+  re-attaching the same slug; a page with no Latin letters re-attaches on its empty name, and a
+  page whose id is its slug re-attaches on its name without taking a nameless page's URL; the
+  nearest of two candidates wins; a new slug avoids a case twin; a record still in the
   dataset without a page keeps its slug; a retired slug is never reassigned; a free bare slug is
   used; updating is idempotent; the build refuses an unregistered page, a record with two slugs
   and an unusable slug or a case twin, and accepts an upper-case Wikidata suffix; a malformed
-  registry (including an entry with no position) is
+  registry (including an entry with no position or recorded name) is
   refused by name; the first registry equals today's slugs; `runBuildSlugs` bootstraps, only
   adds, and refuses to write a registry the build would refuse; and the committed registry gives
   every page of the committed dataset exactly one usable slug.

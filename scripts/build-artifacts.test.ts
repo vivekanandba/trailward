@@ -180,8 +180,8 @@ describe("both builds take each page's URL from the slug registry (spec 35)", ()
   // A registered slug that the old order-dependent rules would NOT produce:
   // if either tool recomputed slugs, it would write or list a different URL.
   const registry = {
-    "kumara-parvatha-gn-1": { id: "gn-1", lat: 12.6, lng: 75.6 },
-    skandagiri: { id: "skandagiri", lat: 13, lng: 77 },
+    "kumara-parvatha-gn-1": { id: "gn-1", lat: 12.6, lng: 75.6, name: "kumara-parvatha" },
+    skandagiri: { id: "skandagiri", lat: 13, lng: 77, name: "skandagiri" },
   };
   const seed = {
     [P.treks]: JSON.stringify(TREKS),

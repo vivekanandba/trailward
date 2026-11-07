@@ -20,6 +20,11 @@ export interface SlugEntry {
   id: string;
   lat: number;
   lng: number;
+  /**
+   * The name the page was published under, folded as its slug folds it ("" for
+   * a name with no Latin letters). A rescan re-attaches only on this name.
+   */
+  name: string;
 }
 
 /** slug → the record published there. Keys are unique by construction. */
@@ -32,28 +37,16 @@ const SLUG = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/;
 // A rescan moves a summit by at most a few DEM pixels (spec 27's carryover).
 const SAME_PLACE_KM = 0.12;
 
-// A record id as it appears in a slug: the shapes the dataset uses today.
-const ID = /^(?:d\d+(?:-\d+)+|gn-\d+|osmx?-\d+|wd-Q\d+)$/;
-// An id suffix, optionally with the `-<n>` a second collision added.
-const ID_SUFFIX = /^(?:d\d+(?:-\d+)+|gn-\d+|osmx?-\d+|wd-Q\d+)(?:-\d+)?$/;
-
-/**
- * Whether the orphan slug was published under the same name as a page whose
- * bare slug is `base`: the bare slug itself, or `<base>-<any id>` — any id,
- * not the orphan's current one, because a slug keeps the id suffix it was
- * first given while a rescan moves it to a new id, again and again. A name
- * with no Latin letters has the record id as its bare slug; it matches a slug
- * that is itself an id.
- */
-function sameName(slug: string, base: string, nameless: boolean): boolean {
-  if (slug === base) return true;
-  if (nameless) return ID.test(slug);
-  return slug.startsWith(`${base}-`) && ID_SUFFIX.test(slug.slice(base.length + 1));
-}
+/** A page's name folded as slugFor folds it, without its id fallback: "" when nameless. */
+export const nameKey = (t: Trek): string => slugFor({ ...t, id: "" });
 
 const round5 = (n: number): number => Math.round(n * 1e5) / 1e5;
-const entryFor = (t: Trek): SlugEntry => ({ id: t.id, lat: round5(t.lat), lng: round5(t.lng) });
-const here = (e: SlugEntry) => ({ id: e.id, name: "", lat: e.lat, lng: e.lng });
+const entryFor = (t: Trek): SlugEntry => ({
+  id: t.id,
+  lat: round5(t.lat),
+  lng: round5(t.lng),
+  name: nameKey(t),
+});
 
 /** Sorted by slug, so the committed file diffs cleanly. */
 function sorted(reg: SlugRegistry): SlugRegistry {
@@ -84,6 +77,9 @@ export function readRegistry(body: string | undefined): SlugRegistry {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no position`);
     }
+    if (typeof (e as SlugEntry).name !== "string") {
+      throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no recorded name`);
+    }
   }
   return reg as SlugRegistry;
 }
@@ -99,11 +95,10 @@ export function registryFromSlugMap(pages: Trek[], slugs: Map<string, string>): 
  * Record a slug for every page that lacks one. Pure.
  *
  * - A page whose id is registered keeps its slug.
- * - A page whose id is new, at the same place (≤ 120 m) and with the same name
- *   as a registered record that is gone from the dataset, takes over that
- *   slug: a rescan regenerated the id of the same summit. "Same name" means
- *   the orphan's slug is exactly this page's bare slug, or that slug plus the
- *   orphan's own id suffix — not merely a slug that starts with it.
+ * - A page whose id is new, at the same place (≤ 120 m) and published under
+ *   the same name (the entry's recorded `name`) as a registered record that is
+ *   gone from the dataset, takes over that slug: a rescan regenerated the id of
+ *   the same summit. The nearest such record wins.
  * - A record still in the dataset keeps its slug even while it has no page,
  *   so its URL is waiting when the page comes back.
  * - Otherwise it gets its bare slug if no record ever held it, else
@@ -122,13 +117,20 @@ export function updateRegistry(
   const added: string[] = [];
   const moved: string[] = [];
 
+  // Slugs taken in any case: two that differ only in case are one directory
+  // on a case-insensitive filesystem, so a new slug avoids both.
+  const taken = new Set(Object.keys(reg).map((k) => k.toLowerCase()));
+
   for (const t of pages) {
     if (slugOf.has(t.id)) continue;
-    const base = slugFor(t);
-    const same = [...orphans].find(
-      (slug) =>
-        sameName(slug, base, base === t.id) && distanceFrom(here(reg[slug]), t) <= SAME_PLACE_KM,
-    );
+    const key = nameKey(t);
+    let same: string | undefined;
+    let nearest = SAME_PLACE_KM;
+    for (const slug of orphans) {
+      if (reg[slug].name !== key) continue;
+      const d = distanceFrom({ ...t, lat: reg[slug].lat, lng: reg[slug].lng }, t);
+      if (d <= nearest) [same, nearest] = [slug, d];
+    }
     if (same) {
       reg[same] = entryFor(t);
       orphans.delete(same);
@@ -136,9 +138,14 @@ export function updateRegistry(
       moved.push(same);
       continue;
     }
-    let slug = reg[base] ? `${base}-${t.id}` : base;
-    for (let n = 2; reg[slug]; n++) slug = `${base}-${t.id}-${n}`;
+    const base = slugFor(t);
+    // The bare slug, else `<slug>-<id>`, else `<slug>-<id>-<n>`: the first free in any case.
+    let slug = base;
+    for (let n = 1; taken.has(slug.toLowerCase()); n++) {
+      slug = n === 1 ? `${base}-${t.id}` : `${base}-${t.id}-${n}`;
+    }
     reg[slug] = entryFor(t);
+    taken.add(slug.toLowerCase());
     slugOf.set(t.id, slug);
     added.push(slug);
   }
