@@ -116,9 +116,9 @@ test("the theme icon turns only after a press, never on load (spec 44 row 5)", a
 test("a new origin flies there and settles on its peaks (spec 44 R9)", async ({ page }) => {
   await page.goto("/");
   await resultsLoaded(page);
-  if (!isDesktop(page)) await page.getByRole("button", { name: /^Filters/ }).click();
+  // The city chips: in the side panel on a desktop, in the results sheet on
+  // a phone (opening Filters there covered them with its dialog).
   await page.getByRole("button", { name: "Pune" }).click();
-  if (!isDesktop(page)) await page.keyboard.press("Escape");
   await resultsLoaded(page);
   // Where the motion ends, not the motion: the area card speaks of Pune.
   await expect(page.getByTestId("region-sentence")).toContainText("around Pune");
