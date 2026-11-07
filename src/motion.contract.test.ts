@@ -69,8 +69,13 @@ describe("motion (spec 44 D2, D3)", () => {
         found.push(`${s.path}: ${m}`);
       }
       if (!s.path.endsWith(".css")) continue;
-      for (const m of s.text.matchAll(/(?:animation|transition)[^;{}]*?(\d*\.?\d+)s\b/g)) {
-        if (Number(m[1]) * 1000 > 300) found.push(`${s.path}: ${m[0].trim()}`);
+      // Every time in each animation/transition declaration, not only the first
+      // of a comma list; a delay is not a duration.
+      const css = s.text.replace(/\/\*[\s\S]*?\*\//g, "");
+      for (const [decl] of css.matchAll(/(?:animation|transition)(?:-duration)?\s*:[^;{}]*/g)) {
+        for (const m of decl.matchAll(/(\d*\.?\d+)s\b/g)) {
+          if (Number(m[1]) * 1000 > 300) found.push(`${s.path}: ${decl.trim()}`);
+        }
       }
     }
     expect(found).toEqual([]);

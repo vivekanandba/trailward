@@ -175,8 +175,9 @@ that specifies each piece starts from them.
   - Leaflet's drag inertia, zoom, fade and marker animations ignore stylesheets.
   - `FitToResults` (`TrekMap.tsx:155`) already moves the map, so a fly-to must replace that, not
     compete with it.
-  - The default e2e context forces reduced motion, and loading skeletons pulse during a `?sel=`
-    load.
+  - The default e2e context forces reduced motion. The loading skeletons pulsed during a `?sel=`
+    load; they are now still, and `e2e/delight.spec.ts` asserts the browser runs no looping or
+    over-300 ms animation after such a load.
   - A transition can be assigned as an expression, not only as a string literal.
 - **Set-pieces (rows 7–9).**
   - **Sunrise:** use the sun's centre at −0.833° and no elevation dip; show times in IST (the
