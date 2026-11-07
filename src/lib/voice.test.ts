@@ -27,6 +27,17 @@ describe("sunSentence", () => {
 });
 
 describe("seasonSentence", () => {
+  it("never calls a dry month outside the longest dry run 'wetter' (rule D1)", () => {
+    // Climate cell 41:308: December (80 mm) is under the 85.6 mm threshold,
+    // but the longest dry run is Feb–Mar.
+    const cell = [120, 18, 28, 87, 201, 169, 415, 351, 186, 198, 204, 80];
+    expect(seasonSentence(cell, 11)).toBe(
+      "Now is one of the drier months here; the longest dry stretch is Feb–Mar, going by rainfall.",
+    );
+    expect(seasonSentence(cell, 6)).toMatch(/^Now is the wetter part of the year here/);
+    expect(seasonSentence(cell, 1)).toMatch(/^Now is the drier stretch here \(Feb–Mar\)/);
+  });
+
   // Bengaluru-like. Dry months are under half the 79.8 mm monthly mean, so April
   // (40 mm) is just outside: the drier stretch is Dec–Mar.
   const rain = [5, 8, 15, 40, 110, 90, 110, 140, 190, 170, 60, 20];

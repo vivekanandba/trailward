@@ -25,7 +25,7 @@ const css = readFileSync(join(SRC, "index.css"), "utf8");
  */
 const LONG_MOTION_ALLOWED: { path: string; ms: number; rule: string }[] = [
   {
-    path: "components/TrekMap.tsx",
+    path: "lib/fit.ts",
     ms: 800,
     rule: "R9: flying to a new origin shows where it is from the old one",
   },

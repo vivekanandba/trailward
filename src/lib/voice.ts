@@ -5,7 +5,7 @@
  * "Unnamed peak" never leads a clause.
  */
 import { compassPoint, toIstClock, type SunTimes } from "./sun";
-import { bestSeasonFrom, driestMonths, type MonthlyRain } from "./climate";
+import { bestSeasonFrom, driestMonths, dryMonths, type MonthlyRain } from "./climate";
 import type { RegionStats } from "./regionStats";
 
 /** "Sunrise 06:05 and sunset 18:43 today (IST); the sun comes up in the east-northeast." */
@@ -31,9 +31,12 @@ export function seasonSentence(
   const dry = driestMonths(monthly);
   const stretch = bestSeasonFrom(monthly)?.replace(/ \(driest\)$/, "");
   if (dry.length === 0 || dry.length >= 11 || !stretch) return undefined;
-  return dry.includes(month0)
-    ? `Now is the drier stretch here (${stretch}), going by rainfall.`
-    : `Now is the wetter part of the year here; the drier stretch is ${stretch}, going by rainfall.`;
+  if (dry.includes(month0)) return `Now is the drier stretch here (${stretch}), going by rainfall.`;
+  // Dry, but outside the longest dry run: say so, not "wetter" (rule D1).
+  if (dryMonths(monthly).includes(month0)) {
+    return `Now is one of the drier months here; the longest dry stretch is ${stretch}, going by rainfall.`;
+  }
+  return `Now is the wetter part of the year here; the drier stretch is ${stretch}, going by rainfall.`;
 }
 
 const isNamed = (name: string): boolean => !name.startsWith("Unnamed");

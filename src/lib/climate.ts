@@ -31,11 +31,18 @@ const DRY_FLOOR_MM = 25;
  * Indices (0=Jan) of the longest run of consecutive dry months, wrapping across
  * December→January. Empty when no month is dry (no clear season).
  */
-export function driestMonths(monthly: MonthlyRain): number[] {
+/** The months below the dry threshold, by index; [] for malformed data. */
+export function dryMonths(monthly: MonthlyRain): number[] {
   if (monthly.length !== 12 || monthly.some((m) => !Number.isFinite(m))) return [];
   const mean = monthly.reduce((a, b) => a + b, 0) / 12;
   const threshold = Math.max(DRY_FLOOR_MM, mean * 0.5);
-  const dry = monthly.map((m) => m < threshold);
+  return monthly.flatMap((m, i) => (m < threshold ? [i] : []));
+}
+
+export function driestMonths(monthly: MonthlyRain): number[] {
+  if (monthly.length !== 12 || monthly.some((m) => !Number.isFinite(m))) return [];
+  const below = new Set(dryMonths(monthly));
+  const dry = monthly.map((_, i) => below.has(i));
   if (dry.every((d) => d)) return monthly.map((_, i) => i);
   if (dry.every((d) => !d)) return [];
 
