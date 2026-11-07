@@ -89,11 +89,18 @@ jobs:
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
+        # Full history, no file contents: the pages' "Data as of" comes from
+        # the data's last commit (spec 44 R5).
+        with:
+          fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: The data's date, read once with the full history (spec 44 R5)
+        run: echo "TRAILWARD_DATA_DATE=$(git log -1 --format=%cs -- src/data/treks.json)" >> "$GITHUB_ENV"
       - uses: ./.github/actions/playwright-setup
       - run: npm run e2e:static
       - uses: actions/upload-artifact@v4

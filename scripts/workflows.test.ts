@@ -146,6 +146,33 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     expect(runs.find((r) => /--project=static/.test(r))).not.toMatch(/--project=(chromium|mobile)/);
   });
 
+  it("every job that builds the static pages gives them the data's date (spec 44 R5)", () => {
+    // #89 updated CI and deploy but not the baseline workflow, whose static
+    // pass then lost "Data as of" and failed for every branch.
+    const builds = jobs.filter(({ job }) =>
+      (job.steps ?? []).some((st) =>
+        /npm run (build|e2e:static)(?![\w:-])|--project=static|--project static/.test(st.run ?? ""),
+      ),
+    );
+    expect(builds.map((j) => j.id).sort()).toEqual(
+      [
+        "ci.yml:e2e-static",
+        "deploy.yml:build",
+        "deploy.yml:e2e-static",
+        "visual-baselines.yml:baselines",
+      ].sort(),
+    );
+    for (const { id, job } of builds) {
+      const steps = job.steps ?? [];
+      const checkout = steps.find((st) => st.uses?.startsWith("actions/checkout"));
+      expect(checkout?.with?.["fetch-depth"], `${id} fetch-depth`).toBe(0);
+      expect(
+        steps.some((st) => /TRAILWARD_DATA_DATE=.*git log -1 --format=%cs/.test(st.run ?? "")),
+        `${id} passes TRAILWARD_DATA_DATE`,
+      ).toBe(true);
+    }
+  });
+
   it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {
     // npm appends extra arguments only to the LAST command of a compound
     // script: `npm run e2e -- --project=static` ran the app suite, then static

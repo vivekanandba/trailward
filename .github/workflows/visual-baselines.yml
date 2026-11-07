@@ -24,11 +24,17 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.branch }}
+          # The static pages' "Data as of" comes from the data's last commit
+          # (spec 44 R5): full history, no file contents.
+          fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: The data's date, read once with the full history (spec 44 R5)
+        run: echo "TRAILWARD_DATA_DATE=$(git log -1 --format=%cs -- src/data/treks.json)" >> "$GITHUB_ENV"
       - uses: ./.github/actions/playwright-setup
       # Both suites carry screenshots: visual.spec.ts covers the app states,
       # static.spec.ts the generated pages served by `vite preview` (spec 42 §C).
