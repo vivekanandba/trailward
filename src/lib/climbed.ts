@@ -28,16 +28,28 @@ export function loadClimbed(): Climbed {
  * change was stored, so the UI can say so rather than pretend.
  */
 export function setClimbed(id: string, climbed: boolean, today?: string): boolean {
-  const all = loadClimbed();
-  if (climbed) {
-    if (!all.has(id)) all.set(id, today ?? new Date().toISOString().slice(0, 10));
-  } else {
-    all.delete(id);
-  }
   try {
-    localStorage.setItem(CLIMBED_KEY, JSON.stringify(Object.fromEntries(all)));
+    // Read what is stored as it is, not as loadClimbed reads it: a value this
+    // code cannot read (corrupt, or a future format) is refused, never
+    // overwritten with this one tick and the rest silently lost.
+    const raw = localStorage.getItem(CLIMBED_KEY);
+    const stored: unknown = raw ? JSON.parse(raw) : {};
+    if (typeof stored !== "object" || stored === null || Array.isArray(stored)) return false;
+    const all = { ...(stored as Record<string, unknown>) };
+    if (climbed) {
+      if (!(id in all)) all[id] = today ?? localDay(new Date());
+    } else {
+      delete all[id];
+    }
+    localStorage.setItem(CLIMBED_KEY, JSON.stringify(all));
     return true;
   } catch {
     return false;
   }
+}
+
+/** The person's own calendar day, YYYY-MM-DD: a 02:00 tick in India is that day, not UTC's. */
+export function localDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }

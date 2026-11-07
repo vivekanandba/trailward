@@ -282,7 +282,18 @@ export default function App() {
 
   // Look up the selection among the currently-visible treks so the detail panel
   // closes automatically when active filters exclude the selected trek (#6).
-  const selected = useMemo(() => visible.find((t) => t.id === selectedId), [visible, selectedId]);
+  // Except the "been there" filter: unticking the open peak must not close
+  // its panel, or the person could not undo the untick (spec 44 R16).
+  const selected = useMemo(
+    () =>
+      visible.find((t) => t.id === selectedId) ??
+      (filters.climbedOnly
+        ? applyFilters(baseTreks, origin, { ...filters, climbedOnly: false }, climbedIds).find(
+            (t) => t.id === selectedId,
+          )
+        : undefined),
+    [visible, selectedId, filters, baseTreks, origin, climbedIds],
+  );
   // Whether the detail panel slides in is decided the moment it opens and held
   // while it stays open: adding the class later would replay the slide.
   const panelWasOpen = useRef(false);

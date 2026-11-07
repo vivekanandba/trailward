@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { CLIMBED_KEY, loadClimbed, setClimbed } from "./climbed";
+import { CLIMBED_KEY, loadClimbed, setClimbed, localDay } from "./climbed";
 
 // Spec 44 R16 ("Been there", register row 19). Personal state on this device
 // only: it must never break the app when storage is missing, full or corrupt.
@@ -52,5 +52,25 @@ describe("climbed peaks", () => {
       throw new Error("quota");
     });
     expect(setClimbed("y", true, "2026-10-31")).toBe(false);
+  });
+
+  it("refuses a tick rather than overwrite stored ticks it cannot read", () => {
+    localStorage.setItem(CLIMBED_KEY, "[not, json");
+    expect(setClimbed("skandagiri", true)).toBe(false);
+    expect(localStorage.getItem(CLIMBED_KEY)).toBe("[not, json"); // untouched
+    localStorage.setItem(CLIMBED_KEY, '["skandagiri"]'); // parses, but not this format
+    expect(setClimbed("savandurga", true)).toBe(false);
+    expect(localStorage.getItem(CLIMBED_KEY)).toBe('["skandagiri"]');
+    // An entry in a format this code does not know survives a tick.
+    localStorage.setItem(CLIMBED_KEY, JSON.stringify({ old: { day: "2026-01-01" } }));
+    expect(setClimbed("skandagiri", true, "2026-10-31")).toBe(true);
+    expect(JSON.parse(localStorage.getItem(CLIMBED_KEY)!)).toEqual({
+      old: { day: "2026-01-01" },
+      skandagiri: "2026-10-31",
+    });
+  });
+
+  it("records the person's own calendar day, not UTC's", () => {
+    expect(localDay(new Date(2026, 10, 1, 2, 0))).toBe("2026-11-01"); // 02:00 local
   });
 });

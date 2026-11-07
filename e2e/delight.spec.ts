@@ -138,3 +138,19 @@ test("been there: a tick survives a reload and the filter finds it (spec 44 R16)
   await expect(page.locator("#results").getByText("Skandagiri")).toBeVisible();
   await expect(page.locator("#results li button")).toHaveCount(1);
 });
+
+test("been there: unticking the open peak under the filter keeps its panel (spec 44 R16)", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("trailward.climbed", JSON.stringify({ skandagiri: "2026-10-31" })),
+  );
+  await page.goto("/?mine=1&sel=skandagiri");
+  const toggle = page.getByRole("button", { name: "Been there" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await toggle.click();
+  // Still open, so an accidental untick can be undone.
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+});

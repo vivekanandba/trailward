@@ -486,6 +486,15 @@ export default function TrekDetail({
             </p>
           )}
           {onToggleClimbed && <BeenThere climbedOn={climbedOn} onToggle={onToggleClimbed} />}
+          {onToggleClimbed && (
+            <BeenThere
+              // One toggle per peak: its celebration and error belong to this
+              // trek, not to the next one the panel shows (spec 44 R16).
+              key={trek.id}
+              climbedOn={climbedOn}
+              onToggle={onToggleClimbed}
+            />
+          )}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span
               className="rounded-full px-2 py-0.5 text-xs font-medium text-white"

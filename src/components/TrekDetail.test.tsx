@@ -450,6 +450,26 @@ describe("TrekDetail been there (spec 44 R16)", () => {
     );
   });
 
+  it("does not carry a celebration over to the next peak the panel shows", () => {
+    // The panel is reused across selections; the toggle must not be.
+    const onToggle = vi.fn(() => true);
+    const { rerender } = render(
+      <TrekDetail trek={baseTrek} origin={origin} onClose={vi.fn()} onToggleClimbed={onToggle} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Been there" }));
+    const other = { ...baseTrek, id: "other", name: "Other" };
+    rerender(
+      <TrekDetail
+        trek={other}
+        origin={origin}
+        onClose={vi.fn()}
+        onToggleClimbed={onToggle}
+        climbedOn="2026-09-01"
+      />,
+    );
+    expect(document.querySelector(".climbed-in")).toBeNull();
+  });
+
   it("says when it was ticked, and celebrates only in answer to the press", () => {
     const onToggle = vi.fn(() => true);
     const { rerender } = render(
