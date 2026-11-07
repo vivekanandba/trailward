@@ -249,11 +249,18 @@ export async function runBuildData(
   // own rule), checked here and located by index. A curated record is rebuilt
   // or dropped, so a tightened rule it breaks is repaired, not refused.
   const entries = parsed as unknown[];
+  // Seed ids stand in for the ids buildDataset returns: it yields exactly one
+  // record per seed or throws.
   const rebuilt = new Set(seeds.map((s) => s.id));
+  const seen = new Map<string, number>();
   entries.forEach((t, i) => {
     if (typeof t !== "object" || t === null || typeof (t as Trek).id !== "string") {
       refuse(`has an entry at index ${i} that is not a trek with an id`);
     }
+    // The fold looks records up by id, so a second copy would silently win.
+    const id = (t as Trek).id;
+    if (seen.has(id)) refuse(`has id '${id}' at index ${seen.get(id)} and again at ${i}`);
+    seen.set(id, i);
     if (!keptByFold(t as Trek, rebuilt)) return;
     const res = validateTrek(t);
     if (!res.ok) refuse(`has an invalid record at index ${i}: ${res.error}`);
@@ -262,7 +269,8 @@ export async function runBuildData(
   const treks = await buildDataset(seeds, origin, enrichers);
   const ds = validateDataset(foldCurated(treks, existing));
   if (!ds.ok) {
-    // Most likely a carried place field or photo that a tightened rule rejects.
+    // Everything the fold keeps exactly was checked above, so this is a field
+    // it carried (place or photo) onto a rebuilt or promoted record.
     throw new Error(
       `[build-data] folding into ${file} gives an invalid dataset, nothing written: ${ds.error}`,
     );

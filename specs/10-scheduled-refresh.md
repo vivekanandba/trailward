@@ -71,8 +71,9 @@ pipeline, commits changes, and lets the gated deploy publish them.
   it naming the file and the entry's index, before any network enrichment. A curated record is
   never kept exactly (it is rebuilt or dropped), so it is not refused there: the fold replaces a
   rebuilt record's `run` fields, which is how `build:data` repairs one a tightened rule rejects.
-  Its carried place fields and photo are not rebuilt, so one of those that fails is refused by
-  the full validation of the folded output before the write, which names the record.
+  Its carried place fields and photo are not rebuilt, and nor are those a promoted pin hands
+  over, so one of those that fails is refused by the full validation of the folded output before
+  the write, after enrichment, which names the record. A duplicate id is refused early.
 
 ## Interfaces & data contracts
 
@@ -87,7 +88,8 @@ of treks.json`.
   `GH_REPO` set, so it names the repo without relying on the work job's checkout, and passes the
   title through `env`.
 - `runBuildData(io, file, seeds, origin, enrichers)` is the whole `build:data` run against a
-  filesystem; `foldCurated(built, existing)` is its pure fold.
+  filesystem; `foldCurated(built, existing)` is its pure fold, and `keptByFold(t, rebuiltIds)`
+  the fold's rule for a record it keeps exactly, which `runBuildData` also checks early.
 
 ## Edge cases & error states
 
@@ -120,9 +122,10 @@ of treks.json`.
   key order kept; a removed seed dropped. `runBuildData`: the written file keeps every discovery
   record; a non-JSON file, a non-array, a `null` or id-less entry and an invalid kept record are
   each refused by name and index before any enricher runs, while an invalid record the fold drops
-  (a removed seed's) or replaces (a promoted pin) is not; a rebuilt curated record whose `run`
-  field the validator rejects is repaired; one whose carried photo fails is refused by the
-  output validation, naming it, and nothing is written.
+  (a removed seed's) or replaces (a promoted pin's rebuilt field) is not; a duplicate id is
+  refused early, by both indexes; a rebuilt curated record whose `run` field the validator
+  rejects is repaired; one whose carried photo fails is refused by the output validation, naming
+  it, and nothing is written.
 - `scripts/sources/parsers.test.ts`: a disambiguation page yields nothing.
 - `scripts/build-tools.test.ts`: `curatedLosses` names each route fact or photo a curated record
   lost, per record and field: a record routed this run does not hide another's loss, one already

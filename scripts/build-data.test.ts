@@ -385,6 +385,24 @@ describe("runBuildData — what build:data actually writes (spec 10)", () => {
     expect((JSON.parse(dropped.files.get(file)!) as Trek[]).map((t) => t.id)).toEqual([seed.id]);
   });
 
+  it("refuses a duplicate id early, naming both indexes", async () => {
+    // The fold looks records up by id, so the last copy would silently win.
+    const file = "/repo/src/data/treks.json";
+    const pin = {
+      id: "gn-1",
+      name: "A hill",
+      lat: 13.1,
+      lng: 77.2,
+      tier: "discovery",
+      sources: [],
+      verified: false,
+    };
+    const io = memoryIO({ [file]: JSON.stringify([pin, { ...pin, name: "B hill" }]) });
+    await expect(runBuildData(io, file, BANGALORE_SEED, BANGALORE_ORIGIN, {})).rejects.toThrow(
+      /has id 'gn-1' at index 0 and again at 1/,
+    );
+  });
+
   it("refuses a carried photo a tightened rule rejects, naming it, and writes nothing", async () => {
     // Not rebuilt, so not repaired: the output validation is its gate.
     const file = "/repo/src/data/treks.json";
