@@ -85,6 +85,20 @@ describe("renderCard", () => {
   });
 });
 
+describe("canRender refuses what cannot be drawn", () => {
+  it("keeps a name with a control or invisible format character on the global card", () => {
+    for (const bad of [
+      "Kote\u000bBetta",
+      "Kote\u2028Betta",
+      "Kote\u200bBetta",
+      "Kote\u202eBetta",
+    ]) {
+      expect(canRender(bad), JSON.stringify(bad)).toBe(false);
+    }
+    expect(canRender("Kumāra Parvatha")).toBe(true);
+  });
+});
+
 describe("titleLayout — the title fits the card, measured by the renderer", () => {
   const font = resolve(__dirname, "../cards/DejaVuSans-Bold.ttf");
   const widest = (name: string): number => {
@@ -111,6 +125,32 @@ describe("titleLayout — the title fits the card, measured by the renderer", ()
       expect(widest(name)).toBeLessThanOrEqual(1120);
     });
   }
+
+  it("shrinks before it cuts: a name that fits whole at a smaller size is never cut", () => {
+    // At 96 px this lost its last word ("Rangaswamy…"); at 84 px it fits whole.
+    const { lines, size } = titleLayout("Bilikal Rangaswamy Betta");
+    expect(lines.join(" ")).toBe("Bilikal Rangaswamy Betta");
+    expect(size).toBeLessThan(96);
+    expect(titleLayout("Skandagiri")).toEqual({ lines: ["Skandagiri"], size: 96 });
+  });
+
+  it("cuts only what cannot fit in two lines even at 64 px, at a word", () => {
+    const { lines, size } = titleLayout("Sri Malai Mahadeshwara Hills Wildlife Sanctuary Peak");
+    expect(size).toBe(64);
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toMatch(/…$/);
+  });
+
+  it("cuts no carded name that fits whole at some size", () => {
+    const treks = JSON.parse(
+      readFileSync(resolve(__dirname, "../../src/data/treks.json"), "utf8"),
+    ) as Trek[];
+    const cut = cardPages(qualifyingTreks(treks))
+      .map((t) => ({ name: t.name, shown: titleLayout(t.name).lines.join(" ") }))
+      .filter(({ name, shown }) => shown !== name);
+    // Only names too long for two 64 px lines may be cut.
+    for (const { name } of cut) expect(name.length, name).toBeGreaterThan(2 * 22);
+  });
 
   it("keeps every name that actually gets a card inside the margin", () => {
     const treks = JSON.parse(

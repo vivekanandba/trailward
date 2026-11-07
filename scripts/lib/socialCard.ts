@@ -24,6 +24,11 @@ const xml = (s: string): string =>
 export function canRender(name: string): boolean {
   return [...name.normalize("NFC")].every((ch) => {
     const cp = ch.codePointAt(0)!;
+    // Control and invisible formatting characters are not drawable: a
+    // vertical tab would make the SVG invalid and fail the whole build.
+    if (cp < 0x20 || (cp >= 0x7f && cp < 0xa0)) return false;
+    if ((cp >= 0x200b && cp <= 0x200f) || (cp >= 0x2028 && cp <= 0x202e)) return false;
+    if (cp >= 0x2060 && cp <= 0x206f) return false;
     return (
       cp <= 0x24f ||
       (cp >= 0x300 && cp <= 0x36f) ||
@@ -39,41 +44,55 @@ const TITLE_ROOM = 1040;
 // character on a mixed-case name; 0.68 leaves room for wider letters.
 const EM_PER_CHAR = 0.68;
 
-/** At most two lines broken at spaces, the second cut with "…" if it would not fit. */
-function wrap(name: string, perLine: number): string[] {
-  const words = name.split(/\s+/);
+/**
+ * At most two lines broken at spaces, or undefined when the name does not fit
+ * in two lines of `perLine` characters (a word too long for a line, or a
+ * third line needed).
+ */
+function wrap(name: string, perLine: number): string[] | undefined {
   const lines: string[] = [];
   let line = "";
-  for (const w of words) {
-    if (line && (line + " " + w).length > perLine && lines.length === 0) {
+  for (const w of name.split(/\s+/)) {
+    if (w.length > perLine) return undefined;
+    if (!line) line = w;
+    else if ((line + " " + w).length <= perLine) line = `${line} ${w}`;
+    else {
       lines.push(line);
       line = w;
-    } else {
-      line = line ? `${line} ${w}` : w;
     }
   }
   lines.push(line);
-  // A second line that would run off the card is cut at a word, with an
-  // ellipsis: shorter, never different.
-  if (lines.length === 2 && lines[1].length > perLine) {
-    const cut = lines[1].slice(0, perLine - 1);
-    const at = cut.lastIndexOf(" ");
-    lines[1] = `${at > 0 ? cut.slice(0, at) : cut}…`;
+  return lines.length <= 2 ? lines : undefined;
+}
+
+/** Two lines at 64 px, the second cut at a word with "…": shorter, never different. */
+function cut(name: string, perLine: number): string[] {
+  const words = name.split(/\s+/);
+  const first: string[] = [];
+  while (words.length && [...first, words[0]].join(" ").length <= perLine)
+    first.push(words.shift()!);
+  if (first.length === 0) first.push(words.shift()!.slice(0, perLine - 1) + "…");
+  let second = words.join(" ");
+  if (second.length > perLine) {
+    const head = second.slice(0, perLine - 1);
+    const at = head.lastIndexOf(" ");
+    second = `${at > 0 ? head.slice(0, at) : head}…`;
   }
-  return lines;
+  return second ? [first.join(" "), second] : [first.join(" ")];
 }
 
 /**
- * Lines and font size for a title: as large as 96 px allows, down to 64 px,
- * so the longest line fits the card's width.
+ * Lines and font size for a title: the largest of 96, 84, 72 and 64 px at
+ * which the whole name fits in two lines; only when none does is it cut, at
+ * 64 px (spec 35 §E).
  */
 export function titleLayout(name: string): { lines: string[]; size: number } {
   const fits = (size: number) => Math.floor(TITLE_ROOM / (size * EM_PER_CHAR));
   for (const size of [96, 84, 72, 64]) {
     const lines = wrap(name, fits(size));
-    if (lines.every((l) => l.length <= fits(size))) return { lines, size };
+    if (lines) return { lines, size };
   }
-  return { lines: wrap(name, fits(64)), size: 64 };
+  return { lines: cut(name, fits(64)), size: 64 };
 }
 
 /** The facts line, from fields the record holds; empty when it holds none. */
