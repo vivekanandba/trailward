@@ -52,7 +52,7 @@ A record whose name starts with "Unnamed" never qualifies: a page titled "Unname
 (~912 m)" has nothing to rank for and dilutes the rest.
 
 **Where each page lives: the slug registry.** A page's URL is `t/<slug>/`, and the slug is
-recorded once in `scripts/pages/slugs.json` (slug → `{id, lat, lng}`) and kept. The registry is
+recorded once in `scripts/pages/slugs.json` (slug → `{id, lat, lng, name}`) and kept. The registry is
 a lockfile:
 
 - `npm run build:slugs` (`scripts/build-slugs.ts`) gives each page with no slug its bare slug
