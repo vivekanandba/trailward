@@ -1,7 +1,8 @@
 name: Weekly data refresh
 
-# Re-runs the data pipeline weekly, commits treks.json if it changed.
-# The push then triggers the gated deploy workflow. No server involved.
+# Re-runs the data pipeline weekly and lands treks.json if it changed
+# (scripts/push-data.sh), then dispatches the gated deploy: a push made with
+# the workflow's token starts no workflow itself. No server involved.
 on:
   schedule:
     - cron: "0 2 * * 1" # Mondays 02:00 UTC
@@ -9,6 +10,13 @@ on:
 
 permissions:
   contents: write
+  actions: write # dispatch the deploy for what landed
+
+# The two workflows that write treks.json never run at once: it is one line,
+# so any overlap is a certain conflict and a lost run (spec 10).
+concurrency:
+  group: data-writer
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -22,24 +30,29 @@ jobs:
       - run: npm ci
       - run: npm run build:data
       - run: npm run build:discovery
-      - run: npm run validate:data
-      # A rebake can "succeed" while silently stripping enrichment (spec 31) —
-      # refuse to commit if any field count regressed vs the committed data.
-      - run: npx tsx scripts/check-enrichment-drift.ts
-      - run: npm run build:chunks
-      # Record a URL for every new page; never move an existing one (spec 35).
-      - run: npm run build:slugs
+      # Validation and the drift guard (spec 31): a rebake can "succeed" while
+      # silently stripping enrichment. The same npm script the landing step
+      # reruns on top of a moved main.
+      - run: npm run check:refresh
+      # Chunks and URLs for every page (spec 35); the same npm script the
+      # landing step reruns on top of a moved main.
+      - run: npm run derive:data
+      # Lands on whatever main became while this ran: if it moved, the data is
+      # re-derived and re-checked on top of it first (spec 10).
       - name: Commit refreshed data if changed
-        run: |
-          if [[ -n "$(git status --porcelain src/data/treks.json public/data scripts/pages)" ]]; then
-            git config user.name "trailward-bot"
-            git config user.email "actions@github.com"
-            git add src/data/treks.json public/data scripts/pages
-            git commit -m "chore(data): weekly refresh of treks.json"
-            git push
-          else
-            echo "No data changes this run."
-          fi
+        id: land
+        run: >-
+          scripts/push-data.sh "chore(data): weekly refresh of treks.json"
+          "npm ci && npm run derive:data && npm run check:refresh"
+          src/data/treks.json -- public/data scripts/pages
+      # A push with the workflow's own token starts no other workflow, so the
+      # data would sit on main unpublished until a person pushed; a dispatch
+      # does start one (spec 10, spec 09).
+      - name: Publish what landed
+        if: steps.land.outputs.pushed == 'true'
+        run: gh workflow run deploy.yml --ref "$GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   # A red scheduled run emails only whoever last edited the cron (spec 10):
   # file a failure, close the issue on the next success.

@@ -11,7 +11,14 @@ on:
 
 permissions:
   contents: write
+  actions: write # dispatch the deploy for what landed
   issues: write
+
+# The two workflows that write treks.json never run at once: it is one line,
+# so any overlap is a certain conflict and a lost run (spec 10).
+concurrency:
+  group: data-writer
+  cancel-in-progress: false
 
 jobs:
   apply:
@@ -26,20 +33,25 @@ jobs:
       - run: npm run apply:names
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: npm run build:chunks
-      # A named pin may earn a page; record its URL (spec 35).
-      - run: npm run build:slugs
+      # Chunks, and a URL for a named pin that earns a page (spec 35); the same
+      # npm script the landing step reruns on top of a moved main.
+      - run: npm run derive:data
+      # Lands on whatever main became while this ran: if it moved, the data is
+      # re-derived and re-checked on top of it first (spec 10).
       - name: Commit applied names
-        run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
-            git config user.name "trailward-bot"
-            git config user.email "actions@github.com"
-            git add scripts/detected src/data/treks.json public/data scripts/pages
-            git commit -m "chore(names): apply community name suggestions"
-            git push
-          else
-            echo "No suggestions applied."
-          fi
+        id: land
+        run: >-
+          scripts/push-data.sh "chore(names): apply community name suggestions"
+          "npm ci && npm run derive:data && npm run validate:data"
+          scripts/detected src/data/treks.json -- public/data scripts/pages
+      # A push with the workflow's own token starts no other workflow, so the
+      # data would sit on main unpublished until a person pushed; a dispatch
+      # does start one (spec 10, spec 09).
+      - name: Publish what landed
+        if: steps.land.outputs.pushed == 'true'
+        run: gh workflow run deploy.yml --ref "$GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   # A red scheduled run emails only whoever last edited the cron (spec 10):
   # file a failure, close the issue on the next success.

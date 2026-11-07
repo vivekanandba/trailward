@@ -14,9 +14,29 @@ pipeline, commits changes, and lets the gated deploy publish them.
 ## Acceptance criteria
 
 - **Given** the schedule `0 2 * * 1` (Mondays 02:00 UTC), **when** it fires, **then** the workflow
-  runs `build:data`, validates the output, and **commits `treks.json` only if it changed**.
-- **Given** a commit happens, **when** pushed to `main`, **then** the gated deploy workflow (09)
-  runs and republishes only if data + tests pass.
+  runs `build:data`, validates the output, and **commits only if the data changed**: `treks.json`
+  or what is derived from it (chunks, the slug registry).
+- **Given** main moved while the run built its data (a refresh takes hours), **when** it lands
+  (`scripts/push-data.sh <sources> -- <derived>`), **then** only this run's change to the source
+  data (`treks.json`, and the detected-name files for apply-suggestions) is carried onto the new
+  main, as a three-way patch; the derived files (chunks, the slug registry) are main's and are
+  rebuilt there by `npm run derive:data`, then checked (`check:refresh` for the refresh,
+  `validate:data` for names). Those are npm scripts, so a step merged mid-run is run. A run that
+  changed only derived files carries nothing and is simply rebuilt. A source change that does not
+  apply, or a failed recheck, pushes nothing and fails the run, which the reporter files. A push
+  a rule refuses (protection, a ruleset, permissions, a hook) is reported as such and not retried;
+  any other failed push is retried from a fresh fetch. Each attempt, and the last look before
+  giving up, first asks whether this run's commit is already on the branch (an ancestor of its
+  tip, so it still counts after someone pushed on top): a push that reached the server but
+  reported failure is counted as landed, and the deploy is still dispatched. The two workflows that write `treks.json` share one
+  `concurrency` group. Incident, 2026-11-07: the first refresh to pass every check in twelve weeks
+  lost its data to a rejected push, and a bare rebase would have landed it unchecked on a main
+  that had since gained the slug registry (247 pages with no URL).
+- **Given** the run landed its commit, **then** it dispatches the deploy: a push made with the
+  workflow's own token starts no other workflow, so the data would otherwise sit on main
+  unpublished until a person pushed.
+- **Given** the data landed on `main`, **then** the dispatched deploy workflow (09) builds and
+  publishes it; the bot's push alone would start nothing.
 - **Given** `workflow_dispatch`, **when** triggered manually, **then** the same refresh runs.
 - **Given** any scheduled workflow (refresh, name suggestions, link check, live API check),
   **when** its work job ends, **then** a separate `report-failure` job reports the result: a
@@ -96,7 +116,7 @@ of treks.json`.
 - No changes this week → no commit, no redeploy (logged "No data changes").
 - Validation fails after build → job fails **before** committing; last good data stays live.
 - Source outage → pipeline skips optional fields (per 02); only a structural failure blocks.
-- Avoid infinite loops: the data-commit triggers deploy, not another refresh.
+- Avoid infinite loops: landing data dispatches the deploy, not another refresh.
 
 - **Incident, 2026-08-10 → 2026-10-26: every weekly run failed and nobody saw it.** `build:data`
   wrote `treks.json` with only the 16 curated records, so `build:discovery` preserved enrichment

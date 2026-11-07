@@ -173,6 +173,38 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     }
   });
 
+  it("a scheduled data job lands through push-data.sh, one writer at a time (spec 10)", () => {
+    // The 2026-11-07 refresh built and checked its data for 2.5 h, then lost
+    // it to a rejected push; a bare rebase would have landed it unchecked on
+    // a main that had since gained the slug registry.
+    for (const f of ["refresh-data.yml", "apply-suggestions.yml"]) {
+      const text = readFileSync(resolve(dir, f), "utf8");
+      const wf = load(text) as { concurrency?: { group?: string } };
+      expect(wf.concurrency?.group, `${f} concurrency`).toBe("data-writer");
+      const runs = jobs
+        .filter((j) => j.id.startsWith(`${f}:`))
+        .flatMap((j) => j.job.steps ?? [])
+        .map((st) => st.run ?? "");
+      expect(
+        runs.some((r) => /scripts\/push-data\.sh/.test(r)),
+        f,
+      ).toBe(true);
+      expect(
+        runs.filter((r) => /git push/.test(r)),
+        `${f} pushes only via push-data.sh`,
+      ).toEqual([]);
+      // A token push starts no workflow: what landed is deployed by dispatch.
+      const steps = jobs
+        .filter((j) => j.id.startsWith(`${f}:`))
+        .flatMap((j) => j.job.steps ?? []) as { run?: string; if?: string }[];
+      const publish = steps.find((st) => /gh workflow run deploy\.yml/.test(st.run ?? ""));
+      expect(publish, `${f} dispatches the deploy`).toBeDefined();
+      expect(publish?.if, f).toMatch(/steps\.land\.outputs\.pushed == 'true'/);
+      const perms = (wf as { permissions?: Record<string, string> }).permissions ?? {};
+      expect(perms.actions, `${f} may dispatch the deploy`).toBe("write");
+    }
+  });
+
   it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {
     // npm appends extra arguments only to the LAST command of a compound
     // script: `npm run e2e -- --project=static` ran the app suite, then static
