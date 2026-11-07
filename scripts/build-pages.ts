@@ -21,11 +21,8 @@ import {
 import { SLUGS_FILE, readRegistry, slugsFromRegistry } from "./lib/slugs";
 import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
-<<<<<<< HEAD
 import { cardPages, cardSvg, renderCard } from "./lib/socialCard";
-=======
 import { pageFontFaces } from "./lib/pageFonts";
->>>>>>> feat(fonts): static pages use the app's bundled Inter, at its hashed paths
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
 import {
@@ -150,14 +147,13 @@ export function runBuildPages(
   const globalCard = absoluteUrl("icons/og.png");
   const trekPages = pages.map((trek) => {
     const slug = slugs.get(trek.id)!;
-    const rendered = renderTrekPage(trek, slug, refreshed);
+    const rendered = withFonts(renderTrekPage(trek, slug, refreshed));
     const html = cards.has(trek.id)
       ? rendered.replace(
           `content="${globalCard}"`,
           `content="${absoluteUrl(`t/${slug}/card.png`)}"`,
         )
       : rendered;
-    const html = withFonts(renderTrekPage(trek, slug, refreshed));
     // Spec 44 R1, on EVERY real page of EVERY build: the page names its own
     // url, and its structured data names the same one. 3,815 pages once
     // advertised a url that 404s, and no gate looked at the real output.
