@@ -21,6 +21,12 @@ permissions:
 
 jobs:
   report:
+    # One writer per issue title, so two quick failures cannot both open an issue. Job-level: a top-level group in a called workflow would share the caller's.
+    concurrency:
+      group: report-failure-${{ inputs.title }}
+      cancel-in-progress: false
+    # A few gh calls; the default is 6 hours.
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

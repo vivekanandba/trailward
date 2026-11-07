@@ -17,8 +17,15 @@ permissions:
   contents: read
   issues: write # to file the drift issue
 
+# A weekly job: a second run waits rather than racing the first.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   live:
+    # About a minute in every run seen; the default is 6 hours.
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

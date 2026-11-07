@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   validate-data:
+    # Bounded at several times the longest run seen (2.4 min); the default is 6 hours.
+    timeout-minutes: 15
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
@@ -28,6 +30,7 @@ jobs:
       - run: npm run validate:data
 
   quality:
+    timeout-minutes: 15
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
@@ -44,6 +47,7 @@ jobs:
       - run: npm run format:check
 
   test:
+    timeout-minutes: 15
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
@@ -57,6 +61,7 @@ jobs:
       - run: npm run coverage
 
   e2e:
+    timeout-minutes: 20
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
@@ -83,6 +88,7 @@ jobs:
           if-no-files-found: ignore
 
   e2e-static:
+    timeout-minutes: 20
     # The generated crawl surface (spec 35): trek pages, robots, sitemap,
     # served by `vite preview` from a real production build at the real base
     # path. Separate job because it pays for that build.
@@ -112,6 +118,7 @@ jobs:
           if-no-files-found: ignore
 
   build:
+    timeout-minutes: 15
     needs: [quality, validate-data, test, e2e, e2e-static]
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
@@ -137,6 +144,7 @@ jobs:
           path: ./dist
 
   deploy:
+    timeout-minutes: 10
     needs: build
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     environment:
@@ -153,6 +161,7 @@ jobs:
   # that the crawl surface and a generated trek page are really being served
   # (a 200 is not enough: the SPA shell as a soft 404 passes a status check).
   verify-deploy:
+    timeout-minutes: 10
     needs: deploy
     runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:

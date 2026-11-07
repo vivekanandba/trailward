@@ -12,8 +12,15 @@ on:
 permissions:
   contents: read
 
+# A weekly job: a second run waits rather than racing the first.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   links:
+    # Runs take about 170 min (2026-10 runs: 168-171); the default is 6 hours.
+    timeout-minutes: 240
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
