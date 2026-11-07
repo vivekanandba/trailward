@@ -207,6 +207,8 @@ describe("updateRegistry", () => {
     // Spacing is not identity; a digits-only name keys by its fold.
     expect(nameKey(mk("a", " ಕೋಟೆ  2 "))).toBe(nameKey(mk("a", "ಕೋಟೆ 2")));
     expect(nameKey(mk("a", "1075 "))).toBe("1075");
+    // No letter at all: keyed by the name, so different ones never match.
+    expect(nameKey(mk("a", "१०७५"))).not.toBe(nameKey(mk("a", "२३४")));
     expect(nameKey(mk("a", ""))).toBe("~");
     expect(() =>
       readRegistry(JSON.stringify({ "gn-77": { id: "gn-77", lat: 1, lng: 1, name: "~" } })),

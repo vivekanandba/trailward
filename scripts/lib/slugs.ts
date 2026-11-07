@@ -38,13 +38,15 @@ const SAME_PLACE_KM = 0.12;
  * The name a slug is matched on. A name with any non-Latin letter keys as `~`
  * and the name itself (NFC, case and spacing normalised), so "ಕೋಟೆ 2A" and
  * "ಬೆಟ್ಟ 2A" never match, as their folds ("2a") would. Any other name keys as
- * its fold ("Kote Betta" → "kote-betta", "1075" → "1075"); an empty one as "~".
+ * its fold ("Kote Betta" → "kote-betta", "1075" → "1075"), or, when the fold is
+ * empty ("१०७५", "△"), as `~` and the name; an empty name keys as "~".
  */
 export const nameKey = (t: Trek): string => {
   if (/(?!\p{Script=Latin})\p{L}/u.test(t.name)) {
     return `~${t.name.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase()}`;
   }
-  return foldName(t.name) || "~";
+  // No letter at all ("१०७५", "△"): the name itself, so two such names differ.
+  return foldName(t.name) || `~${t.name.normalize("NFC").trim().replace(/\s+/g, " ")}`;
 };
 
 const round5 = (n: number): number => Math.round(n * 1e5) / 1e5;
@@ -85,7 +87,7 @@ export function readRegistry(body: string | undefined): SlugRegistry {
       throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no position`);
     }
     const name = (e as SlugEntry).name;
-    // Folded (as a slug folds it), or `~` and a name with no Latin letters.
+    // A fold (as a slug folds it), or a `~` key (see nameKey).
     const folded = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name);
     if (typeof name !== "string" || !(folded || name.startsWith("~"))) {
       throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no recorded name in folded form`);
@@ -146,19 +148,24 @@ export function updateRegistry(
 
   // A rescan's new page takes an orphan's URL only when the match is
   // unambiguous: the same name within 120 m, and neither side has another
-  // such candidate among all new records, pages or not. When two same-named
+  // such candidate among every record without a slug, page or not, including
+  // a long-standing neighbour (which retires the URL rather than risk it). When two same-named
   // summits are rescanned together no rule can tell which is which, so their
   // URLs retire rather than risk pointing at a different peak.
   const fresh = pages.filter((t) => !slugOf.has(t.id));
   const unslugged = new Map(
     [...dataset, ...pages].filter((t) => !slugOf.has(t.id)).map((t) => [t.id, t]),
   );
+  const orphansByName = new Map<string, string[]>();
+  for (const slug of orphans) {
+    const list = orphansByName.get(reg[slug].name) ?? [];
+    list.push(slug);
+    orphansByName.set(reg[slug].name, list);
+  }
   const pairs: { slug: string; t: Trek }[] = [];
-  for (const t of unslugged.values()) {
-    const key = nameKey(t);
-    for (const slug of orphans) {
+  for (const t of orphans.size > 0 ? unslugged.values() : []) {
+    for (const slug of orphansByName.get(nameKey(t)) ?? []) {
       const e = reg[slug];
-      if (e.name !== key) continue;
       const d = distanceFrom({ id: "", name: "", lat: e.lat, lng: e.lng }, t);
       if (d <= SAME_PLACE_KM) pairs.push({ slug, t });
     }

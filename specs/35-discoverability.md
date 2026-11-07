@@ -61,8 +61,10 @@ a lockfile:
   has gone stays reserved.
 - A page whose id is new but which stands within 120 m of a registered record that is **gone
   from the dataset**, **under the same name**, takes over that record's slug **when the match is
-  unambiguous**: neither the page nor the orphan has another such candidate among all new records,
-  with or without a page. That is a terrain
+  unambiguous**: neither the page nor the orphan has another such candidate among every record
+  without a slug, with or without a page. A same-named neighbour without a page within 120 m
+  therefore retires the URL even when it is long-standing: a URL that dies is a smaller harm than
+  one that points at a different peak, and such pairs are rare (none today). That is a terrain
   rescan regenerating a `d12-` id for the same summit (spec 27). When two same-named summits are
   rescanned together no rule can tell which is which, so their old URLs retire rather than risk
   pointing at a different peak. Each entry records its record's name (`nameKey`: a name with any
