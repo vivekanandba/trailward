@@ -90,7 +90,7 @@ export function pagesLost(head: Trek[], now: Trek[]): string[] {
     .filter((t) => qualifies(t))
     .filter((t) => {
       const n = nowById.get(t.id);
-      return n !== undefined && !qualifies(n) && !after.has(t.id);
+      return n !== undefined && !after.has(t.id);
     })
     .map((t) => `${t.id} (${t.name})`);
 }
