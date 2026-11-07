@@ -14,7 +14,8 @@ pipeline, commits changes, and lets the gated deploy publish them.
 ## Acceptance criteria
 
 - **Given** the schedule `0 2 * * 1` (Mondays 02:00 UTC), **when** it fires, **then** the workflow
-  runs `build:data`, validates the output, and **commits `treks.json` only if it changed**.
+  runs `build:data`, validates the output, and **commits only if the data changed**: `treks.json`
+  or what is derived from it (chunks, the slug registry).
 - **Given** main moved while the run built its data (a refresh takes hours), **when** it lands
   (`scripts/push-data.sh <sources> -- <derived>`), **then** only this run's change to the source
   data (`treks.json`, and the detected-name files for apply-suggestions) is carried onto the new
@@ -23,8 +24,10 @@ pipeline, commits changes, and lets the gated deploy publish them.
   `validate:data` for names). Those are npm scripts, so a step merged mid-run is run. A run that
   changed only derived files carries nothing and is simply rebuilt. A source change that does not
   apply, or a failed recheck, pushes nothing and fails the run, which the reporter files. A push
-  a rule refuses (protection, permissions, a hook) is reported as such and not retried; any other
-  failed push is retried from a fresh fetch. The two workflows that write `treks.json` share one
+  a rule refuses (protection, a ruleset, permissions, a hook) is reported as such and not retried;
+  any other failed push is retried from a fresh fetch, and each attempt first asks the branch what
+  happened: a push that reached the server but reported failure is counted as landed, so the
+  deploy is still dispatched. The two workflows that write `treks.json` share one
   `concurrency` group. Incident, 2026-11-07: the first refresh to pass every check in twelve weeks
   lost its data to a rejected push, and a bare rebase would have landed it unchecked on a main
   that had since gained the slug registry (247 pages with no URL).

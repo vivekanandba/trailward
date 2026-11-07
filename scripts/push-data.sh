@@ -45,6 +45,17 @@ built_on=$(git rev-parse HEAD)
 git add -A -- "${all[@]}"
 git commit -q -m "$message"
 
+landed() {
+  echo "push-data: $1 $(git rev-parse --short HEAD) is on $branch."
+  # Tell the workflow, which then dispatches the deploy: a push made with
+  # the workflow's own token starts no other workflow.
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "pushed=true" >> "$GITHUB_OUTPUT"; fi
+  exit 0
+}
+
+# Each attempt decides from the branch's state after a fresh fetch: already
+# landed (a push that reported failure may have reached the server), moved
+# (carry the sources across), or as we left it (push).
 for attempt in 1 2 3; do
   if ! git fetch -q origin "$branch"; then
     echo "push-data: could not fetch $branch (attempt $attempt)" >&2
@@ -55,20 +66,22 @@ for attempt in 1 2 3; do
   # Its own statement, so a failure stops the script (set -e does not reach
   # a substitution inside the test of an if).
   remote_head=$(git rev-parse "origin/$branch")
+  if [ "$remote_head" = "$(git rev-parse HEAD)" ]; then landed "already landed:"; fi
   if [ "$remote_head" != "$built_on" ]; then
     echo "push-data: $branch moved since this run began; re-deriving on top of it."
     # This run's change to the sources, as a patch; everything else is main's.
     patch=$(mktemp)
-    trap 'rm -f "$patch"' EXIT
     git diff --binary "$built_on" HEAD -- "${sources[@]}" > "$patch"
     git reset -q --hard "origin/$branch"
     if [ "${#derived[@]}" -gt 0 ]; then git clean -qfd -- "${derived[@]}"; fi
     # An empty patch (this run changed only derived files) has nothing to
     # carry; git rejects it as "unrecognized input", which is not a conflict.
     if [ -s "$patch" ] && ! applied=$(git apply --3way --index "$patch" 2>&1); then
+      rm -f "$patch"
       echo "push-data: this run's source data does not apply on $branch; refusing: $applied" >&2
       exit 1
     fi
+    rm -f "$patch"
     bash -c "$recheck"
     git add -A -- "${all[@]}"
     if [ -z "$(git diff --cached --name-only)" ]; then
@@ -78,21 +91,18 @@ for attempt in 1 2 3; do
     git commit -q -m "$message"
     built_on=$(git rev-parse HEAD~1)
   fi
-  if out=$(git push -q origin "HEAD:$branch" 2>&1); then
-    echo "push-data: pushed $(git rev-parse --short HEAD) to $branch."
-    # Tell the workflow, which then dispatches the deploy: a push made with
-    # the workflow's own token starts no other workflow.
-    if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "pushed=true" >> "$GITHUB_OUTPUT"; fi
-    exit 0
-  fi
-  # A rule refused it (protection, permissions, a hook): said as itself,
-  # not retried. Anything else (the branch moved, a network blip, a server
-  # error) gets another attempt, from a fresh fetch.
-  if grep -qE "pre-receive hook declined|protected branch|Permission to .* denied|\(denied\)|403" <<<"$out"; then
+  if out=$(git push -q origin "HEAD:$branch" 2>&1); then landed "pushed"; fi
+  # A rule refused it (protection, a ruleset, permissions, a hook): said as
+  # itself, not retried. Anything else gets another attempt, which starts
+  # by asking the branch what actually happened.
+  if grep -qE "pre-receive hook declined|protected branch|GH013|repository rule violations|Permission to [^ ]+ denied|returned error: 403|HTTP 403" <<<"$out"; then
     echo "push-data: push refused: $out" >&2
     exit 1
   fi
+  if [ "$attempt" = 3 ]; then
+    echo "push-data: push failed three times; giving up: $out" >&2
+    exit 1
+  fi
   echo "push-data: push failed, will retry (attempt $attempt): $out" >&2
-  [ "$attempt" = 3 ] && exit 1
   sleep 10
 done

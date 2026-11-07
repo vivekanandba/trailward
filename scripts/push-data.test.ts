@@ -119,6 +119,33 @@ describe("push-data.sh", () => {
     expect(mainHas("derived.txt")).toBe("rebuilt on v2");
   });
 
+  it("counts a push that reached the server but reported failure as landed", () => {
+    // A git that pushes, then says it failed (a connection dropped after the
+    // server accepted): the retry must see its own commit and say so.
+    const bin = join(runner, "..", "bin");
+    execFileSync("mkdir", ["-p", bin]);
+    const realGit = execFileSync("bash", ["-c", "command -v git"], { encoding: "utf8" }).trim();
+    writeFileSync(
+      join(bin, "git"),
+      `#!/bin/bash\nif [ "$1" = push ] && [ ! -e "${bin}/once" ]; then touch "${bin}/once"; "${realGit}" "$@"; echo "connection reset" >&2; exit 1; fi\nexec "${realGit}" "$@"\n`,
+    );
+    chmodSync(join(bin, "git"), 0o755);
+    writeFileSync(join(runner, "data.json"), "new\n");
+    const r = spawnSync("bash", [script, "m", "true", "data.json", "--", "derived.txt"], {
+      cwd: runner,
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        GITHUB_REF_NAME: "main",
+        GITHUB_OUTPUT: join(runner, "..", "gh-output"),
+      },
+      encoding: "utf8",
+    });
+    expect(r.status, r.stdout + r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/already landed/);
+    expect(readFileSync(join(runner, "..", "gh-output"), "utf8")).toBe("pushed=true\n");
+  });
+
   it("says a refused push is refused, and does not retry it as a race", () => {
     writeFileSync(join(remote, "hooks", "pre-receive"), "#!/bin/sh\necho protected >&2\nexit 1\n");
     chmodSync(join(remote, "hooks", "pre-receive"), 0o755);
@@ -136,7 +163,7 @@ describe("push-data.sh", () => {
     git(other, "push", "-q");
     const r = push("true");
     expect(r.status).not.toBe(0);
-    expect(r.out).toMatch(/conflicts/);
+    expect(r.out).toMatch(/does not apply on main; refusing/);
     expect(mainHas("data.json")).toBe("theirs\n");
   });
 
