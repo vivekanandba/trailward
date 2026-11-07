@@ -14,6 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
 import { photoCarries } from "./lib/carryover";
+import { qualifyingTreks } from "./lib/pages";
 
 const FIELDS = [
   "name", // counted as non-"Unnamed" — a naming regression is a data loss too
@@ -69,6 +70,22 @@ export function curatedLosses(head: Trek[], now: Trek[]): string[] {
   return out;
 }
 
+/**
+ * Published pages this refresh would take down although their record is
+ * still in the dataset: a page is a URL people may have linked, and losing
+ * it because a best-effort lookup missed this week is not a data change
+ * (spec 10, spec 35). The 2026-11-07 refresh dropped 23 this way, by losing
+ * the photos that earned them their page. A record gone from the dataset
+ * takes its page with it, and that is not counted here.
+ */
+export function pagesLost(head: Trek[], now: Trek[]): string[] {
+  const nowIds = new Set(now.map((t) => t.id));
+  const after = new Set(qualifyingTreks(now).map((t) => t.id));
+  return qualifyingTreks(head)
+    .filter((t) => nowIds.has(t.id) && !after.has(t.id))
+    .map((t) => `${t.id} (${t.name})`);
+}
+
 // Hand-curated fields have tiny counts (heritage: 2) where one record moving
 // is a huge relative drop — a drop must also exceed this many records to fail.
 const ABSOLUTE_FLOOR = 5;
@@ -112,6 +129,9 @@ async function main(): Promise<void> {
   const lost = curatedLosses(head, now);
   console.log(`[drift] curated records that lost a kept field: ${lost.length}`);
   for (const l of lost) violations.push(`curated ${l}`);
+  const gone = pagesLost(head, now);
+  console.log(`[drift] published pages lost with their record still here: ${gone.length}`);
+  for (const g of gone) violations.push(`published page lost: ${g}`);
   if (violations.length > 0) {
     console.error(`[drift] enrichment dropped:`);
     for (const v of violations) console.error(`  ${v}`);

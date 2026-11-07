@@ -440,6 +440,22 @@ describe("preserveEnrichment (spec 25 — cron must not wipe hand-baked fields)"
     expect(out.historicalNote?.year).toBe(1908);
   });
 
+  it("carries a photo, gallery, text and nearest town a lookup missed this run", () => {
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const withMedia = {
+      ...prev,
+      image: img,
+      gallery: [img],
+      highlights: "A hill.",
+      nearestTown: "Somwarpet",
+    };
+    const [out] = preserveEnrichment([fresh], [withMedia as Trek]);
+    expect(out.image).toEqual(img);
+    expect(out.gallery).toEqual([img]);
+    expect(out.highlights).toBe("A hill.");
+    expect(out.nearestTown).toBe("Somwarpet");
+  });
+
   it("never overwrites a value the fresh record already has", () => {
     const [out] = preserveEnrichment([{ ...fresh, hillFeatures: ["temple"] }], [prev]);
     expect(out.hillFeatures).toEqual(["temple"]);

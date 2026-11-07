@@ -95,6 +95,13 @@ pipeline, commits changes, and lets the gated deploy publish them.
   over, so one of those that fails is refused by the full validation of the folded output before
   the write, after enrichment, which names the record. A duplicate id is refused early.
 
+- **Given** a refresh would take down a published page whose record is still in the dataset (a
+  best-effort lookup missed its photo or text this week), **then** the drift guard refuses it
+  (`pagesLost`); and discovery carries a photo, gallery, text and nearest town over when a lookup
+  misses (`PRESERVED_FIELDS`). Incident, 2026-11-07: the first refresh to land in twelve weeks
+  dropped 21 photos and 22 published pages with them (Kumara Parvatha among them). The deploy's
+  own 404 test caught it, so nothing shipped; the data commit was reverted.
+
 ## Interfaces & data contracts
 
 - `.github/workflows/refresh-data.yml` (`permissions: contents: write`): checkout → setup-node →

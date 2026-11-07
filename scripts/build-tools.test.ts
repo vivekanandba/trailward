@@ -3,7 +3,7 @@ import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown, buildIndiaMask, inIndia, isPlausibleSummit } from "./build-detect";
 import { isImplausibleTrek } from "./scrub-implausible";
-import { fieldCounts, driftViolations, curatedLosses } from "./check-enrichment-drift";
+import { fieldCounts, driftViolations, curatedLosses, pagesLost } from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -268,6 +268,38 @@ describe("enrichment drift guard (spec 31)", () => {
     const d = (over: Record<string, unknown> = {}) =>
       trek({ id: "d", name: "D", tier: "discovery", image: img, ...over });
     expect(curatedLosses([d()], [d({ image: undefined })])).toEqual([]);
+  });
+
+  it("refuses a refresh that takes down a published page whose record is still here", () => {
+    // Kumara Parvatha's page rested on its photo; the 2026-11-07 refresh lost
+    // the photo and with it the page.
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const peak = trek({
+      id: "osm-1",
+      name: "Kumara Parvatha",
+      tier: "discovery",
+      image: img,
+      lat: 12.66,
+      lng: 75.69,
+      discoveryScore: 0.9,
+    });
+    // Three bigger peaks share its 1° cell, so only the photo earned it a page.
+    const others = [1, 2, 3].map((n) =>
+      trek({
+        id: `osm-${n + 1}`,
+        name: `Bigger ${n}`,
+        tier: "discovery",
+        lat: 12.7,
+        lng: 75.7,
+        discoveryScore: 0.95,
+        elevationM: 1800 + n,
+      }),
+    );
+    expect(
+      pagesLost([peak, ...others], [{ ...(peak as Trek), image: undefined }, ...others]),
+    ).toEqual(["osm-1 (Kumara Parvatha)"]);
+    // A record gone from the dataset takes its page with it: not this check's.
+    expect(pagesLost([peak, ...others], others)).toEqual([]);
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {
