@@ -31,6 +31,7 @@ function push(recheck: string): { status: number | null; out: string } {
       env: {
         ...process.env,
         GITHUB_REF_NAME: "main",
+        PUSH_DATA_RETRY_DELAY: "0",
         GITHUB_OUTPUT: join(runner, "..", "gh-output"),
       },
       encoding: "utf8",
@@ -137,12 +138,69 @@ describe("push-data.sh", () => {
         ...process.env,
         PATH: `${bin}:${process.env.PATH}`,
         GITHUB_REF_NAME: "main",
+        PUSH_DATA_RETRY_DELAY: "0",
         GITHUB_OUTPUT: join(runner, "..", "gh-output"),
       },
       encoding: "utf8",
     });
     expect(r.status, r.stdout + r.stderr).toBe(0);
     expect(r.stdout).toMatch(/already landed/);
+    expect(readFileSync(join(runner, "..", "gh-output"), "utf8")).toBe("pushed=true\n");
+  });
+
+  // A git whose pushes report failure: the first `fail` of them without
+  // reaching the server, then one that reaches it and still says it failed.
+  function flakyGit(fail: number, thenOther?: string): string {
+    const bin = join(runner, "..", `bin-${fail}`);
+    execFileSync("mkdir", ["-p", bin]);
+    const realGit = execFileSync("bash", ["-c", "command -v git"], { encoding: "utf8" }).trim();
+    const other = thenOther
+      ? `(cd "${thenOther}" && "${realGit}" pull -q && "${realGit}" commit -q --allow-empty -m on-top && "${realGit}" push -q) || exit 9;`
+      : "";
+    writeFileSync(
+      join(bin, "git"),
+      `#!/bin/bash
+if [ "$1" = push ]; then
+  n=$(cat "${bin}/n" 2>/dev/null || echo 0); echo $((n+1)) > "${bin}/n"
+  if [ "$n" -lt ${fail} ]; then echo "connection reset" >&2; exit 1; fi
+  if [ "$n" = ${fail} ]; then "${realGit}" "$@"; ${other} echo "connection reset" >&2; exit 1; fi
+fi
+exec "${realGit}" "$@"
+`,
+    );
+    chmodSync(join(bin, "git"), 0o755);
+    return bin;
+  }
+
+  function pushWith(bin: string): { status: number | null; out: string } {
+    const r = spawnSync("bash", [script, "m", "true", "data.json", "--", "derived.txt"], {
+      cwd: runner,
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        GITHUB_REF_NAME: "main",
+        PUSH_DATA_RETRY_DELAY: "0",
+        GITHUB_OUTPUT: join(runner, "..", "gh-output"),
+      },
+      encoding: "utf8",
+    });
+    return { status: r.status, out: `${r.stdout}${r.stderr}` };
+  }
+
+  it("counts a push that landed on the last attempt but reported failure as landed", () => {
+    writeFileSync(join(runner, "data.json"), "new\n");
+    const r = pushWith(flakyGit(2));
+    expect(r.status, r.out).toBe(0);
+    expect(r.out).toMatch(/landed despite the error/);
+    expect(readFileSync(join(runner, "..", "gh-output"), "utf8")).toBe("pushed=true\n");
+  });
+
+  it("counts a landed push as landed even after someone pushed on top of it", () => {
+    writeFileSync(join(runner, "data.json"), "new\n");
+    const r = pushWith(flakyGit(0, other));
+    expect(r.status, r.out).toBe(0);
+    expect(git(other, "log", "-1", "--format=%s")).toBe("on-top"); // someone really did
+    expect(r.out).toMatch(/already landed/);
     expect(readFileSync(join(runner, "..", "gh-output"), "utf8")).toBe("pushed=true\n");
   });
 

@@ -25,9 +25,10 @@ pipeline, commits changes, and lets the gated deploy publish them.
   changed only derived files carries nothing and is simply rebuilt. A source change that does not
   apply, or a failed recheck, pushes nothing and fails the run, which the reporter files. A push
   a rule refuses (protection, a ruleset, permissions, a hook) is reported as such and not retried;
-  any other failed push is retried from a fresh fetch, and each attempt first asks the branch what
-  happened: a push that reached the server but reported failure is counted as landed, so the
-  deploy is still dispatched. The two workflows that write `treks.json` share one
+  any other failed push is retried from a fresh fetch. Each attempt, and the last look before
+  giving up, first asks whether this run's commit is already on the branch (an ancestor of its
+  tip, so it still counts after someone pushed on top): a push that reached the server but
+  reported failure is counted as landed, and the deploy is still dispatched. The two workflows that write `treks.json` share one
   `concurrency` group. Incident, 2026-11-07: the first refresh to pass every check in twelve weeks
   lost its data to a rejected push, and a bare rebase would have landed it unchecked on a main
   that had since gained the slug registry (247 pages with no URL).
