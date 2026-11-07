@@ -28,7 +28,10 @@ export default {
         },
       },
       fontFamily: {
-        display: ['"Bricolage Grotesque"', "ui-sans-serif", "system-ui", "sans-serif"],
+        // Inter second: Bricolage's latin-ext lacks the dot-below letters of
+        // Indic transliteration (ṭ ṇ ḍ ṣ ṛ), and a heading should borrow
+        // them from the body face, not from a system font (spec 08).
+        display: ['"Bricolage Grotesque"', '"Inter"', "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ['"Inter"', "ui-sans-serif", "system-ui", "sans-serif"],
       },
     },

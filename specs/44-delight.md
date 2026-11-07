@@ -69,7 +69,7 @@ that implements each one names its check. R1 is enforced by the tests named unde
 | 15  | Console                            | Silent                                                                                                                                                                                                                                                                         | later                                                       |
 | 16  | Distance from a non-default origin | All **16** curated treks carry a road distance _from Bengaluru_ (`distanceKm`), and the filter, map popup and detail prefer it whatever the origin (`filters.ts:37`, `TrekMap.tsx:193`, `TrekDetail.tsx:268`). From Mysuru, Skandagiri is listed at 67.6 km; it is 176 km away | **fixed** (spec 05, `tripDistance`)                         |
 | 17  | Page URLs are not stable           | 456 pages carry a `-<id>` suffix, 438 of them with `d12-` ids that change when the terrain scan reruns, so those URLs die silently. Sorting by id is not a fix: it would move 322 live URLs                                                                                    | **fixed** (spec 35, slug registry)                          |
-| 18  | Diacritics in names                | The bundled Inter and Bricolage woff2 are Latin-only subsets with no `ā`, `ī` or `ū` (checked with fontTools); 1,944 of the 3,886 page names use a character above U+00FF, so those letters render in a fallback font mid-word                                                 | later                                                       |
+| 18  | Diacritics in names                | The bundled Inter and Bricolage woff2 are Latin-only subsets with no `ā`, `ī` or `ū` (checked with fontTools); 1,944 of the 3,886 page names use a character above U+00FF, so those letters render in a fallback font mid-word                                                 | **fixed** (spec 08, latin-ext faces)                        |
 | 19  | Personal layer ("Been there")      | None                                                                                                                                                                                                                                                                           | proposed; needs the owner's approval, because it adds state |
 
 ## Requirements
@@ -124,6 +124,11 @@ that implements each one names its check. R1 is enforced by the tests named unde
   after the build in CI (`e2e-static`) and in the deploy's build job, before upload. The budget
   sits a little above what ships, so a small PR need not touch it; a PR that adds weight raises
   it in review, and one that saves weight lowers it, which is how it ratchets down.
+  The fonts budget went from 95,000 to 200,000 B with the latin-ext faces (row 18): they total
+  193,336 B on disk. The browser itself fetches a latin-ext face only for a name that needs it,
+  but the offline service worker (spec 43) precaches every asset the CSS names on its first
+  install, so in practice each device downloads them once (~104 KB): the price of ā ī ū ṭ in the
+  app's own type for 1,944 page names, paid knowingly.
 
 - **R3 — keyboard focus is always visible (row 1, rule D4).** One `:focus-visible` rule in
   `index.css` draws a 2 px outline on anything that does not style its own focus. No component

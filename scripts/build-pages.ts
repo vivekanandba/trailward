@@ -22,6 +22,7 @@ import { SLUGS_FILE, readRegistry, slugsFromRegistry } from "./lib/slugs";
 import { lastCommitDate } from "./build-sitemap";
 import { renderTrekPage } from "./lib/trekPage";
 import { cardPages, cardSvg, renderCard } from "./lib/socialCard";
+import { pageFontFaces } from "./lib/pageFonts";
 import { parseFrontmatter, renderMarkdown } from "./lib/markdown";
 import { dataPageMarkdown, datasetStats, renderContentPage } from "./lib/contentPage";
 import {
@@ -118,11 +119,20 @@ export function runBuildPages(
   // an image with no alt text — and prose is edited constantly while filenames
   // rarely are, so this is the likeliest way to reach a throw at all. Parsing
   // early but rendering late still left dist/ half-rewritten.
+  // The app's bundled Inter, at the hashed paths the app build just emitted:
+  // every generated page shows names like Kumāra in the same type as the app
+  // (spec 08). Refuses here, before any write, when the faces are missing.
+  const fontFaces = pageFontFaces(io.listDir(`${paths.distDir}/assets`));
+  const withFonts = (html: string): string => html.replace("<style>", `<style>${fontFaces}`);
   const nav = contentSlugs(contentFiles);
   const parsed = authored.map((file) => {
     const slug = file.replace(/\.md$/, "");
     const { data, body } = parseFrontmatter(io.readFile(`${paths.contentDir}/${file}`), file);
-    return { file, slug, html: renderContentPage(data, renderMarkdown(body, file), slug, nav) };
+    return {
+      file,
+      slug,
+      html: withFonts(renderContentPage(data, renderMarkdown(body, file), slug, nav)),
+    };
   });
 
   // The trek pages and the generated /data/ page render up front too, for the
@@ -137,7 +147,7 @@ export function runBuildPages(
   const globalCard = absoluteUrl("icons/og.png");
   const trekPages = pages.map((trek) => {
     const slug = slugs.get(trek.id)!;
-    const rendered = renderTrekPage(trek, slug, refreshed);
+    const rendered = withFonts(renderTrekPage(trek, slug, refreshed));
     const html = cards.has(trek.id)
       ? rendered.replace(
           `content="${globalCard}"`,
@@ -165,11 +175,13 @@ export function runBuildPages(
     dataPageMarkdown(stats, nav, refreshed),
   ].join("\n");
   const generated = parseFrontmatter(generatedSrc, "data.md (generated)");
-  const generatedHtml = renderContentPage(
-    generated.data,
-    renderMarkdown(generated.body, "data.md (generated)"),
-    "data",
-    nav,
+  const generatedHtml = withFonts(
+    renderContentPage(
+      generated.data,
+      renderMarkdown(generated.body, "data.md (generated)"),
+      "data",
+      nav,
+    ),
   );
 
   // Spec 44 R1: the live check's sample, chosen here because only the build

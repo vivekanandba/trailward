@@ -6,6 +6,12 @@ import { memoryIOWithSlugs as memoryIO } from "./lib/testIO";
 import { memoryIO as plainIO } from "./lib/buildIO";
 import type { Trek } from "../src/lib/trek";
 
+// The app build's font files, which build-pages declares on every page (spec 08).
+const FONT_ASSETS = {
+  "/repo/dist/assets/inter-latin-var-t.woff2": "",
+  "/repo/dist/assets/inter-latin-ext-var-t.woff2": "",
+};
+
 const trek = (over: Partial<Trek> & Pick<Trek, "id" | "name">): Trek => ({
   lat: 13,
   lng: 77,
@@ -51,6 +57,7 @@ describe("sitemap ↔ pages agreement (CON-COV-003 — assert it from BOTH sides
     // [about, data] while build-pages would write "data" twice — so the only
     // correct behaviour is to refuse, and this pins that.
     const pages = memoryIO({
+      ...FONT_ASSETS,
       ["/repo/src/data/treks.json"]: JSON.stringify(TREKS),
       ["/repo/content/about.md"]: "---\ntitle: T\ndescription: D\n---\n\nBody.",
       ["/repo/content/data.md"]: "---\ntitle: T\ndescription: D\n---\n\nBody.",
@@ -60,11 +67,15 @@ describe("sitemap ↔ pages agreement (CON-COV-003 — assert it from BOTH sides
 
   for (const listing of listings) {
     it(`agrees for [${listing.join(", ")}]`, () => {
-      const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
+      const io = memoryIO({
+        ...FONT_ASSETS,
+        [P.treks]: JSON.stringify(TREKS),
+      });
       runBuildSitemap(io, P, listing, "2026-09-19");
       const xml = io.files.get(P.out)!;
 
       const pages = memoryIO({
+        ...FONT_ASSETS,
         ["/repo/src/data/treks.json"]: JSON.stringify(TREKS),
         ...Object.fromEntries(
           listing
@@ -84,7 +95,10 @@ describe("sitemap ↔ pages agreement (CON-COV-003 — assert it from BOTH sides
 
 describe("build-sitemap run (spec 35/40)", () => {
   it("lists the app root, the content pages and every qualifying trek", () => {
-    const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
+    const io = memoryIO({
+      ...FONT_ASSETS,
+      [P.treks]: JSON.stringify(TREKS),
+    });
     const n = runBuildSitemap(io, P, CONTENT, "2026-09-19");
     const xml = io.files.get(P.out)!;
 
@@ -98,13 +112,19 @@ describe("build-sitemap run (spec 35/40)", () => {
   });
 
   it("never advertises an Unnamed pin — nothing there to rank for", () => {
-    const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
+    const io = memoryIO({
+      ...FONT_ASSETS,
+      [P.treks]: JSON.stringify(TREKS),
+    });
     runBuildSitemap(io, P, CONTENT, "2026-09-19");
     expect(io.files.get(P.out)!).not.toContain("unnamed");
   });
 
   it("emits only absolute https locations", () => {
-    const io = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
+    const io = memoryIO({
+      ...FONT_ASSETS,
+      [P.treks]: JSON.stringify(TREKS),
+    });
     runBuildSitemap(io, P, CONTENT, "2026-09-19");
     const locs = [...io.files.get(P.out)!.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
     expect(locs.length).toBeGreaterThan(0);
@@ -112,8 +132,14 @@ describe("build-sitemap run (spec 35/40)", () => {
   });
 
   it("is byte-stable for the same input and date", () => {
-    const a = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
-    const b = memoryIO({ [P.treks]: JSON.stringify(TREKS) });
+    const a = memoryIO({
+      ...FONT_ASSETS,
+      [P.treks]: JSON.stringify(TREKS),
+    });
+    const b = memoryIO({
+      ...FONT_ASSETS,
+      [P.treks]: JSON.stringify(TREKS),
+    });
     runBuildSitemap(a, P, CONTENT, "2026-09-19");
     runBuildSitemap(b, P, CONTENT, "2026-09-19");
     expect(b.files.get(P.out)).toBe(a.files.get(P.out));
@@ -128,14 +154,20 @@ const S = { treks: "/repo/src/data/treks.json", out: "/repo/public/data/search-i
 
 describe("build-search-index run (spec 38/40)", () => {
   it("indexes every NAMED summit and excludes the Unnamed ones", () => {
-    const io = memoryIO({ [S.treks]: JSON.stringify(TREKS) });
+    const io = memoryIO({
+      ...FONT_ASSETS,
+      [S.treks]: JSON.stringify(TREKS),
+    });
     const index = runBuildSearchIndex(io, S);
     expect(index.map((e) => e.id).sort()).toEqual(["gn-1", "skandagiri"]);
     expect(JSON.stringify(index)).not.toContain("Unnamed");
   });
 
   it("is sorted by id, so the committed artefact diffs cleanly", () => {
-    const io = memoryIO({ [S.treks]: JSON.stringify(TREKS) });
+    const io = memoryIO({
+      ...FONT_ASSETS,
+      [S.treks]: JSON.stringify(TREKS),
+    });
     const ids = runBuildSearchIndex(io, S).map((e) => e.id);
     // Must match the comparator the code uses. `[...ids].sort()` is UTF-16
     // order, which disagrees with localeCompare the moment an id starts with a
@@ -145,13 +177,22 @@ describe("build-search-index run (spec 38/40)", () => {
 
   it("refuses to write an empty index — that silently disables the palette", () => {
     const onlyUnnamed = JSON.stringify([TREKS[2]]);
-    expect(() => runBuildSearchIndex(memoryIO({ [S.treks]: onlyUnnamed }), S)).toThrow(
-      /refusing to write/,
-    );
+    expect(() =>
+      runBuildSearchIndex(
+        memoryIO({
+          ...FONT_ASSETS,
+          [S.treks]: onlyUnnamed,
+        }),
+        S,
+      ),
+    ).toThrow(/refusing to write/);
   });
 
   it("reports the entry count it actually wrote", () => {
-    const io = memoryIO({ [S.treks]: JSON.stringify(TREKS) });
+    const io = memoryIO({
+      ...FONT_ASSETS,
+      [S.treks]: JSON.stringify(TREKS),
+    });
     runBuildSearchIndex(io, S);
     expect(io.logs.join()).toContain("2 named entries");
   });
@@ -207,7 +248,8 @@ describe("both builds take each page's URL from the slug registry (spec 35)", ()
     "kumara-parvatha-gn-1": { id: "gn-1", lat: 12.6, lng: 75.6, name: "kumara-parvatha" },
     skandagiri: { id: "skandagiri", lat: 13, lng: 77, name: "skandagiri" },
   };
-  const seed = {
+  const seed: Record<string, string> = {
+    ...FONT_ASSETS,
     [P.treks]: JSON.stringify(TREKS),
     [P.slugs]: JSON.stringify(registry),
     ["/repo/content/about.md"]: "---\ntitle: T\ndescription: D\n---\n\nBody.",

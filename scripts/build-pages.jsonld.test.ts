@@ -25,6 +25,8 @@ describe("build-pages refuses a page whose JSON-LD url is not its own (spec 44 R
     // deploy, not the old files (spec 44 R1).
     const P = pagePathsFor("/repo");
     const io = memoryIO({
+      "/repo/dist/assets/inter-latin-var-t.woff2": "",
+      "/repo/dist/assets/inter-latin-ext-var-t.woff2": "",
       [P.treks]: JSON.stringify([
         {
           id: "gn-1",
