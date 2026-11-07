@@ -499,8 +499,8 @@ export default function App() {
         // Reserve the stats card's slot so the rail doesn't jump when the
         // real card arrives (spec 33).
         <div aria-hidden className="border-b border-trail-100 px-4 py-3 dark:border-slate-700">
-          <div className="h-4 w-2/3 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-          <div className="mt-2 h-2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+          <div className="h-4 w-2/3 rounded bg-trail-100 dark:bg-slate-700" />
+          <div className="mt-2 h-2 rounded bg-trail-100 dark:bg-slate-700" />
         </div>
       )}
       {!loadingCells && visible.length > 0 && <RegionStatsCard stats={stats} />}

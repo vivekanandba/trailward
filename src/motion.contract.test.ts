@@ -59,6 +59,22 @@ describe("motion (spec 44 D2, D3)", () => {
     }
     expect(long).toEqual([]);
   });
+
+  it("uses no looping or long Tailwind animation, nor a seconds duration in CSS", () => {
+    // animate-pulse is 2s, infinite, on load: the loading skeletons had it, and
+    // the millisecond scan above could not see it (spec 44 R4).
+    const found: string[] = [];
+    for (const s of sources) {
+      for (const [m] of s.text.matchAll(/\banimate-(?:pulse|spin|ping|bounce)\b/g)) {
+        found.push(`${s.path}: ${m}`);
+      }
+      if (!s.path.endsWith(".css")) continue;
+      for (const m of s.text.matchAll(/(?:animation|transition)[^;{}]*?(\d*\.?\d+)s\b/g)) {
+        if (Number(m[1]) * 1000 > 300) found.push(`${s.path}: ${m[0].trim()}`);
+      }
+    }
+    expect(found).toEqual([]);
+  });
 });
 
 describe("focus (spec 44 D4)", () => {

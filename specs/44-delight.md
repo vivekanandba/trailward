@@ -143,7 +143,9 @@ that implements each one names its check. R1 is enforced by the tests named unde
   - The theme toggle's icon turns in (240 ms) after each press, keyed to the press count, and
     never on load.
   - Nothing lasts longer than 300 ms unless it is on the named allow-list in
-    `src/motion.contract.test.ts`, which is empty.
+    `src/motion.contract.test.ts`, which is empty. That covers Tailwind's looping animations
+    (`animate-pulse` and kin, 1–2 s and infinite) and seconds in CSS, not only `ms` values: the
+    loading skeletons pulsed on load until review found it, and they are now still.
 
 ## Constraints learned in review — for the requirements still to be written
 

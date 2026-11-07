@@ -13,7 +13,10 @@
 
 let acted = false;
 
-/** Start watching for the first press. Idempotent per window. */
+/**
+ * Start watching for the first press. Calling it again adds another pair of
+ * one-shot listeners; that is harmless (each only sets the same flag).
+ */
 export function noteUserActions(win: Window = window): void {
   const mark = () => {
     acted = true;
