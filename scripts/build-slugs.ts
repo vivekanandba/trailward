@@ -43,13 +43,15 @@ export function runBuildSlugs(
   }
 
   const previous = readRegistry(io.readFile(slugsFile));
-  const ids = new Set(treks.map((t) => t.id));
-  const { registry, added, moved } = updateRegistry(pages, previous, ids);
+  const { registry, added, moved, followed } = updateRegistry(pages, previous, treks);
   // What the build will check, checked before the workflow commits it.
   slugsFromRegistry(pages, registry);
   io.writeFile(slugsFile, formatRegistry(registry));
   const total = Object.keys(registry).length;
-  io.log(`[slugs] ${added.length} added, ${moved.length} re-attached, ${total} in all`);
+  io.log(
+    `[slugs] ${added.length} added, ${moved.length} re-attached, ` +
+      `${followed.length} following a renamed or moved record, ${total} in all`,
+  );
   for (const s of moved) io.log(`[slugs] re-attached ${s} → ${registry[s].id}`);
   return { added, moved, total };
 }

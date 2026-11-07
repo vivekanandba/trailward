@@ -20,10 +20,7 @@ export interface SlugEntry {
   id: string;
   lat: number;
   lng: number;
-  /**
-   * The name the page was published under, folded as its slug folds it ("" for
-   * a name with no Latin letters). A rescan re-attaches only on this name.
-   */
+  /** The record's name as `nameKey` gives it; kept current while the record exists. */
   name: string;
 }
 
@@ -38,11 +35,14 @@ const SLUG = /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/;
 const SAME_PLACE_KM = 0.12;
 
 /**
- * The name a slug is matched on: the name folded as its slug folds it, or,
- * for a name with no Latin letters, `~` and the name itself, so two different
- * non-Latin names never count as the same.
+ * The name a slug is matched on: the name folded as its slug folds it when
+ * that keeps a Latin letter, else `~` and the name itself (NFC), so two
+ * different names with no Latin letters ("ಕೋಟೆ 2", "ಬೆಟ್ಟ 2") never match.
  */
-export const nameKey = (t: Trek): string => foldName(t.name) || `~${t.name.normalize("NFC")}`;
+export const nameKey = (t: Trek): string => {
+  const folded = foldName(t.name);
+  return /[a-z]/.test(folded) ? folded : `~${t.name.normalize("NFC")}`;
+};
 
 const round5 = (n: number): number => Math.round(n * 1e5) / 1e5;
 const entryFor = (t: Trek): SlugEntry => ({
@@ -83,10 +83,8 @@ export function readRegistry(body: string | undefined): SlugRegistry {
     }
     const name = (e as SlugEntry).name;
     // Folded (as a slug folds it), or `~` and a name with no Latin letters.
-    if (
-      typeof name !== "string" ||
-      !(/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || /^~./.test(name))
-    ) {
+    const folded = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) && /[a-z]/.test(name);
+    if (typeof name !== "string" || !(folded || name.startsWith("~"))) {
       throw new Error(`[slugs] ${SLUGS_FILE}: "${slug}" has no recorded name in folded form`);
     }
   }
@@ -104,10 +102,11 @@ export function registryFromSlugMap(pages: Trek[], slugs: Map<string, string>): 
  * Record a slug for every page that lacks one. Pure.
  *
  * - A page whose id is registered keeps its slug.
- * - A page whose id is new, at the same place (≤ 120 m) and published under
- *   the same name (the entry's recorded `name`) as a registered record that is
- *   gone from the dataset, takes over that slug: a rescan regenerated the id of
- *   the same summit. The nearest such record wins.
+ * - A page whose id is new, at the same place (≤ 120 m) and under the same
+ *   recorded name as a registered record that is gone from the dataset, takes
+ *   over that slug, when the match is unambiguous (one candidate each side):
+ *   a rescan regenerated the id of the same summit.
+ * - Every entry whose record still exists follows its name and position.
  * - A record still in the dataset keeps its slug even while it has no page,
  *   so its URL is waiting when the page comes back.
  * - Otherwise it gets its bare slug if no record ever held it, else
@@ -116,12 +115,12 @@ export function registryFromSlugMap(pages: Trek[], slugs: Map<string, string>): 
 export function updateRegistry(
   pages: Trek[],
   previous: SlugRegistry,
-  /** Every record id in the dataset, page or not: a record without a page keeps its slug. */
-  datasetIds: ReadonlySet<string>,
-): { registry: SlugRegistry; added: string[]; moved: string[] } {
+  /** Every record in the dataset, page or not: a record without a page keeps its slug. */
+  dataset: Trek[],
+): { registry: SlugRegistry; added: string[]; moved: string[]; followed: string[] } {
   const reg: SlugRegistry = { ...previous };
   const slugOf = new Map(Object.entries(reg).map(([slug, e]) => [e.id, slug]));
-  const live = new Set([...datasetIds, ...pages.map((t) => t.id)]);
+  const live = new Set([...dataset, ...pages].map((t) => t.id));
   const orphans = new Set(Object.keys(reg).filter((slug) => !live.has(reg[slug].id)));
   const added: string[] = [];
   const moved: string[] = [];
@@ -130,30 +129,37 @@ export function updateRegistry(
   // on a case-insensitive filesystem, so a new slug avoids both.
   const taken = new Set(Object.keys(reg).map((k) => k.toLowerCase()));
 
-  // A live page's entry follows its record, so a rename (build:names) is the
-  // name the next rescan is matched on.
-  for (const t of pages) {
+  // Every entry whose record still exists follows it (name and position), so
+  // a rename is the name the next rescan matches on, page or not.
+  const followed: string[] = [];
+  for (const t of [...dataset, ...pages]) {
     const slug = slugOf.get(t.id);
-    if (slug && JSON.stringify(reg[slug]) !== JSON.stringify(entryFor(t))) reg[slug] = entryFor(t);
+    if (!slug) continue;
+    const now = entryFor(t);
+    if (JSON.stringify(reg[slug]) === JSON.stringify(now)) continue;
+    reg[slug] = now;
+    followed.push(slug);
   }
 
-  // Every same-named (page, orphan) pair within 120 m, nearest first, ties by
-  // slug then id: one rule, not build order, decides which page gets which
-  // URL, so two same-named neighbours cannot swap.
+  // A rescan's new page takes an orphan's URL only when the match is
+  // unambiguous: the same name within 120 m, and neither side has another
+  // such candidate. When two same-named summits are rescanned together no
+  // rule can tell which is which, so their URLs retire rather than risk
+  // pointing at a different peak.
   const fresh = pages.filter((t) => !slugOf.has(t.id));
-  const pairs: { d: number; slug: string; t: Trek }[] = [];
+  const pairs: { slug: string; t: Trek }[] = [];
   for (const t of fresh) {
     const key = nameKey(t);
     for (const slug of orphans) {
       const e = reg[slug];
       if (e.name !== key) continue;
       const d = distanceFrom({ id: "", name: "", lat: e.lat, lng: e.lng }, t);
-      if (d <= SAME_PLACE_KM) pairs.push({ d, slug, t });
+      if (d <= SAME_PLACE_KM) pairs.push({ slug, t });
     }
   }
-  pairs.sort((a, b) => a.d - b.d || a.slug.localeCompare(b.slug) || a.t.id.localeCompare(b.t.id));
+  const count = (k: string) => pairs.filter((p) => p.slug === k || p.t.id === k).length;
   for (const { slug, t } of pairs) {
-    if (!orphans.has(slug) || slugOf.has(t.id)) continue;
+    if (count(slug) !== 1 || count(t.id) !== 1) continue;
     reg[slug] = entryFor(t);
     orphans.delete(slug);
     slugOf.set(t.id, slug);
@@ -173,7 +179,7 @@ export function updateRegistry(
     slugOf.set(t.id, slug);
     added.push(slug);
   }
-  return { registry: sorted(reg), added, moved };
+  return { registry: sorted(reg), added, moved, followed };
 }
 
 /**

@@ -27,8 +27,8 @@ const mk = (id: string, name: string, lat = 13, lng = 77): Trek => ({
 });
 
 /** The pages are the whole dataset unless a test says otherwise. */
-const upd = (pages: Trek[], reg: SlugRegistry, ids?: Set<string>) =>
-  updateRegistry(pages, reg, ids ?? new Set(pages.map((t) => t.id)));
+const upd = (pages: Trek[], reg: SlugRegistry, dataset?: Trek[]) =>
+  updateRegistry(pages, reg, dataset ?? pages);
 
 describe("updateRegistry", () => {
   it("keeps every registered slug for a record that still has a page", () => {
@@ -117,14 +117,14 @@ describe("updateRegistry", () => {
     expect(r.registry["d12-5-5"].id).toBe("d12-5-5"); // a nameless page's URL is not taken
   });
 
-  it("gives the slug to the nearest same-named record when two qualify", () => {
+  it("re-attaches nothing when two same-named orphans could be the page", () => {
     const reg: SlugRegistry = {
       "kote-betta": { id: "a", lat: 13.0, lng: 77.0, name: "kote-betta" },
       "kote-betta-gn-2": { id: "b", lat: 13.0008, lng: 77.0, name: "kote-betta" },
     };
-    // ~56 m from a (which sorts first) and ~33 m from b.
     const r = upd([mk("d12-9-9", "Kote Betta", 13.0005, 77.0)], reg);
-    expect(r.moved).toEqual(["kote-betta-gn-2"]);
+    expect(r.moved).toEqual([]);
+    expect(r.added).toEqual(["kote-betta-d12-9-9"]);
   });
 
   it("never mints a slug that differs only in case from one already held", () => {
@@ -138,23 +138,54 @@ describe("updateRegistry", () => {
     expect(() => slugsFromRegistry([mk("wd-Q1", "Foo")], r.registry)).not.toThrow();
   });
 
-  it("gives each URL to its nearest same-named page, whatever the build order", () => {
-    // x @13.0000 and y @13.0009 lose their records; the new pages are 22 m
-    // past x's mid-point and 11 m from y. Greedy build order swapped them.
+  it("never gives a URL to a different peak when two same-named summits are rescanned", () => {
+    // Nearest-first gave A (x rescanned) y's URL here and orphaned x's.
     const reg: SlugRegistry = {
       "kote-betta": { id: "x", lat: 13.0, lng: 77.0, name: "kote-betta" },
       "kote-betta-y": { id: "y", lat: 13.0009, lng: 77.0, name: "kote-betta" },
     };
     for (const order of [
-      ["d12-1", "d12-2"],
-      ["d12-2", "d12-1"],
+      ["A", "B"],
+      ["B", "A"],
     ]) {
-      const at = { "d12-1": 13.0006, "d12-2": 13.001 } as Record<string, number>;
-      const pages = order.map((id) => mk(id, "Kote Betta", at[id], 77.0));
-      const { registry } = upd(pages, reg);
-      expect(registry["kote-betta-y"].id, order.join()).toBe("d12-2");
-      expect(registry["kote-betta"].id, order.join()).toBe("d12-1");
+      const at = { A: 13.0005, B: 13.00135 } as Record<string, number>;
+      const pages = order.map((id) => mk(`d12-${id}`, "Kote Betta", at[id], 77.0));
+      const { moved, registry } = upd(pages, reg);
+      expect(moved, order.join()).toEqual([]);
+      expect(registry["kote-betta"].id).toBe("x"); // retired, not handed over
+      expect(registry["kote-betta-y"].id).toBe("y");
     }
+  });
+
+  it("re-attaches each of two same-named summits when each match is unambiguous", () => {
+    const reg: SlugRegistry = {
+      "kote-betta": { id: "x", lat: 13.0, lng: 77.0, name: "kote-betta" },
+      "kote-betta-y": { id: "y", lat: 13.01, lng: 77.0, name: "kote-betta" }, // 1.1 km apart
+    };
+    const r = upd(
+      [mk("d12-1", "Kote Betta", 13.0003, 77), mk("d12-2", "Kote Betta", 13.0103, 77)],
+      reg,
+    );
+    expect(r.registry["kote-betta"].id).toBe("d12-1");
+    expect(r.registry["kote-betta-y"].id).toBe("d12-2");
+  });
+
+  it("follows a rename of a record that has no page", () => {
+    const reg: SlugRegistry = {
+      "kote-betta": { id: "gn-1", lat: 13, lng: 77, name: "kote-betta" },
+    };
+    const r = upd([], reg, [mk("gn-1", "Kote Betta Fort", 13, 77)]);
+    expect(r.registry["kote-betta"].name).toBe("kote-betta-fort");
+    expect(r.followed).toEqual(["kote-betta"]);
+  });
+
+  it("keys a name with no Latin letters by itself, digits and all", () => {
+    expect(nameKey(mk("a", "ಕೋಟೆ 2"))).toBe("~ಕೋಟೆ 2");
+    expect(nameKey(mk("a", "ಬೆಟ್ಟ 2"))).not.toBe(nameKey(mk("a", "ಕೋಟೆ 2")));
+    expect(nameKey(mk("a", ""))).toBe("~");
+    expect(() =>
+      readRegistry(JSON.stringify({ "gn-77": { id: "gn-77", lat: 1, lng: 1, name: "~" } })),
+    ).not.toThrow();
   });
 
   it("follows a rename, so the next rescan matches the new name", () => {
@@ -180,7 +211,7 @@ describe("updateRegistry", () => {
       "kote-betta": { id: "gn-5", lat: 13.0, lng: 77.0, name: "kote-betta" },
     };
     const dup = mk("d12-1-1", "Kote Betta", 13.0005, 77.0005);
-    const { registry, moved } = upd([dup], reg, new Set(["gn-5", "d12-1-1"]));
+    const { registry, moved } = upd([dup], reg, [mk("gn-5", "Kote Betta", 13.0, 77.0), dup]);
     expect(moved).toEqual([]);
     expect(registry["kote-betta"].id).toBe("gn-5");
   });

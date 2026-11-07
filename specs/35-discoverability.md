@@ -60,17 +60,17 @@ a lockfile:
   one. It never deletes an entry and never gives a slug to a different peak: a slug whose page
   has gone stays reserved.
 - A page whose id is new but which stands within 120 m of a registered record that is **gone
-  from the dataset**, **under the same name**, takes over that record's slug. That is a terrain
-  rescan regenerating a `d12-` id for the same summit (spec 27). Each registry entry records its
-  record's name, folded as its slug folds it (or `~` and the name itself when it has no Latin
-  letters, so two different non-Latin names never match), and a live page's entry follows its
-  record, so a rename is the name the next rescan matches on. The match is on that recorded name,
-  never on the slug's text: a slug keeps re-attaching across any number of rescans whatever id
-  suffix it carries, and "Kote" never takes `kote-betta`. When several pages and orphans qualify,
-  the nearest pairs are matched first (ties by slug, then id), so build order cannot make two
-  same-named neighbours swap URLs. A different name or a farther point is a different page. A
-  record still in the dataset keeps its slug while it has no page. A new slug never differs only
-  in case from one already held.
+  from the dataset**, **under the same name**, takes over that record's slug **when the match is
+  unambiguous**: neither the page nor the orphan has another such candidate. That is a terrain
+  rescan regenerating a `d12-` id for the same summit (spec 27). When two same-named summits are
+  rescanned together no rule can tell which is which, so their old URLs retire rather than risk
+  pointing at a different peak. Each entry records its record's name (`nameKey`: the folded name
+  when it keeps a Latin letter, else `~` and the name itself, so two different names with no
+  Latin letters never match), and every entry whose record still exists follows its name and
+  position, page or not, so a rename is the name the next rescan matches on (provided
+  `build:slugs` runs between the rename and the rescan, as both data workflows do). The match is
+  on that recorded name, never on the slug's text. A record still in the dataset keeps its slug
+  while it has no page. A new slug never differs only in case from one already held.
 - `build-pages` and `build-sitemap` only read the registry, through one function
   (`slugsFromRegistry`), and **refuse to build** when a qualifying page has no slug, when a
   record has two, or when a slug is not URL-safe (letters, digits and single hyphens; upper case
@@ -139,8 +139,10 @@ section C's PR; the app-shell card (`icons/og.png`) already exists.
   slug merely starts with, or a point more than 120 m away does not; repeated rescans keep
   re-attaching the same slug; a page with no Latin letters re-attaches on its own name and never
   on another non-Latin name; a page whose id is its slug re-attaches without taking a nameless
-  page's URL; each URL goes to its nearest same-named page in either build order; a rename is
-  followed; a new slug avoids a case twin; a record still in the
+  page's URL; an ambiguous match (two same-named summits rescanned together, or two orphans for
+  one page) re-attaches nothing in either build order, while two distant ones each re-attach; a
+  rename is followed, with or without a page; non-Latin names are keyed by themselves, digits and
+  all; a new slug avoids a case twin; a record still in the
   dataset without a page keeps its slug; a retired slug is never reassigned; a free bare slug is
   used; updating is idempotent; the build refuses an unregistered page, a record with two slugs
   and an unusable slug or a case twin, and accepts an upper-case Wikidata suffix; a malformed

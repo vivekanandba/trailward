@@ -10,7 +10,6 @@
  */
 import type { Trek } from "../../src/lib/trek";
 
-/** URL-safe, lowercase, diacritics folded. Falls back to the record id. */
 /** A name folded to its URL form: "Kumāra Parvatha" → "kumara-parvatha"; "" if no Latin letters. */
 export function foldName(name: string): string {
   return name
@@ -21,6 +20,7 @@ export function foldName(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** URL-safe, lowercase, diacritics folded. Falls back to the record id. */
 export function slugFor(trek: Trek): string {
   return foldName(trek.name) || trek.id;
 }
