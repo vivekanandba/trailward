@@ -7,6 +7,7 @@
  * asset-resolution bugs surface here rather than in production.
  */
 import { test, expect } from "@playwright/test";
+import { stubPhotos } from "./helpers/deterministic";
 
 test("a trek page serves its facts in the HTML, without JavaScript", async ({ page }) => {
   // JS off: a crawler that doesn't execute scripts, and a reader on a dead
@@ -154,8 +155,16 @@ test("the app links to attribution — a licence obligation, not only an SEO pag
 test("visual: a generated trek page", async ({ page }) => {
   // 3,886 of these ship and none was ever captured. One is the contract —
   // capturing all of them would be noise (spec 42 §C).
+  await stubPhotos(page);
   await page.goto("t/skandagiri/");
   await expect(page.getByRole("heading", { level: 1, name: "Skandagiri" })).toBeVisible();
+  // The photo is lazy: bring it in and wait until it has decoded, so the
+  // capture never lands mid-load.
+  const photo = page.locator("main img").first();
+  await photo.scrollIntoViewIfNeeded();
+  await expect(photo).toHaveJSProperty("complete", true);
+  await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(256);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expect(page).toHaveScreenshot("trek-page.png");
 });
 

@@ -1,20 +1,39 @@
 import { defineConfig, devices } from "@playwright/test";
+import { serversFor } from "./scripts/lib/playwrightServers";
+
+const servers = serversFor(process.argv);
 
 // E2E specs live in e2e/. They boot the Vite dev server and drive the real app.
 // visual.spec.ts additionally diffs committed linux screenshot baselines
-// (spec 33) — regenerate intentionally with `npm run e2e:update`.
+// (spec 33). They should come only from the "Update visual baselines" workflow,
+// which renders on the pinned CI image (spec 42 §E). Nothing refuses a local
+// -u (review-enforced); updateSnapshots "none" below means nothing is written
+// unless asked. A failing run leaves its actual and diff images in test-results/.
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
-  // A bound on a HANG, not a speed assertion (spec 42 §E). The e2e jobs share
-  // this VM with every other project's CI; a first test that pays for the dev
+  // A bound on a HANG, not a speed assertion (spec 42 §E). The local gate shares
+  // the fleet VM with every other project's CI; a first test that pays for the dev
   // server's cold compile at a load average of 13 needed more than the 30 s
   // default, while hanging tests still fail.
   timeout: 60_000,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // A retry is kept so a failure leaves a trace (trace: "on-first-retry"), but
+  // a test that only passes on retry FAILS the run: a flake is a suite defect
+  // (CON-VER-008), and two silent retries were hiding them (spec 42 §E).
+  retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI,
   reporter: process.env.CI ? "github" : "list",
+  // Never write a baseline unless asked: a new screenshot run locally would
+  // otherwise get its first baseline from this machine's fonts. The baseline
+  // workflow asks with --update-snapshots=all (spec 42 §E).
+  updateSnapshots: "none",
   expect: {
+    // A bound on a HANG, like `timeout` above, not a speed assertion: every
+    // assertion still polls for a state. 5 s let a cold mount at a load average
+    // of 14 fail "granted permission refreshes the origin" with the app not yet
+    // rendered (2026-10-31).
+    timeout: 15_000,
     toHaveScreenshot: {
       // 1% of pixels absorbs antialiasing wobble; a real layout/palette change
       // is orders of magnitude larger.
@@ -59,17 +78,27 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:4173/trailward/" },
     },
   ],
+  // Only the servers the requested projects use: Playwright starts every one
+  // listed, and an app-only pass paid for a full production build (spec 42 §E).
   webServer: [
-    {
-      command: "npm run dev",
-      url: "http://localhost:5173/trailward/",
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command: "npm run build && npx vite preview --port 4173",
-      url: "http://localhost:4173/trailward/",
-      reuseExistingServer: !process.env.CI,
-      timeout: 180_000, // a full build: sitemap + vite + 3,886 trek pages
-    },
+    ...(servers.includes("dev")
+      ? [
+          {
+            command: "npm run dev",
+            url: "http://localhost:5173/trailward/",
+            reuseExistingServer: !process.env.CI,
+          },
+        ]
+      : []),
+    ...(servers.includes("preview")
+      ? [
+          {
+            command: "npm run build && npx vite preview --port 4173",
+            url: "http://localhost:4173/trailward/",
+            reuseExistingServer: !process.env.CI,
+            timeout: 180_000, // a full build: sitemap + vite + 3,886 trek pages
+          },
+        ]
+      : []),
   ],
 });

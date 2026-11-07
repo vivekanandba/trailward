@@ -8,7 +8,7 @@ on:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -42,7 +42,7 @@ jobs:
       - run: npm run format:check
 
   validate-data:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -53,7 +53,7 @@ jobs:
       - run: npm run validate:data
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -66,7 +66,7 @@ jobs:
       - run: npm run coverage
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -74,16 +74,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Cache the Playwright browser download across runs.
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-setup
       # App projects only (desktop chromium + Pixel-7). The static-surface
       # project needs a full production build and runs as its own job, so a
       # smoke-test failure is never queued behind 3,886 generated pages.
-      - run: npm run e2e -- --project=chromium --project=mobile
+      # The named script, not `npm run e2e -- --project=…`: npm appends extra
+      # arguments only to the LAST command of the e2e script (spec 42 §E).
+      - run: npm run e2e:app
       # Failing visual diffs (-actual/-diff/-expected PNGs) and traces are
       # useless if discarded — surface them on every run outcome (spec 33).
       - uses: actions/upload-artifact@v4
@@ -98,7 +95,7 @@ jobs:
     # The generated crawl surface (spec 35): trek pages, robots, sitemap,
     # served by `vite preview` from a real production build at the real base
     # path. Separate job because it pays for that build.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -106,12 +103,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
-      - run: npm run e2e -- --project=static
+      - uses: ./.github/actions/playwright-setup
+      - run: npm run e2e:static
       - uses: actions/upload-artifact@v4
         if: always()
         with:

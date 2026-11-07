@@ -13,8 +13,9 @@ validates and all tests pass**.
 
 ## Acceptance criteria
 
-- **Given** a push to `main`, **when** CI runs, **then** jobs `validate-data`, `test` (typecheck +
-  unit), and `e2e` run; the `build` + `deploy` jobs run **only if all three pass**.
+- **Given** a push to `main`, **when** CI runs, **then** jobs `quality`, `validate-data`, `test`
+  (typecheck + unit with coverage), `e2e` and `e2e-static` run; the `build` + `deploy` jobs run
+  **only if all five pass**, and `verify-deploy` then reads the live site back.
 - **Given** the build, **when** assets are emitted, **then** Vite `base: '/trailward/'` makes JS,
   CSS, and Leaflet marker images resolve at `https://<user>.github.io/trailward/`.
 - **Given** a deep link is refreshed on Pages, **when** there's no server route, **then** the app
@@ -26,15 +27,18 @@ validates and all tests pass**.
 
 - `.github/workflows/deploy.yml`:
   - `validate-data`: `npm ci && npm run validate:data`
-  - `test`: `npm ci && npm run typecheck && npm test`
-  - `e2e`: `npm ci && npx playwright install --with-deps chromium && npm run e2e` (both Chromium-based projects: desktop + Pixel-7 mobile; includes the spec-33 visual diffs; `test-results/` uploaded as an artifact on every outcome)
-  - `build`: `needs: [validate-data, test, e2e]` → `npm run build` → upload Pages artifact
+  - `quality`: `npm ci`, `npm run check:constitution` (spec 39), `npm run lint`, `npm run format:check`
+  - `test`: `npm ci && npm run typecheck && npm run coverage` (the coverage floors gate here)
+  - `e2e`: `npm ci`, the shared Playwright setup action, then `npm run e2e:app` (both Chromium-based projects: desktop + Pixel-7 mobile; includes the spec-33 visual diffs; `test-results/` uploaded as an artifact on every outcome)
+  - `e2e-static`: the same setup, then `npm run e2e:static` against the production build (spec 42 §E)
+  - `build`: `needs: [quality, validate-data, test, e2e, e2e-static]` → `npm run build` → upload Pages artifact
   - `deploy`: `needs: build` → `actions/deploy-pages`
+  - `verify-deploy`: `needs: deploy` → `npm run check:deploy -- --sha "$GITHUB_SHA" --previous …`, which reads the live site back (spec 42)
 - Pages source = **GitHub Actions** (set once in repo Settings → Pages).
 
 ## Edge cases & error states
 
-- e2e flakiness → Playwright `retries: 2` in CI; still must pass to deploy.
+- e2e flakiness → Playwright `retries: 1` with `failOnFlakyTests` in CI: a test that passes only on retry fails the run (CON-VER-008), so a flake blocks the deploy rather than hiding in it.
 - A red pipeline leaves the previously deployed site live (no partial publish).
 - Forks/PRs don't deploy (deploy only on `main` / dispatch).
 

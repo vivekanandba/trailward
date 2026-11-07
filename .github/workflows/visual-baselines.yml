@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   baselines:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned with the baselines: spec 42 §E
     steps:
       - uses: actions/checkout@v6
         with:
@@ -29,14 +29,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-setup
       # Both suites carry screenshots: visual.spec.ts covers the app states,
       # static.spec.ts the generated pages served by `vite preview` (spec 42 §C).
-      - run: npx playwright test visual.spec.ts static.spec.ts --update-snapshots
+      # =all: plain --update-snapshots rewrites only screenshots that FAIL, so
+      # drift inside the 1% tolerance (⌘K vs Ctrl K) was never refreshed and
+      # "Baselines already match" was reported over a stale image (spec 42 §E).
+      # Two passes, as `npm run e2e` runs them: the static project's full
+      # build starves the dev server when they share one (playwright.config.ts).
+      - run: npx playwright test --project=chromium --project=mobile visual.spec.ts --update-snapshots=all
+      - run: npx playwright test --project=static static.spec.ts --update-snapshots=all
       - name: Commit refreshed baselines if changed
         run: |
           if [[ -n "$(git status --porcelain e2e/__screenshots__)" ]]; then
