@@ -2,7 +2,8 @@
  * How far a record may move and still be the same summit: a terrain rescan
  * shifts a detected peak by at most a few DEM pixels (spec 27). Shared by
  * discovery's preservation, build:data's fold and the drift guard, in a module
- * of its own so none loads another's dependencies to read one rule.
+ * of its own so none loads another's dependencies to read one rule. It also
+ * holds DISCOVERY_CARRIED, the fields discovery carries and the refresh guards.
  */
 import type { Trek } from "../../src/lib/trek";
 import { distanceFrom } from "../../src/lib/distance";

@@ -90,7 +90,7 @@ export function carriedLosses(head: Trek[], now: Trek[]): string[] {
     const n = nowById.get(t.id);
     if (!n || t.tier === "curated" || n.tier === "curated") continue; // curated: curatedLosses
     const lost = DISCOVERY_CARRIED.filter((f) => t[f] !== undefined && n[f] === undefined);
-    if (lost.length > 0) out.push(`${t.id} (${t.name}): lost ${lost.join(" and ")}`);
+    if (lost.length > 0) out.push(`${t.id} (${t.name}): lost ${lost.join(", ")}`);
   }
   return out;
 }
@@ -161,9 +161,15 @@ async function main(): Promise<void> {
   const lost = curatedLosses(head, now);
   console.log(`[drift] curated records that lost a kept field: ${lost.length}`);
   for (const l of lost) violations.push(`curated ${l}`);
-  const carried = carriedLosses(head, now);
-  console.log(`[drift] records that lost a carried photo or text: ${carried.length}`);
-  for (const c of carried) violations.push(`carried field ${c}`);
+  // Only for the weekly refresh (`--refresh`, from check:refresh): nothing in
+  // it may clear a carried field. The hand-run rebakes (spec 32) clear some
+  // on purpose (no WorldCover reading, a hill feature gone), and they keep
+  // the count tolerance alone.
+  if (process.argv.includes("--refresh")) {
+    const carried = carriedLosses(head, now);
+    console.log(`[drift] records that lost a field discovery carries: ${carried.length}`);
+    for (const c of carried) violations.push(`carried field ${c}`);
+  }
   const gone = pagesLost(head, now);
   console.log(`[drift] published pages lost with their record still here: ${gone.length}`);
   for (const g of gone) violations.push(`published page lost: ${g}`);

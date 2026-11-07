@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
@@ -315,6 +317,14 @@ describe("enrichment drift guard (spec 31)", () => {
     expect(pagesLost(before, after)).toEqual([]);
   });
 
+  it("runs the per-record carried check only for the weekly refresh", () => {
+    // The hand-run rebakes clear some carried fields on purpose (spec 32).
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["check:refresh"]).toMatch(/check-enrichment-drift\.ts --refresh/);
+  });
+
   it("names every record that kept its id but lost a carried photo or text", () => {
     // Sesha Parvata lost its photo, kept a page by rank, and pushed
     // Dipadakallu out: only the cause is visible on both.
@@ -335,7 +345,7 @@ describe("enrichment drift guard (spec 31)", () => {
     const full = { ...(sesha as Trek), historicalNote: note, nearestTown: "Somwarpet" };
     expect(
       carriedLosses([full], [{ ...full, historicalNote: undefined, nearestTown: undefined }]),
-    ).toEqual(["osm-6 (Sesha Parvata): lost historicalNote and nearestTown"]);
+    ).toEqual(["osm-6 (Sesha Parvata): lost historicalNote, nearestTown"]);
     // A record promoted to curated is curatedLosses' to judge.
     expect(
       carriedLosses([sesha], [{ ...(sesha as Trek), tier: "curated", image: undefined }]),
