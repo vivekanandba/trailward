@@ -106,7 +106,7 @@ export default function CommandPalette({
         aria-modal="true"
         aria-label="Search summits"
         tabIndex={-1}
-        className="fixed left-1/2 top-[12vh] z-[1300] w-[min(36rem,92vw)] -translate-x-1/2 overflow-hidden rounded-xl bg-white shadow-2xl focus:outline-none dark:bg-slate-900"
+        className="fixed left-1/2 top-[12vh] z-[1300] w-[min(36rem,92vw)] -translate-x-1/2 overflow-hidden rounded-xl bg-white shadow-2xl focus-visible:-outline-offset-2 dark:bg-slate-900"
       >
         <input
           ref={inputRef}
@@ -122,7 +122,7 @@ export default function CommandPalette({
           }}
           onKeyDown={onKeyDown}
           placeholder="Search any summit in India…"
-          className="w-full border-b border-trail-100 bg-transparent px-4 py-3.5 text-base outline-none dark:border-slate-700"
+          className="w-full border-b border-trail-100 bg-transparent px-4 py-3.5 text-base outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-trail-400 dark:border-slate-700"
         />
         {results.length > 0 && (
           <ul id="palette-results" role="listbox" className="max-h-80 overflow-y-auto">

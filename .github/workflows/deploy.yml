@@ -115,6 +115,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Delight pays its weight: the shipped bytes against size-budget.json (spec 44 D5).
+      - run: npm run check:size
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

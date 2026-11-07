@@ -45,15 +45,15 @@ export default function TrekList({
         // before the list has rendered, unlike waiting for "Loading" to detach
         // (spec 42 §E).
         aria-busy={loading}
-        className="flex-1 divide-y divide-trail-50 dark:divide-slate-700 focus:outline-none"
+        className="flex-1 divide-y divide-trail-50 focus-visible:-outline-offset-2 dark:divide-slate-700"
       >
         {loading &&
           Array.from({ length: 6 }, (_, i) => (
             <li key={`skeleton-${i}`} aria-hidden className="flex items-center gap-3 px-4 py-3">
-              <div className="h-9 w-9 flex-none animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+              <div className="h-9 w-9 flex-none rounded bg-trail-100 dark:bg-slate-700" />
               <div className="min-w-0 flex-1">
-                <div className="h-4 w-1/2 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
-                <div className="mt-1.5 h-3 w-3/4 animate-pulse rounded bg-trail-100 dark:bg-slate-700" />
+                <div className="h-4 w-1/2 rounded bg-trail-100 dark:bg-slate-700" />
+                <div className="mt-1.5 h-3 w-3/4 rounded bg-trail-100 dark:bg-slate-700" />
               </div>
             </li>
           ))}

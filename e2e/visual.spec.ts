@@ -63,7 +63,9 @@ test("visual: empty state (impossible filter combo)", async ({ page }) => {
 });
 
 test("visual: filters surface", async ({ page }) => {
-  await settled(page, `/?${BLR}`);
+  // With a filter active: on desktop the rail is always open, so without one
+  // this screenshot was byte-identical to list-light and covered nothing.
+  await settled(page, `/?${BLR}&d=Hard`);
   if (isMobile(page)) {
     await page.getByRole("button", { name: /^Filters/ }).click();
     await page.waitForTimeout(400); // sheet transition (reduced but settle anyway)

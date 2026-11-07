@@ -24,6 +24,21 @@
 }
 
 @layer base {
+  /* Keyboard focus is always visible (spec 44 D4). One rule for everything a
+     component does not style itself; :focus-visible, so a pointer click or a
+     programmatic focus with no keyboard behind it draws no ring. */
+  :focus-visible {
+    outline: 2px solid theme("colors.trail.600");
+    outline-offset: 2px;
+  }
+  .dark :focus-visible {
+    outline-color: theme("colors.trail.300");
+  }
+  /* A dialog that focused itself on load, before any press (useDialogFocus). */
+  [data-quiet-focus]:focus-visible {
+    outline: none;
+  }
+
   html,
   body,
   #root {
@@ -103,7 +118,22 @@
   animation: panel-in 200ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Motion is an enhancement, never a requirement (spec 33). */
+/* The theme toggle's icon turns in after a press (spec 44 register row 5). */
+@keyframes theme-icon-in {
+  from {
+    transform: rotate(-90deg) scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.theme-icon-in {
+  animation: theme-icon-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Motion is an enhancement, never a requirement (spec 33, spec 44 D2). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
