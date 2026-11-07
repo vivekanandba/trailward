@@ -173,22 +173,33 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     }
   });
 
-  it("a scheduled job that pushes to main rebases first (spec 10)", () => {
+  it("a scheduled data job lands through push-data.sh, one writer at a time (spec 10)", () => {
     // The 2026-11-07 refresh built and checked its data for 2.5 h, then lost
-    // it all to a rejected push because main had moved meanwhile.
+    // it to a rejected push; a bare rebase would have landed it unchecked on
+    // a main that had since gained the slug registry.
     for (const f of ["refresh-data.yml", "apply-suggestions.yml"]) {
+      const text = readFileSync(resolve(dir, f), "utf8");
+      const wf = load(text) as { concurrency?: { group?: string } };
+      expect(wf.concurrency?.group, `${f} concurrency`).toBe("data-writer");
       const runs = jobs
         .filter((j) => j.id.startsWith(`${f}:`))
         .flatMap((j) => j.job.steps ?? [])
-        .map((st) => st.run ?? "")
-        .filter((r) => /git push/.test(r));
-      expect(runs.length, f).toBeGreaterThan(0);
-      for (const r of runs) {
-        const pull = r.indexOf('git pull --rebase origin "$GITHUB_REF_NAME"');
-        expect(pull, `${f} pulls with rebase`).toBeGreaterThan(-1);
-        expect(r.indexOf("git push", pull), `${f} pushes after the pull`).toBeGreaterThan(pull);
-        expect(r, `${f} aborts a conflicted rebase`).toMatch(/git rebase --abort/);
-      }
+        .map((st) => st.run ?? "");
+      expect(
+        runs.some((r) => /scripts\/push-data\.sh/.test(r)),
+        f,
+      ).toBe(true);
+      expect(
+        runs.filter((r) => /git push/.test(r)),
+        `${f} pushes only via push-data.sh`,
+      ).toEqual([]);
+      // A token push starts no workflow: what landed is deployed by dispatch.
+      const steps = jobs
+        .filter((j) => j.id.startsWith(`${f}:`))
+        .flatMap((j) => j.job.steps ?? []) as { run?: string; if?: string }[];
+      const publish = steps.find((st) => /gh workflow run deploy\.yml/.test(st.run ?? ""));
+      expect(publish, `${f} dispatches the deploy`).toBeDefined();
+      expect(publish?.if, f).toMatch(/steps\.land\.outputs\.pushed == 'true'/);
     }
   });
 

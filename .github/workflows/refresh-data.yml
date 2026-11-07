@@ -9,6 +9,13 @@ on:
 
 permissions:
   contents: write
+  actions: write # dispatch the deploy for what landed
+
+# The two workflows that write treks.json never run at once: it is one line,
+# so any overlap is a certain conflict and a lost run (spec 10).
+concurrency:
+  group: data-writer
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -29,25 +36,22 @@ jobs:
       - run: npm run build:chunks
       # Record a URL for every new page; never move an existing one (spec 35).
       - run: npm run build:slugs
+      # Lands on whatever main became while this ran: if it moved, the data is
+      # re-derived and re-checked on top of it first (spec 10).
       - name: Commit refreshed data if changed
-        run: |
-          if [[ -n "$(git status --porcelain src/data/treks.json public/data scripts/pages)" ]]; then
-            git config user.name "trailward-bot"
-            git config user.email "actions@github.com"
-            git add src/data/treks.json public/data scripts/pages
-            git commit -m "chore(data): weekly refresh of treks.json"
-            # A long run outlives merges to main: replay this commit on top of
-            # them, so the push is not rejected (spec 10). A conflict fails here,
-            # loudly, and the reporter files it.
-            for attempt in 1 2 3; do
-              git pull --rebase origin "$GITHUB_REF_NAME" || { git rebase --abort; exit 1; }
-              git push && break # a push race: pull again and retry
-              [ "$attempt" = 3 ] && exit 1
-              sleep 10
-            done
-          else
-            echo "No data changes this run."
-          fi
+        id: land
+        run: >-
+          scripts/push-data.sh "chore(data): weekly refresh of treks.json"
+          "npm ci && npm run build:chunks && npm run build:slugs && npm run validate:data && npx tsx scripts/check-enrichment-drift.ts"
+          src/data/treks.json public/data scripts/pages
+      # A push with the workflow's own token starts no other workflow, so the
+      # data would sit on main unpublished until a person pushed; a dispatch
+      # does start one (spec 10, spec 09).
+      - name: Publish what landed
+        if: steps.land.outputs.pushed == 'true'
+        run: gh workflow run deploy.yml --ref "$GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   # A red scheduled run emails only whoever last edited the cron (spec 10):
   # file a failure, close the issue on the next success.
