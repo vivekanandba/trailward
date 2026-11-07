@@ -108,6 +108,17 @@ describe("push-data.sh", () => {
     expect(mainHas("derived.txt")).toBe("from new");
   });
 
+  it("lands a run that changed only derived files on a moved branch", () => {
+    // An empty source patch is nothing to carry, not a conflict.
+    writeFileSync(join(runner, "derived.txt"), "rebuilt\n");
+    writeFileSync(join(other, "code.txt"), "v2\n");
+    git(other, "commit", "-qam", "code");
+    git(other, "push", "-q");
+    const r = push('printf "rebuilt on %s" "$(cat code.txt)" > derived.txt');
+    expect(r.status, r.out).toBe(0);
+    expect(mainHas("derived.txt")).toBe("rebuilt on v2");
+  });
+
   it("says a refused push is refused, and does not retry it as a race", () => {
     writeFileSync(join(remote, "hooks", "pre-receive"), "#!/bin/sh\necho protected >&2\nexit 1\n");
     chmodSync(join(remote, "hooks", "pre-receive"), 0o755);
@@ -115,7 +126,7 @@ describe("push-data.sh", () => {
     const r = push("true");
     expect(r.status).not.toBe(0);
     expect(r.out).toMatch(/push refused:.*protected/s);
-    expect(r.out).not.toMatch(/raced/);
+    expect(r.out).not.toMatch(/will retry/);
   });
 
   it("refuses when the branch changed the same data", () => {

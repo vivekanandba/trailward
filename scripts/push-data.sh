@@ -59,11 +59,14 @@ for attempt in 1 2 3; do
     echo "push-data: $branch moved since this run began; re-deriving on top of it."
     # This run's change to the sources, as a patch; everything else is main's.
     patch=$(mktemp)
+    trap 'rm -f "$patch"' EXIT
     git diff --binary "$built_on" HEAD -- "${sources[@]}" > "$patch"
     git reset -q --hard "origin/$branch"
     if [ "${#derived[@]}" -gt 0 ]; then git clean -qfd -- "${derived[@]}"; fi
-    if ! git apply --3way --index "$patch" 2>/dev/null; then
-      echo "push-data: this run's source data conflicts with $branch; refusing." >&2
+    # An empty patch (this run changed only derived files) has nothing to
+    # carry; git rejects it as "unrecognized input", which is not a conflict.
+    if [ -s "$patch" ] && ! applied=$(git apply --3way --index "$patch" 2>&1); then
+      echo "push-data: this run's source data does not apply on $branch; refusing: $applied" >&2
       exit 1
     fi
     bash -c "$recheck"
@@ -82,13 +85,14 @@ for attempt in 1 2 3; do
     if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "pushed=true" >> "$GITHUB_OUTPUT"; fi
     exit 0
   fi
-  # Only a rejection because the branch moved is a race worth retrying;
-  # anything else (protection, permissions, a hook) is said as itself.
-  if ! grep -qE "fetch first|non-fast-forward|stale info" <<<"$out"; then
+  # A rule refused it (protection, permissions, a hook): said as itself,
+  # not retried. Anything else (the branch moved, a network blip, a server
+  # error) gets another attempt, from a fresh fetch.
+  if grep -qE "pre-receive hook declined|protected branch|Permission to .* denied|\(denied\)|403" <<<"$out"; then
     echo "push-data: push refused: $out" >&2
     exit 1
   fi
-  echo "push-data: push raced another (attempt $attempt)" >&2
+  echo "push-data: push failed, will retry (attempt $attempt): $out" >&2
   [ "$attempt" = 3 ] && exit 1
   sleep 10
 done

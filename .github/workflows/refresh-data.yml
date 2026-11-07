@@ -30,10 +30,10 @@ jobs:
       - run: npm ci
       - run: npm run build:data
       - run: npm run build:discovery
-      - run: npm run validate:data
-      # A rebake can "succeed" while silently stripping enrichment (spec 31) —
-      # refuse to commit if any field count regressed vs the committed data.
-      - run: npx tsx scripts/check-enrichment-drift.ts
+      # Validation and the drift guard (spec 31): a rebake can "succeed" while
+      # silently stripping enrichment. The same npm script the landing step
+      # reruns on top of a moved main.
+      - run: npm run check:refresh
       # Chunks and URLs for every page (spec 35); the same npm script the
       # landing step reruns on top of a moved main.
       - run: npm run derive:data

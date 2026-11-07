@@ -16,14 +16,18 @@ pipeline, commits changes, and lets the gated deploy publish them.
 - **Given** the schedule `0 2 * * 1` (Mondays 02:00 UTC), **when** it fires, **then** the workflow
   runs `build:data`, validates the output, and **commits `treks.json` only if it changed**.
 - **Given** main moved while the run built its data (a refresh takes hours), **when** it lands
-  its commit (`scripts/push-data.sh`), **then** it undoes the commit, re-derives and re-checks on
-  top of the new main (`build:chunks`, `build:slugs`, `validate:data`, and for the refresh the
-  drift guard), and commits again; a push race is retried, and a conflict with main's own data or
-  a failed recheck pushes nothing and fails the run, which the reporter files. A bare rebase is
-  not enough: the 2026-11-07 run was built before the slug registry existed and would have landed
-  247 pages with no URL. The two workflows that write `treks.json` share one `concurrency` group,
-  so they never overlap. Incident, 2026-11-07: the first refresh to pass every check in twelve
-  weeks lost its data to a rejected push.
+  (`scripts/push-data.sh <sources> -- <derived>`), **then** only this run's change to the source
+  data (`treks.json`, and the detected-name files for apply-suggestions) is carried onto the new
+  main, as a three-way patch; the derived files (chunks, the slug registry) are main's and are
+  rebuilt there by `npm run derive:data`, then checked (`check:refresh` for the refresh,
+  `validate:data` for names). Those are npm scripts, so a step merged mid-run is run. A run that
+  changed only derived files carries nothing and is simply rebuilt. A source change that does not
+  apply, or a failed recheck, pushes nothing and fails the run, which the reporter files. A push
+  a rule refuses (protection, permissions, a hook) is reported as such and not retried; any other
+  failed push is retried from a fresh fetch. The two workflows that write `treks.json` share one
+  `concurrency` group. Incident, 2026-11-07: the first refresh to pass every check in twelve weeks
+  lost its data to a rejected push, and a bare rebase would have landed it unchecked on a main
+  that had since gained the slug registry (247 pages with no URL).
 - **Given** the run landed its commit, **then** it dispatches the deploy: a push made with the
   workflow's own token starts no other workflow, so the data would otherwise sit on main
   unpublished until a person pushed.
