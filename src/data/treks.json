@@ -8,13 +8,24 @@
     "tier": "curated",
     "elevationM": 1350,
     "difficulty": "Moderate",
-    "type": ["Hill", "Fort"],
+    "type": [
+      "Hill",
+      "Fort"
+    ],
     "bestSeason": "Oct–Feb",
     "nightTrek": true,
     "highlights": "Famous pre-dawn trek to catch a sunrise above the clouds, with ruins of a hill fort near the summit.",
     "nearestTown": "Chikkaballapur",
-    "sources": ["https://en.wikipedia.org/wiki/Skandagiri"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Skandagiri.jpg",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Skandagiri"
+    },
+    "distanceKm": 67.6,
+    "driveTimeMin": 76,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Skandagiri"
+    ]
   },
   {
     "id": "nandi-hills",
@@ -25,13 +36,24 @@
     "tier": "curated",
     "elevationM": 1478,
     "difficulty": "Easy",
-    "type": ["Hill", "Fort"],
+    "type": [
+      "Hill",
+      "Fort"
+    ],
     "bestSeason": "Sep–Feb",
     "entryFee": "₹30 / head",
     "highlights": "Popular hill station with Tipu's fort, viewpoints and a motorable road; the trek up Nandi steps is a local favourite.",
     "nearestTown": "Chikkaballapur",
-    "sources": ["https://en.wikipedia.org/wiki/Nandi_Hills,_India"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Sunrise_at_Nandi_Hills.jpg/3840px-Sunrise_at_Nandi_Hills.jpg",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Nandi_Hills%2C_India"
+    },
+    "distanceKm": 60.9,
+    "driveTimeMin": 71,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Nandi_Hills,_India"
+    ]
   },
   {
     "id": "savandurga",
@@ -42,12 +64,23 @@
     "tier": "curated",
     "elevationM": 1226,
     "difficulty": "Hard",
-    "type": ["Monolith", "Hill"],
+    "type": [
+      "Monolith",
+      "Hill"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "One of the largest monolith hills in Asia; a steep, exposed granite climb with a temple at the base.",
     "nearestTown": "Magadi",
-    "sources": ["https://en.wikipedia.org/wiki/Savandurga"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Savandurga_Hill_02.jpg/3840px-Savandurga_Hill_02.jpg",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Savandurga"
+    },
+    "distanceKm": 56.2,
+    "driveTimeMin": 64,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Savandurga"
+    ]
   },
   {
     "id": "makalidurga",
@@ -58,12 +91,23 @@
     "tier": "curated",
     "elevationM": 1190,
     "difficulty": "Moderate",
-    "type": ["Hill", "Fort"],
+    "type": [
+      "Hill",
+      "Fort"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "Hill-fort trek reached by walking along a railway track, with a Nandi temple at the summit.",
     "nearestTown": "Doddaballapur",
-    "sources": ["https://en.wikipedia.org/wiki/Makalidurga"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/4/43/Railway_trek.JPG",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Makalidurga"
+    },
+    "distanceKm": 40.9,
+    "driveTimeMin": 42,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Makalidurga"
+    ]
   },
   {
     "id": "anthargange",
@@ -74,13 +118,24 @@
     "tier": "curated",
     "elevationM": 1712,
     "difficulty": "Moderate",
-    "type": ["Cave", "Hill"],
+    "type": [
+      "Cave",
+      "Hill"
+    ],
     "bestSeason": "Oct–Feb",
     "nightTrek": true,
     "highlights": "Volcanic rock terrain with boulder caves to scramble through; popular for cave exploration and night camping.",
     "nearestTown": "Kolar",
-    "sources": ["https://en.wikipedia.org/wiki/Antaragange"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Antharagange.JPG/3840px-Antharagange.JPG",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Antara_Gange"
+    },
+    "distanceKm": 60,
+    "driveTimeMin": 59,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Antaragange"
+    ]
   },
   {
     "id": "ramadevarabetta",
@@ -91,12 +146,19 @@
     "tier": "curated",
     "elevationM": 915,
     "difficulty": "Easy",
-    "type": ["Monolith", "Hill"],
+    "type": [
+      "Monolith",
+      "Hill"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "Rocky hill in a vulture sanctuary near Ramanagara, with a Rama temple and the granite outcrops made famous by the film Sholay.",
     "nearestTown": "Ramanagara",
-    "sources": ["https://en.wikipedia.org/wiki/Ramadevarabetta"],
-    "verified": true
+    "verified": true,
+    "distanceKm": 47.6,
+    "driveTimeMin": 49,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Ramadevarabetta"
+    ]
   },
   {
     "id": "kunti-betta",
@@ -107,13 +169,23 @@
     "tier": "curated",
     "elevationM": 882,
     "difficulty": "Moderate",
-    "type": ["Hill"],
+    "type": [
+      "Hill"
+    ],
     "bestSeason": "Oct–Feb",
     "nightTrek": true,
     "highlights": "Twin rocky hillocks near Pandavapura with a lake at the base; a popular night-trek-and-camp outing.",
     "nearestTown": "Pandavapura",
-    "sources": ["https://en.wikipedia.org/wiki/Kunti_Betta"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/5f/KuntiBetta01.jpg",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Kunti_Betta"
+    },
+    "distanceKm": 127.5,
+    "driveTimeMin": 116,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Kunti_Betta"
+    ]
   },
   {
     "id": "channarayana-durga",
@@ -124,12 +196,23 @@
     "tier": "curated",
     "elevationM": 1100,
     "difficulty": "Hard",
-    "type": ["Fort", "Hill"],
+    "type": [
+      "Fort",
+      "Hill"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "Ruined hill fort with seven gates and steep rock-cut steps; a quieter, more rugged trek near Tumakuru.",
     "nearestTown": "Madhugiri",
-    "sources": ["https://en.wikipedia.org/wiki/Channarayana_Durga"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Channarayanadurga1.jpg/3840px-Channarayanadurga1.jpg",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Channarayana_Durga"
+    },
+    "distanceKm": 100.5,
+    "driveTimeMin": 82,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Channarayana_Durga"
+    ]
   },
   {
     "id": "devarayanadurga",
@@ -140,12 +223,23 @@
     "tier": "curated",
     "elevationM": 1195,
     "difficulty": "Easy",
-    "type": ["Hill", "Pilgrimage"],
+    "type": [
+      "Hill",
+      "Pilgrimage"
+    ],
     "bestSeason": "Sep–Feb",
     "highlights": "Forested hill near Tumakuru with the Yoga Narasimha and Bhoga Narasimha temples and the Namada Chilume spring.",
     "nearestTown": "Tumakuru",
-    "sources": ["https://en.wikipedia.org/wiki/Devarayanadurga"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Yoga_Narasimha_Temple_Devarayanadurga.JPG",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Devarayanadurga"
+    },
+    "distanceKm": 79,
+    "driveTimeMin": 69,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Devarayanadurga"
+    ]
   },
   {
     "id": "madhugiri",
@@ -156,12 +250,23 @@
     "tier": "curated",
     "elevationM": 1199,
     "difficulty": "Hard",
-    "type": ["Monolith", "Fort"],
+    "type": [
+      "Monolith",
+      "Fort"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "Among the largest monoliths in Asia; a steep climb with fort walls and railings on the exposed upper rock face.",
     "nearestTown": "Madhugiri",
-    "sources": ["https://en.wikipedia.org/wiki/Madhugiri"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/6/63/Madhugiri_Fort_1.JPG",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Madhugiri"
+    },
+    "distanceKm": 103.3,
+    "driveTimeMin": 95,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Madhugiri"
+    ]
   },
   {
     "id": "shivagange",
@@ -172,12 +277,23 @@
     "tier": "curated",
     "elevationM": 1380,
     "difficulty": "Moderate",
-    "type": ["Hill", "Pilgrimage"],
+    "type": [
+      "Hill",
+      "Pilgrimage"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "Cone-shaped sacred hill with temples, a Nandi statue and the Olakal Teertha crevice along the climb.",
     "nearestTown": "Dabaspete",
-    "sources": ["https://en.wikipedia.org/wiki/Shivagange"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Shivagange_Basavanna.JPG/3840px-Shivagange_Basavanna.JPG",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Shivagange"
+    },
+    "distanceKm": 52.1,
+    "driveTimeMin": 56,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Shivagange"
+    ]
   },
   {
     "id": "kabbaladurga",
@@ -188,13 +304,20 @@
     "tier": "curated",
     "elevationM": 1110,
     "difficulty": "Hard",
-    "type": ["Hill", "Fort"],
+    "type": [
+      "Hill",
+      "Fort"
+    ],
     "bestSeason": "Oct–Feb",
     "nightTrek": true,
     "highlights": "Steep rocky climb near Kanakapura with fort remnants; a well-known night-trek destination.",
     "nearestTown": "Kanakapura",
-    "sources": ["https://en.wikipedia.org/wiki/Kabbaladurga"],
-    "verified": true
+    "verified": true,
+    "distanceKm": 63.8,
+    "driveTimeMin": 67,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Kabbaladurga"
+    ]
   },
   {
     "id": "bilikal-rangaswamy-betta",
@@ -205,12 +328,23 @@
     "tier": "curated",
     "elevationM": 1191,
     "difficulty": "Moderate",
-    "type": ["Hill", "Pilgrimage"],
+    "type": [
+      "Hill",
+      "Pilgrimage"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "Forested ridge near Kanakapura with a cave temple and a large white rock that gives the hill its name.",
     "nearestTown": "Kanakapura",
-    "sources": ["https://en.wikipedia.org/wiki/Bilikal_Rangaswamy_Betta"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Bilikal_Rangaswamy_Temple.png",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Bilikal_Rangaswamy_Betta"
+    },
+    "distanceKm": 66.3,
+    "driveTimeMin": 68,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Bilikal_Rangaswamy_Betta"
+    ]
   },
   {
     "id": "hutridurga",
@@ -221,12 +355,23 @@
     "tier": "curated",
     "elevationM": 1158,
     "difficulty": "Moderate",
-    "type": ["Fort", "Hill"],
+    "type": [
+      "Fort",
+      "Hill"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "One of the nine 'durga' hill forts around Magadi, with layered stone gateways and a Shiva temple on top.",
     "nearestTown": "Kunigal",
-    "sources": ["https://en.wikipedia.org/wiki/Hutridurga"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Huthridurga_View.jpg",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Hutridurga"
+    },
+    "distanceKm": 84.8,
+    "driveTimeMin": 86,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Hutridurga"
+    ]
   },
   {
     "id": "avalabetta",
@@ -237,12 +382,18 @@
     "tier": "curated",
     "elevationM": 1219,
     "difficulty": "Easy",
-    "type": ["Hill"],
+    "type": [
+      "Hill"
+    ],
     "bestSeason": "Sep–Feb",
     "highlights": "Short climb to a dramatic cliff-edge viewpoint with a small temple and a cantilevered rock ledge.",
     "nearestTown": "Chikkaballapur",
-    "sources": ["https://en.wikipedia.org/wiki/Avalabetta"],
-    "verified": true
+    "verified": true,
+    "distanceKm": 79.3,
+    "driveTimeMin": 83,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Avalabetta"
+    ]
   },
   {
     "id": "huliyurdurga",
@@ -253,11 +404,22 @@
     "tier": "curated",
     "elevationM": 1062,
     "difficulty": "Hard",
-    "type": ["Monolith", "Fort"],
+    "type": [
+      "Monolith",
+      "Fort"
+    ],
     "bestSeason": "Oct–Feb",
     "highlights": "Steep monolithic hill near Kunigal with fort traces; a short but stiff scramble over bare rock.",
     "nearestTown": "Kunigal",
-    "sources": ["https://en.wikipedia.org/wiki/Huliyurdurga"],
-    "verified": true
+    "verified": true,
+    "image": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/HuliyoorDurga-6.jpg/3840px-HuliyoorDurga-6.jpg",
+      "attribution": "Wikimedia Commons — https://en.wikipedia.org/wiki/Huliyurdurga"
+    },
+    "distanceKm": 82.7,
+    "driveTimeMin": 82,
+    "sources": [
+      "https://en.wikipedia.org/wiki/Huliyurdurga"
+    ]
   }
 ]

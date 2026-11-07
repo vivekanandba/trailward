@@ -4,10 +4,12 @@ import type { Trek } from "./lib/trek";
 import { loadOrigin, saveOrigin } from "./lib/origin";
 import { DEFAULT_FILTERS, applyFilters, type FilterState } from "./lib/filters";
 import { discoverPeaks } from "./lib/overpass";
+import type { FeedbackKind } from "./lib/feedback";
 import TrekMap from "./components/TrekMap";
 import FilterBar from "./components/FilterBar";
 import TrekDetail from "./components/TrekDetail";
 import OriginSearch from "./components/OriginSearch";
+import FeedbackForm from "./components/FeedbackForm";
 
 const ALL_TREKS = treksRaw as Trek[];
 
@@ -17,6 +19,8 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [discovery, setDiscovery] = useState<Trek[]>([]);
   const [discovering, setDiscovering] = useState(false);
+  // When set, the feedback panel is open in the given mode (spec 07).
+  const [feedbackKind, setFeedbackKind] = useState<FeedbackKind | null>(null);
 
   // Curated treks for this origin; otherwise discover peaks live (spec 03).
   const curated = useMemo(() => ALL_TREKS.filter((t) => t.cityId === origin.id), [origin.id]);
@@ -76,6 +80,13 @@ export default function App() {
         <div className="ml-auto w-full max-w-md sm:w-80">
           <OriginSearch origin={origin} onPick={pickOrigin} />
         </div>
+        <button
+          type="button"
+          onClick={() => setFeedbackKind("feedback")}
+          className="rounded-lg border border-trail-200 px-3 py-2 text-sm font-medium text-trail-700 hover:border-trail-400 hover:bg-trail-50"
+        >
+          Feedback
+        </button>
       </header>
 
       {/* Body */}
@@ -92,6 +103,13 @@ export default function App() {
             {!discovering && visible.length === 0 && (
               <li className="p-4 text-sm text-trail-500">
                 No treks match. Try widening the radius or clearing filters.
+                <button
+                  type="button"
+                  onClick={() => setFeedbackKind("suggest-trek")}
+                  className="mt-2 block font-medium text-trail-700 underline hover:text-trail-900"
+                >
+                  Know a trek we're missing? Suggest it.
+                </button>
               </li>
             )}
             {visible.map((t) => (
@@ -130,6 +148,14 @@ export default function App() {
                 trek={selected}
                 origin={origin}
                 onClose={() => setSelectedId(undefined)}
+              />
+            </div>
+          )}
+          {feedbackKind && (
+            <div className="absolute inset-y-0 right-0 z-[1050] w-full max-w-sm border-l border-trail-100 bg-white shadow-xl">
+              <FeedbackForm
+                initialKind={feedbackKind}
+                onClose={() => setFeedbackKind(null)}
               />
             </div>
           )}
