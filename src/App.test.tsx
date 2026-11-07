@@ -53,6 +53,13 @@ describe("App", () => {
     expect(screen.getByText("Nandi Hills")).toBeInTheDocument();
   });
 
+  it("opens the area card with a sentence about the place (spec 44 R8)", async () => {
+    render(<App />);
+    const sentence = await screen.findByTestId("region-sentence");
+    expect(sentence.textContent).toMatch(/^\d+ peaks? around Bengaluru[,.;]/);
+    expect(sentence.textContent).not.toMatch(/undefined|NaN/);
+  });
+
   it("renders the filter controls and a reset action", () => {
     render(<App />);
     expect(screen.getByLabelText("Search radius in kilometres")).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { prefersReducedMotion, shouldAnimate } from "../lib/motion";
 import {
   MapContainer,
@@ -15,6 +15,7 @@ import L from "leaflet";
 import type { Origin, Trek } from "../lib/trek";
 import { difficultyColor, difficultyLabel } from "../lib/difficulty";
 import { distanceFrom, tripDistance } from "../lib/distance";
+import { fitController } from "../lib/fit";
 import { clusterByGrid } from "../lib/cluster";
 import { loadBasemap, saveBasemap, type Basemap } from "../lib/basemap";
 
@@ -158,11 +159,16 @@ function FitToResults({
 }) {
   const map = useMap();
   const hasResults = treks.length > 0;
+  const lastOrigin = useRef<string | undefined>(undefined);
+  const fitter = useRef<ReturnType<typeof fitController> | null>(null);
+  fitter.current ??= fitController(map);
   useEffect(() => {
     const bounds = L.latLng(origin.lat, origin.lng).toBounds(radiusKm * 2 * 1000);
     for (const t of treks) bounds.extend([t.lat, t.lng]);
-    // The first fit happens on load: it jumps; later fits answer an action (spec 44).
-    map.fitBounds(bounds, { padding: [24, 24], animate: shouldAnimate() });
+    const here = `${origin.lat},${origin.lng}`;
+    const moved = lastOrigin.current !== undefined && lastOrigin.current !== here;
+    lastOrigin.current = here;
+    fitter.current!.fit(bounds, moved, shouldAnimate());
     // Refit on origin/radius change and when results first appear (e.g. discovery
     // loading) — NOT on every filter tweak, which would yank the map mid-typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps

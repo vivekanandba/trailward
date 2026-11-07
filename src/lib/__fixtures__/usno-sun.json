@@ -1,0 +1,86 @@
+{
+  "_about": "Sunrise and sunset in IST from the US Naval Observatory's Astronomical Applications API (aa.usno.navy.mil), fetched 2026-10-31. Rise/set are the sun's upper limb at the horizon with standard refraction, i.e. its centre at -0.833 degrees.",
+  "rows": [
+    {
+      "place": "Thiruvananthapuram",
+      "lat": 8.5241,
+      "lng": 76.9366,
+      "date": "2026-03-20",
+      "rise": "06:27",
+      "set": "18:33",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-20&coords=8.5241,76.9366&tz=5.5"
+    },
+    {
+      "place": "Thiruvananthapuram",
+      "lat": 8.5241,
+      "lng": 76.9366,
+      "date": "2026-06-21",
+      "rise": "06:05",
+      "set": "18:43",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-06-21&coords=8.5241,76.9366&tz=5.5"
+    },
+    {
+      "place": "Thiruvananthapuram",
+      "lat": 8.5241,
+      "lng": 76.9366,
+      "date": "2026-12-21",
+      "rise": "06:31",
+      "set": "18:09",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-12-21&coords=8.5241,76.9366&tz=5.5"
+    },
+    {
+      "place": "Nagpur",
+      "lat": 21.1458,
+      "lng": 79.0882,
+      "date": "2026-03-20",
+      "rise": "06:18",
+      "set": "18:25",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-20&coords=21.1458,79.0882&tz=5.5"
+    },
+    {
+      "place": "Nagpur",
+      "lat": 21.1458,
+      "lng": 79.0882,
+      "date": "2026-06-21",
+      "rise": "05:33",
+      "set": "18:58",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-06-21&coords=21.1458,79.0882&tz=5.5"
+    },
+    {
+      "place": "Nagpur",
+      "lat": 21.1458,
+      "lng": 79.0882,
+      "date": "2026-12-21",
+      "rise": "06:46",
+      "set": "17:37",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-12-21&coords=21.1458,79.0882&tz=5.5"
+    },
+    {
+      "place": "Leh",
+      "lat": 34.1526,
+      "lng": 77.5771,
+      "date": "2026-03-20",
+      "rise": "06:24",
+      "set": "18:31",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-03-20&coords=34.1526,77.5771&tz=5.5"
+    },
+    {
+      "place": "Leh",
+      "lat": 34.1526,
+      "lng": 77.5771,
+      "date": "2026-06-21",
+      "rise": "05:08",
+      "set": "19:35",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-06-21&coords=34.1526,77.5771&tz=5.5"
+    },
+    {
+      "place": "Leh",
+      "lat": 34.1526,
+      "lng": 77.5771,
+      "date": "2026-12-21",
+      "rise": "07:21",
+      "set": "17:14",
+      "source": "https://aa.usno.navy.mil/api/rstt/oneday?date=2026-12-21&coords=34.1526,77.5771&tz=5.5"
+    }
+  ]
+}
