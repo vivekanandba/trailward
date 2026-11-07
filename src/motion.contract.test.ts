@@ -29,6 +29,11 @@ const LONG_MOTION_ALLOWED: { path: string; ms: number; rule: string }[] = [
     ms: 800,
     rule: "R9: flying to a new origin shows where it is from the old one",
   },
+  {
+    path: "index.css",
+    ms: 600,
+    rule: "R16: a short celebration of something the person did (ticking a peak)",
+  },
 ];
 
 describe("motion (spec 44 D2, D3)", () => {
