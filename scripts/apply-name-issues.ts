@@ -1,9 +1,10 @@
 /**
  * apply-name-issues — turns accepted GitHub "name-suggestion" issues into real
  * pin names (spec 29). Run weekly by .github/workflows/apply-suggestions.yml
- * (or by hand with `gh` authenticated):
+ * (or by hand with `gh` authenticated, naming where the applied list goes):
  *
- *   npm run apply:names
+ *   APPLIED_NAMES_FILE=/tmp/applied.json npm run apply:names
+ *   APPLIED_NAMES_FILE=/tmp/applied.json npm run close:names   # only once it has landed
  *
  * For each open issue labelled `name-suggestion`:
  *  - parse the issue-form body (### Pin id / ### Suggested name);
@@ -148,9 +149,10 @@ export function triageIssues(
     }
     humanNames[parsed.pinId] = { name: parsed.name, issue: issue.number };
     // An earlier suggestion for this pin in the same run is not what the map
-    // will show: it is answered as superseded, never as applied.
+    // will show: it is answered as superseded by the one that stands (each
+    // later suggestion repoints them all), never as applied.
     for (const a of applied) {
-      if (a.pinId === parsed.pinId && a.supersededBy === undefined) a.supersededBy = issue.number;
+      if (a.pinId === parsed.pinId) a.supersededBy = issue.number;
     }
     applied.push({ issue: issue.number, pinId: parsed.pinId, name: parsed.name });
     console.log(`  #${issue.number}: ${parsed.pinId} → "${parsed.name}"`);

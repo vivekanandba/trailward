@@ -274,6 +274,7 @@ describe("name suggestions are closed after landing (spec 29, issue #99)", () =>
 
   it("the apply and close steps name the same list file, in step env", () => {
     // A job-level env cannot read the runner context: the workflow would not start.
+    expect(apply, "the apply:names step").toBeGreaterThanOrEqual(0);
     const file = steps[apply].env?.APPLIED_NAMES_FILE;
     expect(file).toMatch(/runner\.temp/);
     expect(steps[close].env?.APPLIED_NAMES_FILE).toBe(file);

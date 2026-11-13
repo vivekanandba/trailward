@@ -46,7 +46,9 @@ refresh, so applied names ride the same deploy) + `workflow_dispatch`; permissio
 5. Only once that step succeeds, on `main` — the rename is on the map — `npm run close:names`
    closes and then thanks each listed issue (`closeApplied`); a dispatch on a branch closes
    nothing. When two suggestions name the same pin in one run, the latest stands and the earlier
-   issue is answered as superseded, never as applied. If landing is refused, the rename is discarded
+   issue is answered as superseded, never as applied ("latest" is the highest issue number). An
+   issue is closed before it is thanked, so a failed comment leaves it closed without a reply
+   rather than thanked twice on the next run. If landing is refused, the rename is discarded
    and the issue stays open for the next run (issue #99; `triageIssues / closeApplied` in
    `scripts/apply-name-issues.test.ts`, and the step order in `scripts/workflows.test.ts`).
 

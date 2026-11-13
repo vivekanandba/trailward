@@ -184,4 +184,19 @@ describe("triageIssues / closeApplied", () => {
     expect(bodies[0]).not.toMatch(/Bilikal Betta/);
     expect(bodies[1]).toMatch(/now named \*\*Bilikal Hill\*\*/);
   });
+
+  it("points every earlier suggestion at the one that stands, not at another superseded one", () => {
+    const { gh } = fakeGh();
+    const issues3 = [9, 7, 5].map((number) => ({
+      number,
+      title: "name",
+      body: FORM_BODY.replace("Bilikal Betta", `Bilikal ${number}`),
+    }));
+    const applied = triageIssues(issues3, new Set([PIN]), {}, gh, "o/r");
+    expect(applied.map((a) => [a.issue, a.supersededBy])).toEqual([
+      [5, 9],
+      [7, 9],
+      [9, undefined],
+    ]);
+  });
 });
