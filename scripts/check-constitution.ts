@@ -88,26 +88,48 @@ export function parseCommitSha(raw: string): string | null {
   return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
 }
 
-/** Fetch CONSTITUTION.md from the REMOTE. Returns null when unreachable. */
-export function fetchRemote(
-  lock: ConstitutionLock,
-  /**
-   * How to run a command. Injected so the fetch policy — prefer the API when
-   * a token exists, fall back to a cache-busted raw read, treat an empty body
-   * as a miss — is testable. Until this seam existed nothing imported this
-   * file at all, so v8 reported it as having NO functions and the coverage
-   * floor could not see it.
-   */
-  run: (cmd: string, args: string[]) => string = (cmd, args) =>
-    execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 }),
-): string | null {
-  const [, owner, repo] = /github\.com\/([^/]+)\/([^/]+)/.exec(lock.repo) ?? [];
-  if (!owner || !repo) return null;
+/**
+ * How to run a command, with extra environment for it. Injected so the fetch
+ * policy — prefer the API when a token exists, fall back to a cache-busted raw
+ * read, treat an empty body as a miss — is testable. Until this seam existed
+ * nothing imported this file at all, so v8 reported it as having NO functions
+ * and the coverage floor could not see it.
+ */
+export type Run = (cmd: string, args: string[], env?: Record<string, string>) => string;
+
+export const defaultRun: Run = (cmd, args, env) =>
+  execFileSync(cmd, args, {
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+    env: { ...process.env, ...env },
+  });
+
+/** Owner and repo of a GitHub repo URL, without a trailing `.git`; null for anything else. */
+export function repoParts(url: string): { owner: string; repo: string } | null {
+  const m = /^https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(url);
+  return m ? { owner: m[1], repo: m[2] } : null;
+}
+
+/**
+ * The token gh should use. gh reads GH_TOKEN (or GITHUB_TOKEN), never
+ * CONSTITUTION_TOKEN, so the token CI is told to set must be handed over: a
+ * gate that says "no token is set" when one is set misdiagnoses (issue #85).
+ */
+function ghEnv(): Record<string, string> | undefined {
+  const token = process.env.CONSTITUTION_TOKEN || process.env.GH_TOKEN;
+  return token ? { GH_TOKEN: token } : undefined;
+}
+
+/** Fetch CONSTITUTION.md from the REMOTE at `lock.ref`. Returns null when unreachable. */
+export function fetchRemote(lock: ConstitutionLock, run: Run = defaultRun): string | null {
+  const parts = repoParts(lock.repo);
+  if (!parts) return null;
+  const { owner, repo } = parts;
   // Prefer the API whenever a token exists: raw.githubusercontent is served
   // through a CDN that caches for minutes, so a "match" from raw can mean
   // yesterday's rules — and a verification that might be stale is not one.
-  const hasToken = Boolean(process.env.CONSTITUTION_TOKEN || process.env.GH_TOKEN);
-  if (!hasToken) {
+  const env = ghEnv();
+  if (!env) {
     try {
       const raw = run("curl", [
         "-sfL",
@@ -128,16 +150,89 @@ export function fetchRemote(
   }
   try {
     return decodeGhContent(
-      run("gh", [
-        "api",
-        `repos/${owner}/${repo}/contents/CONSTITUTION.md?ref=${lock.ref}`,
-        "--jq",
-        ".content",
-      ]),
+      run(
+        "gh",
+        [
+          "api",
+          `repos/${owner}/${repo}/contents/CONSTITUTION.md?ref=${lock.ref}`,
+          "--jq",
+          ".content",
+        ],
+        env,
+      ),
     );
   } catch {
     return null;
   }
+}
+
+/**
+ * The commit `lock.ref` points at now, or null when that cannot be confirmed.
+ * Asked the same way fetchRemote reads: through gh with the token when there
+ * is one, else anonymously, so the two halves of a sync agree on access.
+ */
+export function resolveCommit(lock: ConstitutionLock, run: Run = defaultRun): string | null {
+  const parts = repoParts(lock.repo);
+  if (!parts) return null;
+  const path = `repos/${parts.owner}/${parts.repo}/commits/${lock.ref}`;
+  const env = ghEnv();
+  try {
+    return parseCommitSha(
+      env
+        ? run("gh", ["api", path, "--jq", ".sha"], env)
+        : run("curl", [
+            "-sfL",
+            "--max-time",
+            "20",
+            "-H",
+            "Accept: application/vnd.github.sha",
+            `https://api.github.com/${path}`,
+          ]),
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Why the remote could not be read, said as what it is: with no token the
+ * repository may simply be private; with one, the token itself is suspect.
+ * "No token is set" when one is set sends the reader after a problem that
+ * does not exist (CON-VER-005, issue #85).
+ */
+export function unreachableReason(lock: ConstitutionLock, tokenSet: boolean): string {
+  return tokenSet
+    ? `could not read ${lock.repo} at ${lock.ref} with the token that is set: it may be expired, ` +
+        "lack read access to the repository, or the ref may be gone."
+    : `could not read ${lock.repo} at ${lock.ref} anonymously: the repository is private (or the ` +
+        "ref is gone, or the anonymous rate limit was hit) and no CONSTITUTION_TOKEN/GH_TOKEN is set.";
+}
+
+/**
+ * What a sync would pin: the rules and the commit they came from, or why not.
+ * The commit is resolved FIRST and the rules fetched at that sha, so a ref that
+ * moves between the two requests cannot pair one revision's commit with
+ * another's content (issue #85).
+ */
+export function syncFromRemote(
+  lock: ConstitutionLock,
+  run: Run = defaultRun,
+): { remote: string; commit: string } | string {
+  const commit = resolveCommit(lock, run);
+  if (!commit) {
+    return (
+      `${unreachableReason(lock, Boolean(ghEnv()))} Could not resolve which commit the ref points ` +
+      "at; refusing to write a lock whose commit would be a guess."
+    );
+  }
+  const remote = fetchRemote({ ...lock, ref: commit }, run);
+  if (remote === null) {
+    return (
+      `resolved ${lock.ref} to ${commit.slice(0, 7)} but could not read its CONSTITUTION.md. ` +
+      "The local clone is deliberately not used as a fallback."
+    );
+  }
+  return { remote, commit };
 }
 
 /** Whether we have any way to read the remote at all. */
@@ -200,8 +295,8 @@ function main(): void {
   if (remote === null) {
     status = "unreachable";
     console.warn(
-      `[constitution] could not read ${lock.repo} at ${lock.ref}: the repository is private and ` +
-        "no CONSTITUTION_TOKEN/GH_TOKEN is set. The pin was NOT verified against the remote.",
+      `[constitution] ${unreachableReason(lock, Boolean(ghEnv()))} ` +
+        "The pin was NOT verified against the remote.",
     );
   } else if (sha256(remote) === lock.sha256) {
     status = "match";
@@ -230,45 +325,16 @@ function main(): void {
 /** `sync` mode: refresh the pinned copy and lock FROM THE REMOTE. */
 function sync(): void {
   const lock = parseLock(readFileSync(lockFile, "utf8"));
-  const remote = fetchRemote(lock);
-  if (remote === null) {
-    console.error(
-      "::error::cannot reach the remote constitution. Set CONSTITUTION_TOKEN (or make the repo " +
-        "public). The local clone is deliberately not used as a fallback.",
-    );
+  const got = syncFromRemote(lock);
+  if (typeof got === "string") {
+    console.error(`::error::${got}`);
     process.exit(1);
   }
-  const [, owner, repoName] = /github\.com\/([^/]+)\/([^/]+)/.exec(lock.repo) ?? [];
-  let commit: string | null = null;
-  if (owner && repoName) {
-    try {
-      commit = parseCommitSha(
-        execFileSync(
-          "gh",
-          ["api", `repos/${owner}/${repoName}/commits/${lock.ref}`, "--jq", ".sha"],
-          {
-            encoding: "utf8",
-          },
-        ),
-      );
-    } catch {
-      commit = null;
-    }
-  }
-  if (!commit) {
-    // Refusing beats recording a commit we did not confirm. A lock whose
-    // `commit` and `sha256` disagree is worse than one that was never written.
-    console.error(
-      `::error::fetched the rules but could not resolve which commit ${lock.ref} points at. ` +
-        "Refusing to write a lock whose commit would be a guess.",
-    );
-    process.exit(1);
-  }
-  writeFileSync(pinnedFile, remote, "utf8");
-  const next = nextLock(lock, remote, commit);
+  writeFileSync(pinnedFile, got.remote, "utf8");
+  const next = nextLock(lock, got.remote, got.commit);
   writeFileSync(lockFile, `${JSON.stringify(next, null, 2)}\n`, "utf8");
   console.log(
-    `[constitution] synced from ${lock.repo}@${lock.ref} (${commit.slice(0, 7)}); ` +
+    `[constitution] synced from ${lock.repo}@${lock.ref} (${got.commit.slice(0, 7)}); ` +
       "review the diff before committing.",
   );
 }
