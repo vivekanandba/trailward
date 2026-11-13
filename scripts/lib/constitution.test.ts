@@ -426,7 +426,7 @@ describe("the token, the repo and the revision (issue #85)", () => {
   it("the real runner hands the env it is given to the command", async () => {
     const { defaultRun } = await import("../check-constitution");
     const seen = defaultRun(
-      "node",
+      process.execPath,
       ["-e", "process.stdout.write(process.env.GH_TOKEN ?? '<unset>')"],
       {
         GH_TOKEN: "secret",
