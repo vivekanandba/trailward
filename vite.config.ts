@@ -66,6 +66,10 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/setupTests.ts"],
+    // Rendering the whole App takes 0.3-0.7 s alone and past the 5 s default
+    // at load 20-35 on the shared runner (2026-11-13). Tests assert behaviour,
+    // not speed; a slow machine must not read as a failure (CON-VER-008).
+    testTimeout: 30_000,
     // Playwright owns e2e/; keep Vitest to unit/component tests only.
     exclude: ["**/node_modules/**", "**/dist/**", "**/e2e/**"],
     coverage: {
