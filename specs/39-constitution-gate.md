@@ -30,8 +30,10 @@ version it was verified against, and a gate fails the build when they disagree.
 ```
 
 Updating the rules is one deliberate command — `npm run sync:constitution` — which fetches from
-the **remote** and rewrites the lock. It never reads a local clone. The resulting diff is
-reviewable, so a change to the rules is a decision, not an accident.
+the **remote** and rewrites the lock. It never reads a local clone. It resolves the commit the
+ref points at **first** and then fetches the rules at that sha, so a ref that moves between the
+two requests cannot pair one revision's commit with another's content (issue #85). The resulting
+diff is reviewable, so a change to the rules is a decision, not an accident.
 
 ## B. Checks that need no network — these always hard-fail
 
@@ -57,6 +59,8 @@ Fetch `CONSTITUTION.md` from the remote at the pinned ref and compare its sha256
 - **Unreachable** → the repo is private today, and CI has no credential for it. In that case the
   check reports **exactly which access it lacks** and exits non-zero in CI only when access is
   configured (`CONSTITUTION_TOKEN` present, or the repo has become public). Until then it warns.
+  `CONSTITUTION_TOKEN` is handed to `gh` as `GH_TOKEN`, the only variable gh reads; before #85 a
+  set token never reached gh and the gate said no token was set.
   It must never print a reassuring line it has not earned: a gate that silently passes is worse
   than no gate (CON-VER-005).
 
@@ -84,6 +88,10 @@ when a token is present. Whichever lands, only the fetch function changes.
 - `verifyRemote` returns match / mismatch / unreachable, and the CLI's exit code follows the
   matrix in section C — asserted for all three, including that "unreachable" does not report
   success.
+- The token, the repo and the revision (issue #85): `fetchRemote` and `resolveCommit` hand
+  `CONSTITUTION_TOKEN` to gh as `GH_TOKEN`; `repoParts` drops a trailing `.git`;
+  `syncFromRemote` fetches at the resolved sha and fetches nothing when it cannot resolve one
+  (`scripts/lib/constitution.test.ts`).
 - The gate is proven by making it fail: a fabricated ID, a local path, a pasted rule, and a
   hash mismatch each break the build.
 

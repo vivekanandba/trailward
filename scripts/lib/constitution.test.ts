@@ -322,3 +322,102 @@ describe("scannableFiles and accessConfigured (spec 39)", () => {
     }
   });
 });
+
+// Issue #85: the token the gate is told to use must reach gh, the repo URL is
+// parsed once, and a sync pins content and commit from one revision.
+describe("the token, the repo and the revision (issue #85)", () => {
+  const lock = {
+    repo: "https://github.com/vivekanandba/fleet",
+    ref: "main",
+    commit: "0".repeat(40),
+    sha256: "a".repeat(64),
+  };
+  const SHA = "b".repeat(40);
+
+  function withEnv(vars: Record<string, string | undefined>, fn: () => void): void {
+    const prev = Object.fromEntries(Object.keys(vars).map((k) => [k, process.env[k]]));
+    for (const [k, v] of Object.entries(vars)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    try {
+      fn();
+    } finally {
+      for (const [k, v] of Object.entries(prev)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  }
+
+  it("hands CONSTITUTION_TOKEN to gh, which reads only GH_TOKEN", async () => {
+    const { fetchRemote } = await import("../check-constitution");
+    withEnv({ CONSTITUTION_TOKEN: "secret", GH_TOKEN: undefined }, () => {
+      let env: Record<string, string> | undefined;
+      fetchRemote(lock, (_cmd, _args, e) => {
+        env = e;
+        return Buffer.from("# rules\n").toString("base64");
+      });
+      expect(env?.GH_TOKEN).toBe("secret");
+    });
+  });
+
+  it("parses owner and repo once, without a trailing .git", async () => {
+    const { repoParts } = await import("../check-constitution");
+    expect(repoParts("https://github.com/vivekanandba/fleet.git")).toEqual({
+      owner: "vivekanandba",
+      repo: "fleet",
+    });
+    expect(repoParts("https://github.com/vivekanandba/fleet")).toEqual({
+      owner: "vivekanandba",
+      repo: "fleet",
+    });
+    expect(repoParts("https://gitlab.com/a/b")).toBeNull();
+  });
+
+  it("resolves the commit with the token, and refuses an answer that is not a sha", async () => {
+    const { resolveCommit } = await import("../check-constitution");
+    withEnv({ CONSTITUTION_TOKEN: "secret", GH_TOKEN: undefined }, () => {
+      let seen: { args: string[]; env?: Record<string, string> } | undefined;
+      expect(
+        resolveCommit(lock, (_c, args, env) => {
+          seen = { args, env };
+          return `${SHA}\n`;
+        }),
+      ).toBe(SHA);
+      expect(seen?.args).toContain("repos/vivekanandba/fleet/commits/main");
+      expect(seen?.env?.GH_TOKEN).toBe("secret");
+      expect(resolveCommit(lock, () => "<html>")).toBeNull();
+    });
+  });
+
+  it("a sync fetches the rules at the commit it resolved, not at the moving ref", async () => {
+    const { syncFromRemote } = await import("../check-constitution");
+    withEnv({ CONSTITUTION_TOKEN: "secret" }, () => {
+      const calls: string[] = [];
+      const got = syncFromRemote(lock, (_c, args) => {
+        const path = args[1];
+        calls.push(path);
+        return path.includes("/commits/") ? SHA : Buffer.from("# rules\n").toString("base64");
+      });
+      expect(got).toEqual({ remote: "# rules\n", commit: SHA });
+      expect(calls).toEqual([
+        "repos/vivekanandba/fleet/commits/main",
+        `repos/vivekanandba/fleet/contents/CONSTITUTION.md?ref=${SHA}`,
+      ]);
+    });
+  });
+
+  it("a sync that cannot resolve the commit fetches nothing", async () => {
+    const { syncFromRemote } = await import("../check-constitution");
+    withEnv({ CONSTITUTION_TOKEN: "secret" }, () => {
+      const calls: string[] = [];
+      const got = syncFromRemote(lock, (_c, args) => {
+        calls.push(args[1]);
+        throw new Error("404");
+      });
+      expect(typeof got).toBe("string");
+      expect(calls).toHaveLength(1);
+    });
+  });
+});
