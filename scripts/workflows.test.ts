@@ -205,6 +205,17 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     }
   });
 
+  it("name-suggestion issues are closed only after their rename lands (issue #99)", () => {
+    const steps = jobs
+      .filter((j) => j.id.startsWith("apply-suggestions.yml:"))
+      .flatMap((j) => j.job.steps ?? []) as { id?: string; run?: string; if?: string }[];
+    const land = steps.findIndex((st) => st.id === "land");
+    const close = steps.findIndex((st) => /npm run close:names/.test(st.run ?? ""));
+    expect(land, "the landing step").toBeGreaterThanOrEqual(0);
+    expect(close, "a step closes the applied issues").toBeGreaterThan(land);
+    expect(steps[close].if).toMatch(/steps\.land\.outcome == 'success'/);
+  });
+
   it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {
     // npm appends extra arguments only to the LAST command of a compound
     // script: `npm run e2e -- --project=static` ran the app suite, then static

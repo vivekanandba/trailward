@@ -11,8 +11,12 @@
  *    name is sane;
  *  - valid → record in the committed scripts/detected/human-names.json, rename
  *    the summit + its baked treks.json records (with "via issue #N" provenance),
- *    close the issue with a thank-you;
+ *    and list it in $APPLIED_NAMES_FILE;
  *  - invalid → comment what's missing, label `needs-info`, leave open.
+ *
+ * The issues are thanked and closed later, by `npm run close:names`, and only
+ * once the commit has landed (issue #99): landing can still be refused, and a
+ * closed issue whose rename was discarded says it was applied when it was not.
  *
  * Human names are durable: toDetectedTreks applies human-names.json on every
  * pipeline regeneration, and build:names never overwrites a name that no
@@ -20,6 +24,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
@@ -30,6 +35,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const detectedFile = resolve(here, "detected/india-detected.json");
 const humanNamesFile = resolve(here, "detected/human-names.json");
 const treksFile = resolve(here, "../src/data/treks.json");
+// What this run applied, for close:names to thank and close after landing.
+const appliedFile =
+  process.env.APPLIED_NAMES_FILE ?? resolve(tmpdir(), "trailward-applied-names.json");
 
 export interface Suggestion {
   pinId: string;
@@ -96,30 +104,31 @@ interface Issue {
   body: string;
 }
 
+export interface Applied {
+  issue: number;
+  pinId: string;
+  name: string;
+}
+
+export type Gh = (args: string[]) => string;
+
 function gh(args: string[]): string {
   return execFileSync("gh", args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
 }
 
-async function main(): Promise<void> {
-  const repo = process.env.GITHUB_REPOSITORY ?? "vivekanandba/trailward";
-  const issues = JSON.parse(
-    gh([
-      "api",
-      `repos/${repo}/issues?labels=name-suggestion&state=open&per_page=100`,
-      "--jq",
-      "[.[] | {number, title, body}]",
-    ]),
-  ) as Issue[];
-  console.log(`[apply-names] ${issues.length} open name-suggestion issue(s).`);
-  if (issues.length === 0) return;
-
-  const summits = JSON.parse(readFileSync(detectedFile, "utf8")) as DetectedSummit[];
-  const knownIds = new Set(summits.map((s) => s.id));
-  const humanNames: HumanNames = existsSync(humanNamesFile)
-    ? (JSON.parse(readFileSync(humanNamesFile, "utf8")) as HumanNames)
-    : {};
-
-  let applied = 0;
+/**
+ * Records each valid suggestion in `humanNames` and returns it; asks on an
+ * invalid one for what is missing. Leaves valid issues open: they are closed by
+ * closeApplied once the rename has landed.
+ */
+export function triageIssues(
+  issues: Issue[],
+  knownIds: Set<string>,
+  humanNames: HumanNames,
+  gh: Gh,
+  repo: string,
+): Applied[] {
+  const applied: Applied[] = [];
   for (const issue of issues) {
     const parsed = parseNameIssueBody(issue.body ?? "");
     const error = parsed
@@ -138,17 +147,48 @@ async function main(): Promise<void> {
       continue;
     }
     humanNames[parsed.pinId] = { name: parsed.name, issue: issue.number };
-    applied++;
+    applied.push({ issue: issue.number, pinId: parsed.pinId, name: parsed.name });
     console.log(`  #${issue.number}: ${parsed.pinId} → "${parsed.name}"`);
+  }
+  return applied;
+}
+
+/** Thanks and closes each issue whose rename has landed. */
+export function closeApplied(applied: Applied[], gh: Gh, repo: string): void {
+  for (const a of applied) {
     gh([
       "api",
-      `repos/${repo}/issues/${issue.number}/comments`,
+      `repos/${repo}/issues/${a.issue}/comments`,
       "-f",
-      `body=Applied — this pin is now named **${parsed.name}** on the map (next deploy). Thank you!`,
+      `body=Applied — this pin is now named **${a.name}** on the map (next deploy). Thank you!`,
     ]);
-    gh(["api", "--method", "PATCH", `repos/${repo}/issues/${issue.number}`, "-f", "state=closed"]);
+    gh(["api", "--method", "PATCH", `repos/${repo}/issues/${a.issue}`, "-f", "state=closed"]);
   }
-  if (applied === 0) return;
+}
+
+async function main(): Promise<void> {
+  const repo = process.env.GITHUB_REPOSITORY ?? "vivekanandba/trailward";
+  // A stale list from an earlier run must never close this run's issues.
+  writeFileSync(appliedFile, "[]\n", "utf8");
+  const issues = JSON.parse(
+    gh([
+      "api",
+      `repos/${repo}/issues?labels=name-suggestion&state=open&per_page=100`,
+      "--jq",
+      "[.[] | {number, title, body}]",
+    ]),
+  ) as Issue[];
+  console.log(`[apply-names] ${issues.length} open name-suggestion issue(s).`);
+  if (issues.length === 0) return;
+
+  const summits = JSON.parse(readFileSync(detectedFile, "utf8")) as DetectedSummit[];
+  const knownIds = new Set(summits.map((s) => s.id));
+  const humanNames: HumanNames = existsSync(humanNamesFile)
+    ? (JSON.parse(readFileSync(humanNamesFile, "utf8")) as HumanNames)
+    : {};
+
+  const applied = triageIssues(issues, knownIds, humanNames, gh, repo);
+  if (applied.length === 0) return;
 
   writeFileSync(humanNamesFile, JSON.stringify(humanNames, null, 2) + "\n", "utf8");
 
@@ -158,13 +198,24 @@ async function main(): Promise<void> {
   const ds = validateDataset(applied2.treks);
   if (!ds.ok) throw new Error(`[apply-names] dataset invalid: ${ds.error}`);
   writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
-  console.log(`[apply-names] applied ${applied} name(s).`);
+  // Written last: only a run whose data was fully written lists anything.
+  writeFileSync(appliedFile, JSON.stringify(applied) + "\n", "utf8");
+  console.log(`[apply-names] applied ${applied.length} name(s); listed in ${appliedFile}.`);
+}
+
+function closeMain(): void {
+  const repo = process.env.GITHUB_REPOSITORY ?? "vivekanandba/trailward";
+  const applied = existsSync(appliedFile)
+    ? (JSON.parse(readFileSync(appliedFile, "utf8")) as Applied[])
+    : [];
+  closeApplied(applied, gh, repo);
+  console.log(`[apply-names] closed ${applied.length} applied issue(s).`);
 }
 
 // Only run when invoked as a CLI — importing this module (tests) must not
 // touch GitHub.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((err) => {
+  (process.argv.includes("--close") ? Promise.resolve().then(closeMain) : main()).catch((err) => {
     console.error((err as Error).message);
     process.exit(1);
   });

@@ -25,6 +25,9 @@ jobs:
     # Under a minute in every run seen; the default is 6 hours.
     timeout-minutes: 10
     runs-on: ubuntu-latest
+    env:
+      # apply:names lists what it applied; close:names closes those issues.
+      APPLIED_NAMES_FILE: ${{ runner.temp }}/applied-names.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,6 +55,14 @@ jobs:
       - name: Publish what landed
         if: steps.land.outputs.pushed == 'true'
         run: gh workflow run deploy.yml --ref "$GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      # Thank and close each applied issue only now: had landing been refused,
+      # its rename would be discarded and the issue must stay open (issue #99).
+      # push-data.sh succeeds only when this run's data is on main.
+      - name: Close the issues whose names landed
+        if: steps.land.outcome == 'success'
+        run: npm run close:names
         env:
           GH_TOKEN: ${{ github.token }}
 
