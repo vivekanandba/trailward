@@ -12,8 +12,11 @@ set -euo pipefail
 file=src/data/treks.json
 # Only an explicit "false" is a full clone: an error (not a checkout, a
 # dubious-ownership refusal) must be named as itself, not read as "not shallow".
-if ! shallow="$(git rev-parse --is-shallow-repository 2>&1)"; then
-  echo "::error::data-date: git could not inspect this checkout: $shallow" >&2
+# Its stderr is kept apart: a warning on success must not become the answer.
+err="$(mktemp)"
+trap 'rm -f "$err"' EXIT
+if ! shallow="$(git rev-parse --is-shallow-repository 2>"$err")"; then
+  echo "::error::data-date: git could not inspect this checkout: $(cat "$err")" >&2
   exit 1
 fi
 if [ "$shallow" != false ]; then
