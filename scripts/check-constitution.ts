@@ -204,8 +204,8 @@ export function unreachableReason(lock: ConstitutionLock, tokenSet: boolean): st
   return tokenSet
     ? `could not read ${lock.repo} at ${lock.ref} with the token that is set: it may be expired, ` +
         "lack read access to the repository, or the ref may be gone."
-    : `could not read ${lock.repo} at ${lock.ref} anonymously: the repository is private and no ` +
-        "CONSTITUTION_TOKEN/GH_TOKEN is set.";
+    : `could not read ${lock.repo} at ${lock.ref} anonymously: the repository is private (or the ` +
+        "ref is gone, or the anonymous rate limit was hit) and no CONSTITUTION_TOKEN/GH_TOKEN is set.";
 }
 
 /**
