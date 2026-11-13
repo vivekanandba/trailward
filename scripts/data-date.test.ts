@@ -11,7 +11,7 @@ const script = resolve(__dirname, "data-date.sh");
 let dir: string;
 
 // A repo of our own: strip git's variables so a hook's GIT_DIR cannot point
-// these commands at the real checkout (CON-PROC-016).
+// these commands at the real checkout.
 const env = Object.fromEntries(
   Object.entries(process.env).filter(([k]) => !k.startsWith("GIT_")),
 ) as Record<string, string>;
