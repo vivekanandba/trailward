@@ -34,6 +34,10 @@ const contentDir = resolve(repoRoot, "content");
  * with git in a plain step and pass it in, because inside Playwright's web
  * server on GitHub's runner git reported the full clone as shallow (the cause
  * was not found; a plain step in the same job saw it whole).
+ *
+ * In CI (`CI` set) a missing date is an error, not a warning: every job that
+ * builds the pages is meant to pass one (.github/actions/data-date), and a job
+ * that forgot would otherwise ship pages with no "Data as of" (issue #94).
  */
 export function lastCommitDate(
   file: string,
@@ -44,20 +48,26 @@ export function lastCommitDate(
 ): string | undefined {
   const given = env.TRAILWARD_DATA_DATE;
   if (given && /^\d{4}-\d{2}-\d{2}$/.test(given)) return given;
-  try {
-    const shallow = git(["rev-parse", "--is-shallow-repository"]);
-    if (shallow !== "false") {
-      console.warn(`[dates] no data date: shallow clone (is-shallow-repository=${shallow})`);
-      return undefined;
+  const none = (why: string): undefined => {
+    if (env.CI) {
+      throw new Error(
+        `[dates] no data date in CI: ${why}. Run .github/actions/data-date before building the pages.`,
+      );
     }
-    const out = git(["log", "-1", "--format=%cs", "--", file]);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(out)) return out;
-    console.warn(`[dates] no data date: git log gave ${JSON.stringify(out.slice(0, 80))}`);
+    console.warn(`[dates] no data date: ${why}`);
     return undefined;
+  };
+  let shallow: string;
+  let out: string;
+  try {
+    shallow = git(["rev-parse", "--is-shallow-repository"]);
+    if (shallow !== "false") return none(`shallow clone (is-shallow-repository=${shallow})`);
+    out = git(["log", "-1", "--format=%cs", "--", file]);
   } catch (err) {
-    console.warn(`[dates] no data date: ${(err as Error).message.split("\n")[0]}`);
-    return undefined;
+    return none((err as Error).message.split("\n")[0]);
   }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(out)) return out;
+  return none(`git log gave ${JSON.stringify(out.slice(0, 80))}`);
 }
 
 /** Emits the sitemap. `lastmod` is injected so the output is deterministic. */

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { load } from "js-yaml";
+import { serversFor } from "./lib/playwrightServers";
 
 // Spec 42 §E. ubuntu-latest moved to 26.04 on its own schedule, Playwright
 // 1.60 cannot install its browser dependencies there, and every e2e job and
@@ -38,10 +39,30 @@ const usesPlaywright = (job: Job): boolean =>
   (job.steps ?? []).some((s) => /playwright|npm run e2e/.test(`${s.run ?? ""} ${s.uses ?? ""}`));
 
 const playwrightJobs = jobs.filter((j) => usesPlaywright(j.job));
-// A step that builds the static pages: the build, the static project, or an
-// unscoped Playwright run (issue #94).
-const BUILDS_PAGES =
-  /npm run (build|e2e|e2e:static|build:pages|build:sitemap)(?![\w:-])|playwright test(?![^\n]*--project)|--project[= ]static/;
+// Whether a step's `run:` builds the static pages (issue #94): an npm script
+// that builds them, a direct build script, or a Playwright run that starts the
+// preview server. Playwright's own rules decide the last — `--project x y`,
+// any case, wildcards — through the helper playwright.config.ts uses.
+const PAGE_SCRIPTS = ["build", "e2e", "e2e:static", "build:pages", "build:sitemap"];
+function buildsPages(run: string): boolean {
+  return run.split(/&&|\|\||;|\n/).some((command) => {
+    const argv = command
+      .trim()
+      .split(/\s+/)
+      .map((a) => a.replace(/^["']|["']$/g, ""));
+    if (argv.some((a) => /(^|\/)scripts\/build-(pages|sitemap)\.ts$/.test(a))) return true;
+    const pw = argv.indexOf("playwright");
+    if (pw >= 0 && argv[pw + 1] === "test") {
+      return serversFor(argv.slice(pw + 2)).includes("preview");
+    }
+    const npm = argv.indexOf("npm");
+    if (npm >= 0 && ["run", "run-script"].includes(argv[npm + 1])) {
+      const script = argv.slice(npm + 2).find((a) => !a.startsWith("-"));
+      return PAGE_SCRIPTS.includes(script ?? "");
+    }
+    return false;
+  });
+}
 
 const action = load(
   readFileSync(resolve(__dirname, "../.github/actions/playwright-setup/action.yml"), "utf8"),
@@ -156,7 +177,7 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     // date comes from one action, and the matcher covers every way a step can
     // build the pages: the build, the static project, or an unscoped run.
     const builds = jobs.filter(({ job }) =>
-      (job.steps ?? []).some((st) => BUILDS_PAGES.test(st.run ?? "")),
+      (job.steps ?? []).some((st) => buildsPages(st.run ?? "")),
     );
     expect(builds.map((j) => j.id).sort()).toEqual(
       [
@@ -170,18 +191,29 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
       const steps = job.steps ?? [];
       const checkout = steps.find((st) => st.uses?.startsWith("actions/checkout"));
       expect(checkout?.with?.["fetch-depth"], `${id} fetch-depth`).toBe(0);
+      const at = steps.findIndex((st) => st.uses?.startsWith("actions/checkout"));
       const date = steps.findIndex((st) => st.uses === "./.github/actions/data-date");
-      const build = steps.findIndex((st) => BUILDS_PAGES.test(st.run ?? ""));
+      const build = steps.findIndex((st) => buildsPages(st.run ?? ""));
       expect(date, `${id} uses the data-date action`).toBeGreaterThanOrEqual(0);
+      expect(date, `${id} reads the date after the checkout`).toBeGreaterThan(at);
       expect(date, `${id} reads the date before it builds`).toBeLessThan(build);
     }
   });
 
   it("the data's date is read in one place, never copied inline (issue #94)", () => {
-    const inline = jobs.filter(({ job }) =>
-      (job.steps ?? []).some((st) => /TRAILWARD_DATA_DATE=/.test(st.run ?? "")),
-    );
-    expect(inline.map((j) => j.id)).toEqual([]);
+    // Neither a shell line nor an env: mapping at any level may set it.
+    const setters = readdirSync(dir)
+      .filter((f) => /\.ya?ml$/.test(f))
+      .filter((f) => /TRAILWARD_DATA_DATE\s*[=:]/.test(readFileSync(resolve(dir, f), "utf8")));
+    expect(setters).toEqual([]);
+  });
+
+  it("the data-date action runs the tested script, and nothing excuses its failure", () => {
+    const dateAction = load(
+      readFileSync(resolve(__dirname, "../.github/actions/data-date/action.yml"), "utf8"),
+    ) as { runs: { steps: (NonNullable<Job["steps"]>[number] & Record<string, unknown>)[] } };
+    expect(dateAction.runs.steps.map((st) => st.run?.trim())).toEqual(["scripts/data-date.sh"]);
+    for (const st of dateAction.runs.steps) expect(st["continue-on-error"]).toBeUndefined();
   });
 
   it("the matcher sees every way a step builds the pages", () => {
@@ -195,15 +227,22 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
       "npx playwright test",
       "npx playwright test --project=static static.spec.ts",
       "npx playwright test --project static",
+      "npx playwright test --project chromium static",
+      "npx playwright test --project=Static",
+      'npx playwright test --project="*"',
+      "npx playwright test && npx playwright test --project=chromium",
+      "npm run --silent build",
+      "npm run-script build",
+      "npx tsx scripts/build-pages.ts",
     ])
-      expect(BUILDS_PAGES.test(yes), yes).toBe(true);
+      expect(buildsPages(yes), yes).toBe(true);
     for (const no of [
       "npm run e2e:app",
       "npm run build:data",
       "npm run build:chunks",
       "npx playwright test --project=chromium --project=mobile visual.spec.ts",
     ])
-      expect(BUILDS_PAGES.test(no), no).toBe(false);
+      expect(buildsPages(no), no).toBe(false);
   });
 
   it("a scheduled data job lands through push-data.sh, one writer at a time (spec 10)", () => {

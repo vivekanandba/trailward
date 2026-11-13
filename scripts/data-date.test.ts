@@ -68,6 +68,13 @@ describe("data-date.sh", () => {
     expect(r.written).toBe("");
   });
 
+  it("names a git failure as itself, outside a checkout", () => {
+    const r = run(dir); // dir holds the repos but is not one
+    expect(r.status).not.toBe(0);
+    expect(r.out).toMatch(/git could not inspect this checkout/);
+    expect(r.written).toBe("");
+  });
+
   it("refuses when treks.json has no history to date it by (a wrong path, say)", () => {
     const other = join(dir, "other");
     mkdirSync(other);
