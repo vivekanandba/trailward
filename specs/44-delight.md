@@ -170,7 +170,10 @@ that implements each one names its check. R1 is enforced by the tests named unde
     every page with the deploy day), and the build jobs fetch full history without file contents
     (`filter: blob:none`) and read the date once in a plain step, passing it to the build as
     `TRAILWARD_DATA_DATE`: inside Playwright's web server on GitHub's runner, git reported the
-    full clone as shallow while a plain step in the same job saw it whole (cause not found). The
+    full clone as shallow while a plain step in the same job saw it whole (cause not found). That
+    step is one action, `.github/actions/data-date` (`scripts/data-date.sh`), which every job that
+    builds the pages uses before it builds, and which fails on a shallow clone or a blank date
+    (issue #94; `scripts/data-date.test.ts`, `scripts/workflows.test.ts`). The
     sitemap's `lastmod` shares that date and the fix. The
     call-to-action's row and the back link are hidden in print.
   - Playwright's print emulation never fires `beforeprint`, so the date's refresh is unit-tested

@@ -38,6 +38,10 @@ const usesPlaywright = (job: Job): boolean =>
   (job.steps ?? []).some((s) => /playwright|npm run e2e/.test(`${s.run ?? ""} ${s.uses ?? ""}`));
 
 const playwrightJobs = jobs.filter((j) => usesPlaywright(j.job));
+// A step that builds the static pages: the build, the static project, or an
+// unscoped Playwright run (issue #94).
+const BUILDS_PAGES =
+  /npm run (build|e2e|e2e:static|build:pages|build:sitemap)(?![\w:-])|playwright test(?![^\n]*--project)|--project[= ]static/;
 
 const action = load(
   readFileSync(resolve(__dirname, "../.github/actions/playwright-setup/action.yml"), "utf8"),
@@ -148,11 +152,11 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
 
   it("every job that builds the static pages gives them the data's date (spec 44 R5)", () => {
     // #89 updated CI and deploy but not the baseline workflow, whose static
-    // pass then lost "Data as of" and failed for every branch.
+    // pass then lost "Data as of" and failed for every branch. Since #94 the
+    // date comes from one action, and the matcher covers every way a step can
+    // build the pages: the build, the static project, or an unscoped run.
     const builds = jobs.filter(({ job }) =>
-      (job.steps ?? []).some((st) =>
-        /npm run (build|e2e:static)(?![\w:-])|--project=static|--project static/.test(st.run ?? ""),
-      ),
+      (job.steps ?? []).some((st) => BUILDS_PAGES.test(st.run ?? "")),
     );
     expect(builds.map((j) => j.id).sort()).toEqual(
       [
@@ -166,11 +170,40 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
       const steps = job.steps ?? [];
       const checkout = steps.find((st) => st.uses?.startsWith("actions/checkout"));
       expect(checkout?.with?.["fetch-depth"], `${id} fetch-depth`).toBe(0);
-      expect(
-        steps.some((st) => /TRAILWARD_DATA_DATE=.*git log -1 --format=%cs/.test(st.run ?? "")),
-        `${id} passes TRAILWARD_DATA_DATE`,
-      ).toBe(true);
+      const date = steps.findIndex((st) => st.uses === "./.github/actions/data-date");
+      const build = steps.findIndex((st) => BUILDS_PAGES.test(st.run ?? ""));
+      expect(date, `${id} uses the data-date action`).toBeGreaterThanOrEqual(0);
+      expect(date, `${id} reads the date before it builds`).toBeLessThan(build);
     }
+  });
+
+  it("the data's date is read in one place, never copied inline (issue #94)", () => {
+    const inline = jobs.filter(({ job }) =>
+      (job.steps ?? []).some((st) => /TRAILWARD_DATA_DATE=/.test(st.run ?? "")),
+    );
+    expect(inline.map((j) => j.id)).toEqual([]);
+  });
+
+  it("the matcher sees every way a step builds the pages", () => {
+    // Asserted directly, so widening or narrowing it is a visible change.
+    for (const yes of [
+      "npm run build",
+      "npm run e2e",
+      "npm run e2e:static",
+      "npm run build:pages",
+      "npm run build:sitemap",
+      "npx playwright test",
+      "npx playwright test --project=static static.spec.ts",
+      "npx playwright test --project static",
+    ])
+      expect(BUILDS_PAGES.test(yes), yes).toBe(true);
+    for (const no of [
+      "npm run e2e:app",
+      "npm run build:data",
+      "npm run build:chunks",
+      "npx playwright test --project=chromium --project=mobile visual.spec.ts",
+    ])
+      expect(BUILDS_PAGES.test(no), no).toBe(false);
   });
 
   it("a scheduled data job lands through push-data.sh, one writer at a time (spec 10)", () => {

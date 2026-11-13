@@ -120,8 +120,7 @@ jobs:
           cache: npm
       - run: npm ci
       - uses: ./.github/actions/playwright-setup
-      - name: The data's date, read once with the full history (spec 44 R5)
-        run: echo "TRAILWARD_DATA_DATE=$(git log -1 --format=%cs -- src/data/treks.json)" >> "$GITHUB_ENV"
+      - uses: ./.github/actions/data-date # spec 44 R5, issue #94
       - run: npm run e2e:static
       # The static project's web server ran `npm run build`, so dist/ is this
       # PR's build: hold it to the size budget (spec 44 D5).

@@ -1,0 +1,11 @@
+name: The data's date
+description: >-
+  Export TRAILWARD_DATA_DATE, the date src/data/treks.json last changed, for the
+  static pages and the sitemap (spec 44 R5). Needs a full-history checkout
+  (fetch-depth: 0) and fails on a shallow clone or a blank date. One copy, used
+  by every job that builds the static pages (issue #94).
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: scripts/data-date.sh
