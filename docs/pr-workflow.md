@@ -60,6 +60,11 @@ the script only performs the mechanical, repeatable GitHub actions.
 
 ## Notes
 
+- **Every thread, or no answer:** `status`, `threads`, `unresolved`,
+  `resolve-all` and `merge` read every page of review threads (GitHub serves
+  100 at a time) and check the count read against the PR's total. A read that
+  cannot be shown complete exits non-zero rather than reporting 0 — PRs #79 and
+  #80 passed 100 threads and a first-page read hid an open one (issue #83).
 - **Self-approval:** GitHub does not let you formally approve your own PR, so
   `approve` is best-effort. The real merge gate is "all threads resolved + CI
   green", not the approval stamp. When a separate reviewer account is

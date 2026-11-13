@@ -316,25 +316,32 @@ describe("TrekDetail trail + elevation profile", () => {
 });
 
 describe("TrekDetail GPX export", () => {
-  it("downloads a GPX file naming the trek", () => {
-    const createURL = vi.fn<(b: Blob) => string>(() => "blob:gpx");
-    const revokeURL = vi.fn();
-    vi.stubGlobal("URL", { ...URL, createObjectURL: createURL, revokeObjectURL: revokeURL });
+  it("downloads a GPX file naming the trek, and frees its URL 10 s later", () => {
+    const createURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:gpx");
+    const revokeURL = vi.spyOn(URL, "revokeObjectURL");
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    // The revocation timer runs here, under the spy, never after the test.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      render(
+        <TrekDetail trek={{ ...baseTrek, elevationM: 1350 }} origin={origin} onClose={vi.fn()} />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "GPX" }));
 
-    render(
-      <TrekDetail trek={{ ...baseTrek, elevationM: 1350 }} origin={origin} onClose={vi.fn()} />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "GPX" }));
-
-    expect(createURL).toHaveBeenCalledOnce();
-    const blob = createURL.mock.calls[0][0];
-    expect(blob.type).toBe("application/gpx+xml");
-    expect(clickSpy).toHaveBeenCalledOnce();
-    // Revocation is DEFERRED (spec 33): revoking synchronously after click()
-    // races the browser's blob fetch and intermittently aborts the download.
-    expect(revokeURL).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
+      expect(createURL).toHaveBeenCalledOnce();
+      const blob = createURL.mock.calls[0][0] as Blob;
+      expect(blob.type).toBe("application/gpx+xml");
+      expect(clickSpy).toHaveBeenCalledOnce();
+      // Revocation is DEFERRED (spec 33): revoking soon after click() races
+      // the browser's blob fetch and intermittently aborts the download.
+      vi.advanceTimersByTime(9_999);
+      expect(revokeURL).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(revokeURL).toHaveBeenCalledWith("blob:gpx");
+    } finally {
+      vi.useRealTimers();
+      for (const spy of [createURL, revokeURL, clickSpy]) spy.mockRestore();
+    }
   });
 });
 
