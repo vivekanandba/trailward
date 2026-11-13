@@ -18,14 +18,15 @@
 #
 # Requires: gh (authenticated), git. No external jq needed (uses gh --jq).
 set -euo pipefail
+# bash switches errexit off inside $(…). Without this, a thread read that dies
+# inside `merge` or `status` let the caller print "0" and merge anyway (#103).
+shopt -s inherit_errexit
 
 die() { echo "ship: $*" >&2; exit 1; }
 command -v gh >/dev/null || die "gh CLI not found on PATH"
 
 # owner/repo from the gh-resolved remote so this works on any clone.
 repo_slug() { gh repo view --json nameWithOwner --jq .nameWithOwner; }
-owner() { repo_slug | cut -d/ -f1; }
-name() { repo_slug | cut -d/ -f2; }
 
 current_branch() { git rev-parse --abbrev-ref HEAD; }
 
@@ -58,18 +59,25 @@ cmd_open() {
 # "0 unresolved" with one open (issue #83); so any read that cannot be shown
 # complete exits non-zero instead of guessing.
 _threads() {
-  local num="$1" out
+  local num="$1" slug out
+  slug="$(repo_slug)"
   out="$(gh api graphql --paginate \
     -f query='query($owner:String!,$repo:String!,$num:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$num){reviewThreads(first:100,after:$endCursor){totalCount pageInfo{hasNextPage endCursor} nodes{id isResolved comments(first:1){nodes{path body}}}}}}}' \
-    -F owner="$(owner)" -F repo="$(name)" -F num="$num" --jq \
+    -F owner="${slug%%/*}" -F repo="${slug#*/}" -F num="$num" --jq \
     '.data.repository.pullRequest.reviewThreads | "total\t\(.totalCount)", (.nodes[] | "\(if .isResolved then "resolved" else "open" end)\t\(.id)\t\((.comments.nodes[0].path)//"?")\t\((.comments.nodes[0].body)//"" | gsub("[\n\t]";" ") | .[0:80])")')" \
     || die "could not read the review threads of PR #$num; refusing to guess"
-  local total read
-  total="$(awk -F'\t' '$1 == "total" { print $2; exit }' <<< "$out")"
-  read="$(awk -F'\t' '$1 != "total"' <<< "$out" | grep -c . || true)"
+  # Each page states the total; they differ only if a thread was added or
+  # removed mid-read, which is a reason to retry, not a missing page.
+  local totals total rows read
+  totals="$(awk -F'\t' '$1 == "total" { print $2 }' <<< "$out" | sort -u)"
+  [ "$(grep -c . <<< "$totals")" -le 1 ] \
+    || die "PR #$num's thread count changed while it was read ($(paste -sd' ' <<< "$totals" | sed 's/ / → /g')); run it again"
+  total="$totals"
+  rows="$(awk -F'\t' '$1 != "total"' <<< "$out")"
+  read="$(grep -c . <<< "$rows" || true)"
   [ -n "$total" ] && [ "$read" = "$total" ] \
     || die "read $read of ${total:-an unknown number of} review threads on PR #$num; refusing to guess"
-  awk -F'\t' '$1 != "total"' <<< "$out"
+  [ -z "$rows" ] || printf '%s\n' "$rows"
 }
 
 cmd_threads() {
@@ -135,7 +143,7 @@ cmd_approve() {
 
 cmd_merge() {
   local num; num="$(pr_number "${1:-}")"
-  local unresolved; unresolved="$(cmd_unresolved "$num" | tail -1)"
+  local unresolved; unresolved="$(cmd_unresolved "$num")"
   [ "$unresolved" = "0" ] || die "refusing to merge: $unresolved unresolved review thread(s)"
   # Gate on CI. `gh pr checks` exits 0 only when every check has passed; it is
   # non-zero for failing OR still-pending checks. A PR with no checks configured
