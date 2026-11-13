@@ -1,9 +1,17 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 import { pickVolumes } from "./build-gazetteer";
 import { pickTargets, matchHeritage } from "./build-hillfeatures";
 import { filterUnknown, buildIndiaMask, inIndia, isPlausibleSummit } from "./build-detect";
 import { isImplausibleTrek } from "./scrub-implausible";
-import { fieldCounts, driftViolations, curatedLosses } from "./check-enrichment-drift";
+import {
+  fieldCounts,
+  driftViolations,
+  curatedLosses,
+  pagesLost,
+  carriedLosses,
+} from "./check-enrichment-drift";
 import { featuresNear } from "./build-names";
 import { regionFreeId, mergeDuplicates } from "./migrate-region-free";
 import { cellsFor } from "./build-climate";
@@ -268,6 +276,83 @@ describe("enrichment drift guard (spec 31)", () => {
     const d = (over: Record<string, unknown> = {}) =>
       trek({ id: "d", name: "D", tier: "discovery", image: img, ...over });
     expect(curatedLosses([d()], [d({ image: undefined })])).toEqual([]);
+  });
+
+  it("refuses a refresh that takes down a published page whose record is still here", () => {
+    // Kumara Parvatha's page rested on its photo; the 2026-11-07 refresh lost
+    // the photo and with it the page.
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const peak = trek({
+      id: "osm-1",
+      name: "Kumara Parvatha",
+      tier: "discovery",
+      image: img,
+      lat: 12.66,
+      lng: 75.69,
+      discoveryScore: 0.9,
+    });
+    // Three bigger peaks share its 1° cell, so only the photo earned it a page.
+    const others = [1, 2, 3].map((n) =>
+      trek({
+        id: `osm-${n + 1}`,
+        name: `Bigger ${n}`,
+        tier: "discovery",
+        lat: 12.7,
+        lng: 75.7,
+        discoveryScore: 0.95,
+        elevationM: 1800 + n,
+      }),
+    );
+    expect(
+      pagesLost([peak, ...others], [{ ...(peak as Trek), image: undefined }, ...others]),
+    ).toEqual(["osm-1 (Kumara Parvatha)"]);
+    // A record gone from the dataset takes its page with it: not this check's.
+    expect(pagesLost([peak, ...others], others)).toEqual([]);
+    // Rank churn is not a loss: a page held only by its place in the cell's
+    // top three may change hands when a neighbour's score moves.
+    const ranked = (id: string, score: number) =>
+      trek({ id, name: id, tier: "discovery", lat: 13.5, lng: 76.5, discoveryScore: score });
+    const before = [ranked("a", 0.9), ranked("b", 0.8), ranked("c", 0.7), ranked("d", 0.6)];
+    const after = [ranked("a", 0.9), ranked("b", 0.8), ranked("c", 0.5), ranked("d", 0.6)];
+    expect(pagesLost(before, after)).toEqual([]);
+  });
+
+  it("runs the per-record carried check only for the weekly refresh", () => {
+    // The hand-run rebakes clear some carried fields on purpose (spec 32).
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["check:refresh"]).toMatch(/check-enrichment-drift\.ts --refresh/);
+  });
+
+  it("names every record that kept its id but lost a carried photo or text", () => {
+    // Sesha Parvata lost its photo, kept a page by rank, and pushed
+    // Dipadakallu out: only the cause is visible on both.
+    const img = { url: "https://upload.wikimedia.org/a.jpg", attribution: "Commons" };
+    const sesha = trek({
+      id: "osm-6",
+      name: "Sesha Parvata",
+      tier: "discovery",
+      image: img,
+      highlights: "A hill.",
+    });
+    expect(carriedLosses([sesha], [{ ...(sesha as Trek), image: undefined }])).toEqual([
+      "osm-6 (Sesha Parvata): lost image",
+    ]);
+    expect(carriedLosses([sesha], [sesha])).toEqual([]);
+    // Every carried field, a history note included: it earns a page as well.
+    const note = { text: "A fort in 1908.", source: "Imperial Gazetteer of India", year: 1908 };
+    const full = { ...(sesha as Trek), historicalNote: note, nearestTown: "Somwarpet" };
+    expect(
+      carriedLosses([full], [{ ...full, historicalNote: undefined, nearestTown: undefined }]),
+    ).toEqual(["osm-6 (Sesha Parvata): lost historicalNote, nearestTown"]);
+    // A record promoted to curated is curatedLosses' to judge.
+    expect(
+      carriedLosses([sesha], [{ ...(sesha as Trek), tier: "curated", image: undefined }]),
+    ).toEqual([]);
+    expect(carriedLosses([sesha], [])).toEqual([]); // a record gone is not this check's
+    const cur = trek({ id: "c", name: "C", tier: "curated", image: img });
+    expect(carriedLosses([cur], [{ ...(cur as Trek), image: undefined }])).toEqual([]); // curatedLosses' job
   });
 
   it("tolerates single-record wobble on tiny hand-curated fields", () => {

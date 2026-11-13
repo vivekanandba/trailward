@@ -13,7 +13,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
-import { photoCarries } from "./lib/carryover";
+import { DISCOVERY_CARRIED, photoCarries } from "./lib/carryover";
+import { qualifies, qualifyingTreks } from "./lib/pages";
 
 const FIELDS = [
   "name", // counted as non-"Unnamed" — a naming regression is a data loss too
@@ -23,6 +24,10 @@ const FIELDS = [
   "hillFeatures",
   "protectedArea",
   "heritage",
+  // Carried over by discovery when a lookup misses (spec 10), so a bulk drop
+  // means the carry broke: 21 photos went in one refresh before it existed.
+  "image",
+  "highlights",
 ] as const;
 
 const TOLERANCE = 0.02; // fraction each count may drop before this fails
@@ -69,6 +74,50 @@ export function curatedLosses(head: Trek[], now: Trek[]): string[] {
   return out;
 }
 
+/**
+ * Non-curated records that kept their id but lost any field discovery
+ * carries (photo, gallery, text, history note, nearest town, land cover…).
+ * Discovery carries those over when a lookup misses (spec 10),
+ * so any such loss means the carry broke: per record, no tolerance. This is
+ * the cause, caught before its effects: on 2026-11-07, 21 photos went, 16
+ * pages that rested on them went too, and a 17th (Dipadakallu) was pushed out
+ * of its cell's top three by a neighbour that had lost its photo.
+ */
+export function carriedLosses(head: Trek[], now: Trek[]): string[] {
+  const nowById = new Map(now.map((t) => [t.id, t]));
+  const out: string[] = [];
+  for (const t of head) {
+    const n = nowById.get(t.id);
+    if (!n || t.tier === "curated" || n.tier === "curated") continue; // curated: curatedLosses
+    const lost = DISCOVERY_CARRIED.filter((f) => t[f] !== undefined && n[f] === undefined);
+    if (lost.length > 0) out.push(`${t.id} (${t.name}): lost ${lost.join(", ")}`);
+  }
+  return out;
+}
+
+/**
+ * Pages that earned their place on their own (curated, or carrying a photo,
+ * text or a history note: `qualifies`) and that this refresh would take down
+ * because that photo or text went missing, although the record is still in
+ * the dataset. A missed best-effort lookup is not a data change (spec 10,
+ * spec 35): the 2026-11-07 refresh took down 16 pages this way, Kumara
+ * Parvatha among them. A page held only by its rank in its 1° cell may
+ * change hands as scores move week to week; that is not counted here, and
+ * a page pushed out by a neighbour's lost photo is caught at the cause, by
+ * carriedLosses.
+ */
+export function pagesLost(head: Trek[], now: Trek[]): string[] {
+  const nowById = new Map(now.map((t) => [t.id, t]));
+  const after = new Set(qualifyingTreks(now).map((t) => t.id));
+  return head
+    .filter((t) => qualifies(t))
+    .filter((t) => {
+      const n = nowById.get(t.id);
+      return n !== undefined && !after.has(t.id);
+    })
+    .map((t) => `${t.id} (${t.name})`);
+}
+
 // Hand-curated fields have tiny counts (heritage: 2) where one record moving
 // is a huge relative drop — a drop must also exceed this many records to fail.
 const ABSOLUTE_FLOOR = 5;
@@ -112,6 +161,18 @@ async function main(): Promise<void> {
   const lost = curatedLosses(head, now);
   console.log(`[drift] curated records that lost a kept field: ${lost.length}`);
   for (const l of lost) violations.push(`curated ${l}`);
+  // Only for the weekly refresh (`--refresh`, from check:refresh): nothing in
+  // it may clear a carried field. The hand-run rebakes (spec 32) clear some
+  // on purpose (no WorldCover reading, a hill feature gone), and they keep
+  // the count tolerance alone.
+  if (process.argv.includes("--refresh")) {
+    const carried = carriedLosses(head, now);
+    console.log(`[drift] records that lost a field discovery carries: ${carried.length}`);
+    for (const c of carried) violations.push(`carried field ${c}`);
+  }
+  const gone = pagesLost(head, now);
+  console.log(`[drift] published pages lost with their record still here: ${gone.length}`);
+  for (const g of gone) violations.push(`published page lost: ${g}`);
   if (violations.length > 0) {
     console.error(`[drift] enrichment dropped:`);
     for (const v of violations) console.error(`  ${v}`);
