@@ -146,14 +146,42 @@ describe("triageIssues / closeApplied", () => {
   it("thanks and closes each applied issue", () => {
     const { calls, gh } = fakeGh();
     closeApplied([{ issue: 7, pinId: PIN, name: "Bilikal Betta" }], gh, "o/r");
+    // Closed before thanked: a failed comment must not mean a second thanks.
     expect(calls).toEqual([
+      ["api", "--method", "PATCH", "repos/o/r/issues/7", "-f", "state=closed"],
       [
         "api",
         "repos/o/r/issues/7/comments",
         "-f",
         "body=Applied — this pin is now named **Bilikal Betta** on the map (next deploy). Thank you!",
       ],
-      ["api", "--method", "PATCH", "repos/o/r/issues/7", "-f", "state=closed"],
     ]);
+  });
+
+  it("answers an earlier suggestion for the same pin as superseded, never as applied", () => {
+    const { calls, gh } = fakeGh();
+    const names: HumanNames = {};
+    const second = FORM_BODY.replace("Bilikal Betta", "Bilikal Hill");
+    // The API lists newest first; the latest suggestion is the one that stands.
+    const applied = triageIssues(
+      [
+        { number: 9, title: "name", body: second },
+        { number: 7, title: "name", body: FORM_BODY },
+      ],
+      new Set([PIN]),
+      names,
+      gh,
+      "o/r",
+    );
+    expect(names[PIN]).toEqual({ name: "Bilikal Hill", issue: 9 });
+    expect(applied).toEqual([
+      { issue: 7, pinId: PIN, name: "Bilikal Betta", supersededBy: 9 },
+      { issue: 9, pinId: PIN, name: "Bilikal Hill" },
+    ]);
+    closeApplied(applied, gh, "o/r");
+    const bodies = calls.filter((c) => c[1].endsWith("/comments")).map((c) => c[3]);
+    expect(bodies[0]).toMatch(/^body=Thank you! A later suggestion for this pin \(#9\)/);
+    expect(bodies[0]).not.toMatch(/Bilikal Betta/);
+    expect(bodies[1]).toMatch(/now named \*\*Bilikal Hill\*\*/);
   });
 });

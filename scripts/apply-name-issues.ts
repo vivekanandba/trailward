@@ -24,7 +24,6 @@
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { Trek } from "../src/lib/trek";
@@ -35,9 +34,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const detectedFile = resolve(here, "detected/india-detected.json");
 const humanNamesFile = resolve(here, "detected/human-names.json");
 const treksFile = resolve(here, "../src/data/treks.json");
-// What this run applied, for close:names to thank and close after landing.
-const appliedFile =
-  process.env.APPLIED_NAMES_FILE ?? resolve(tmpdir(), "trailward-applied-names.json");
+const repo = process.env.GITHUB_REPOSITORY ?? "vivekanandba/trailward";
 
 export interface Suggestion {
   pinId: string;
@@ -108,6 +105,8 @@ export interface Applied {
   issue: number;
   pinId: string;
   name: string;
+  /** A later suggestion for the same pin, applied instead of this one. */
+  supersededBy?: number;
 }
 
 export type Gh = (args: string[]) => string;
@@ -129,7 +128,8 @@ export function triageIssues(
   repo: string,
 ): Applied[] {
   const applied: Applied[] = [];
-  for (const issue of issues) {
+  // Oldest first, so the latest suggestion for a pin is the one that stands.
+  for (const issue of [...issues].sort((a, b) => a.number - b.number)) {
     const parsed = parseNameIssueBody(issue.body ?? "");
     const error = parsed
       ? validateSuggestion(parsed, knownIds)
@@ -147,29 +147,51 @@ export function triageIssues(
       continue;
     }
     humanNames[parsed.pinId] = { name: parsed.name, issue: issue.number };
+    // An earlier suggestion for this pin in the same run is not what the map
+    // will show: it is answered as superseded, never as applied.
+    for (const a of applied) {
+      if (a.pinId === parsed.pinId && a.supersededBy === undefined) a.supersededBy = issue.number;
+    }
     applied.push({ issue: issue.number, pinId: parsed.pinId, name: parsed.name });
     console.log(`  #${issue.number}: ${parsed.pinId} → "${parsed.name}"`);
   }
   return applied;
 }
 
-/** Thanks and closes each issue whose rename has landed. */
+/**
+ * Closes, then thanks, each issue whose rename has landed. Closed first: if
+ * the comment then fails, the next run does not see the issue and so never
+ * posts the thanks twice.
+ */
 export function closeApplied(applied: Applied[], gh: Gh, repo: string): void {
   for (const a of applied) {
+    gh(["api", "--method", "PATCH", `repos/${repo}/issues/${a.issue}`, "-f", "state=closed"]);
     gh([
       "api",
       `repos/${repo}/issues/${a.issue}/comments`,
       "-f",
-      `body=Applied — this pin is now named **${a.name}** on the map (next deploy). Thank you!`,
+      a.supersededBy === undefined
+        ? `body=Applied — this pin is now named **${a.name}** on the map (next deploy). Thank you!`
+        : `body=Thank you! A later suggestion for this pin (#${a.supersededBy}) was applied instead.`,
     ]);
-    gh(["api", "--method", "PATCH", `repos/${repo}/issues/${a.issue}`, "-f", "state=closed"]);
   }
 }
 
+/**
+ * Where apply:names lists what it applied. Required: close:names closes live
+ * issues, so it reads only a list the workflow named for this run, never a
+ * default left over from some earlier local run.
+ */
+function appliedFile(): string {
+  const f = process.env.APPLIED_NAMES_FILE;
+  if (!f) throw new Error("[apply-names] APPLIED_NAMES_FILE is not set; it names this run's list");
+  return f;
+}
+
 async function main(): Promise<void> {
-  const repo = process.env.GITHUB_REPOSITORY ?? "vivekanandba/trailward";
+  const listFile = appliedFile();
   // A stale list from an earlier run must never close this run's issues.
-  writeFileSync(appliedFile, "[]\n", "utf8");
+  writeFileSync(listFile, "[]\n", "utf8");
   const issues = JSON.parse(
     gh([
       "api",
@@ -199,15 +221,16 @@ async function main(): Promise<void> {
   if (!ds.ok) throw new Error(`[apply-names] dataset invalid: ${ds.error}`);
   writeFileSync(treksFile, JSON.stringify(ds.treks) + "\n", "utf8");
   // Written last: only a run whose data was fully written lists anything.
-  writeFileSync(appliedFile, JSON.stringify(applied) + "\n", "utf8");
-  console.log(`[apply-names] applied ${applied.length} name(s); listed in ${appliedFile}.`);
+  writeFileSync(listFile, JSON.stringify(applied) + "\n", "utf8");
+  console.log(`[apply-names] applied ${applied.length} name(s); listed in ${listFile}.`);
 }
 
 function closeMain(): void {
-  const repo = process.env.GITHUB_REPOSITORY ?? "vivekanandba/trailward";
-  const applied = existsSync(appliedFile)
-    ? (JSON.parse(readFileSync(appliedFile, "utf8")) as Applied[])
-    : [];
+  const listFile = appliedFile();
+  // apply:names always writes the list, even an empty one: a missing file
+  // means the two steps disagree about where it is, not that nothing applied.
+  if (!existsSync(listFile)) throw new Error(`[apply-names] no list at ${listFile}; refusing`);
+  const applied = JSON.parse(readFileSync(listFile, "utf8")) as Applied[];
   closeApplied(applied, gh, repo);
   console.log(`[apply-names] closed ${applied.length} applied issue(s).`);
 }

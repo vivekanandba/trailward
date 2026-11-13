@@ -205,17 +205,6 @@ describe("Playwright jobs run on one pinned image (spec 42 §E)", () => {
     }
   });
 
-  it("name-suggestion issues are closed only after their rename lands (issue #99)", () => {
-    const steps = jobs
-      .filter((j) => j.id.startsWith("apply-suggestions.yml:"))
-      .flatMap((j) => j.job.steps ?? []) as { id?: string; run?: string; if?: string }[];
-    const land = steps.findIndex((st) => st.id === "land");
-    const close = steps.findIndex((st) => /npm run close:names/.test(st.run ?? ""));
-    expect(land, "the landing step").toBeGreaterThanOrEqual(0);
-    expect(close, "a step closes the applied issues").toBeGreaterThan(land);
-    expect(steps[close].if).toMatch(/steps\.land\.outcome == 'success'/);
-  });
-
   it("CI runs the named e2e scripts, never `npm run e2e -- <flags>`", () => {
     // npm appends extra arguments only to the LAST command of a compound
     // script: `npm run e2e -- --project=static` ran the app suite, then static
@@ -257,5 +246,40 @@ describe("the suite cannot hide a flake (spec 42 §E, CON-VER-008)", () => {
         .map((ms) => `${f}: ${ms}`),
     );
     expect(tight).toEqual([]);
+  });
+});
+
+// Spec 29: a suggestion is answered as applied only once its rename is on main.
+describe("name suggestions are closed after landing (spec 29, issue #99)", () => {
+  const steps = jobs
+    .filter((j) => j.id.startsWith("apply-suggestions.yml:"))
+    .flatMap((j) => j.job.steps ?? []) as {
+    id?: string;
+    run?: string;
+    if?: string;
+    env?: Record<string, string>;
+  }[];
+  const land = steps.findIndex((st) => st.id === "land");
+  const apply = steps.findIndex((st) => /npm run apply:names/.test(st.run ?? ""));
+  const close = steps.findIndex((st) => /npm run close:names/.test(st.run ?? ""));
+
+  it("closes only after the landing step succeeded, on main, even if the deploy dispatch failed", () => {
+    expect(land, "the landing step").toBeGreaterThanOrEqual(0);
+    expect(close, "a step closes the applied issues").toBeGreaterThan(land);
+    const cond = steps[close].if ?? "";
+    expect(cond).toMatch(/^always\(\) && /);
+    expect(cond).toMatch(/steps\.land\.outcome == 'success'/);
+    expect(cond).toMatch(/github\.ref == 'refs\/heads\/main'/);
+  });
+
+  it("the apply and close steps name the same list file, in step env", () => {
+    // A job-level env cannot read the runner context: the workflow would not start.
+    const file = steps[apply].env?.APPLIED_NAMES_FILE;
+    expect(file).toMatch(/runner\.temp/);
+    expect(steps[close].env?.APPLIED_NAMES_FILE).toBe(file);
+    const jobEnv = jobs
+      .filter((j) => j.id.startsWith("apply-suggestions.yml:"))
+      .map((j) => JSON.stringify((j.job as { env?: unknown }).env ?? {}));
+    for (const e of jobEnv) expect(e).not.toMatch(/runner\./);
   });
 });
