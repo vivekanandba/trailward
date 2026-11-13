@@ -69,7 +69,7 @@ _threads() {
   # Each page states the total; they differ only if a thread was added or
   # removed mid-read, which is a reason to retry, not a missing page.
   local totals total rows read
-  totals="$(awk -F'\t' '$1 == "total" { print $2 }' <<< "$out" | sort -u)"
+  totals="$(awk -F'\t' '$1 == "total" && !seen[$2]++ { print $2 }' <<< "$out")"
   [ "$(grep -c . <<< "$totals")" -le 1 ] \
     || die "PR #$num's thread count changed while it was read ($(paste -sd' ' <<< "$totals" | sed 's/ / → /g')); run it again"
   total="$totals"

@@ -168,4 +168,11 @@ describe("ship.sh review threads", () => {
     expect(r.status).not.toBe(0);
     expect(r.stderr).toMatch(/changed while it was read \(108 → 109\)/);
   });
+
+  it("names the counts in the order they were read, so a deletion reads as one", () => {
+    const pages: Page[] = structuredClone(captured);
+    threads(pages[1]).totalCount = 107;
+    serve(pages);
+    expect(ship(["unresolved", "79"]).stderr).toMatch(/\(108 → 107\)/);
+  });
 });
