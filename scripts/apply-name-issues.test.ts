@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { parseNameIssueBody, validateSuggestion, applyToData } from "./apply-name-issues";
+import {
+  parseNameIssueBody,
+  validateSuggestion,
+  applyToData,
+  triageIssues,
+  closeApplied,
+  type HumanNames,
+} from "./apply-name-issues";
 
 const FORM_BODY = `### Pin id
 
@@ -99,5 +106,97 @@ describe("applyToData", () => {
     const out = applyToData([{ ...summit, id: "d12-9-9-9-9" }], [other], names);
     expect(out.summits[0].name).toBe("Unnamed peak (~500 m)");
     expect(out.treks[0]).toBe(other);
+  });
+});
+
+// Issue #99: an issue is thanked and closed only once its rename has landed.
+// Triage runs before the data is committed; if landing is then refused, the
+// rename is discarded, and a closed issue would say it had been applied.
+describe("triageIssues / closeApplied", () => {
+  const PIN = "d12-2947-1901-246-99";
+  const fakeGh = () => {
+    const calls: string[][] = [];
+    return { calls, gh: (args: string[]) => (calls.push(args), "") };
+  };
+  const issues = [
+    { number: 7, title: "name", body: FORM_BODY },
+    { number: 8, title: "name", body: "no form here" },
+  ];
+
+  it("records a valid suggestion without thanking or closing its issue", () => {
+    const { calls, gh } = fakeGh();
+    const names: HumanNames = {};
+    const applied = triageIssues(issues, new Set([PIN]), names, gh, "o/r");
+    expect(applied).toEqual([{ issue: 7, pinId: PIN, name: "Bilikal Betta" }]);
+    expect(names[PIN]).toEqual({ name: "Bilikal Betta", issue: 7 });
+    const touched7 = calls.filter((c) => c.some((a) => a.includes("issues/7")));
+    expect(touched7).toEqual([]);
+  });
+
+  it("still asks for what is missing on an invalid suggestion", () => {
+    const { calls, gh } = fakeGh();
+    triageIssues(issues, new Set([PIN]), {}, gh, "o/r");
+    const on8 = calls.filter((c) => c.some((a) => a.includes("issues/8")));
+    expect(on8.map((c) => c[1])).toEqual([
+      "repos/o/r/issues/8/comments",
+      "repos/o/r/issues/8/labels",
+    ]);
+  });
+
+  it("thanks and closes each applied issue", () => {
+    const { calls, gh } = fakeGh();
+    closeApplied([{ issue: 7, pinId: PIN, name: "Bilikal Betta" }], gh, "o/r");
+    // Closed before thanked: a failed comment must not mean a second thanks.
+    expect(calls).toEqual([
+      ["api", "--method", "PATCH", "repos/o/r/issues/7", "-f", "state=closed"],
+      [
+        "api",
+        "repos/o/r/issues/7/comments",
+        "-f",
+        "body=Applied — this pin is now named **Bilikal Betta** on the map (next deploy). Thank you!",
+      ],
+    ]);
+  });
+
+  it("answers an earlier suggestion for the same pin as superseded, never as applied", () => {
+    const { calls, gh } = fakeGh();
+    const names: HumanNames = {};
+    const second = FORM_BODY.replace("Bilikal Betta", "Bilikal Hill");
+    // The API lists newest first; the latest suggestion is the one that stands.
+    const applied = triageIssues(
+      [
+        { number: 9, title: "name", body: second },
+        { number: 7, title: "name", body: FORM_BODY },
+      ],
+      new Set([PIN]),
+      names,
+      gh,
+      "o/r",
+    );
+    expect(names[PIN]).toEqual({ name: "Bilikal Hill", issue: 9 });
+    expect(applied).toEqual([
+      { issue: 7, pinId: PIN, name: "Bilikal Betta", supersededBy: 9 },
+      { issue: 9, pinId: PIN, name: "Bilikal Hill" },
+    ]);
+    closeApplied(applied, gh, "o/r");
+    const bodies = calls.filter((c) => c[1].endsWith("/comments")).map((c) => c[3]);
+    expect(bodies[0]).toMatch(/^body=Thank you! A later suggestion for this pin \(#9\)/);
+    expect(bodies[0]).not.toMatch(/Bilikal Betta/);
+    expect(bodies[1]).toMatch(/now named \*\*Bilikal Hill\*\*/);
+  });
+
+  it("points every earlier suggestion at the one that stands, not at another superseded one", () => {
+    const { gh } = fakeGh();
+    const issues3 = [9, 7, 5].map((number) => ({
+      number,
+      title: "name",
+      body: FORM_BODY.replace("Bilikal Betta", `Bilikal ${number}`),
+    }));
+    const applied = triageIssues(issues3, new Set([PIN]), {}, gh, "o/r");
+    expect(applied.map((a) => [a.issue, a.supersededBy])).toEqual([
+      [5, 9],
+      [7, 9],
+      [9, undefined],
+    ]);
   });
 });
