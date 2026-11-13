@@ -97,16 +97,16 @@ export function parseCommitSha(raw: string): string | null {
  */
 export type Run = (cmd: string, args: string[], env?: Record<string, string>) => string;
 
-const defaultRun: Run = (cmd, args, env) =>
+export const defaultRun: Run = (cmd, args, env) =>
   execFileSync(cmd, args, {
     encoding: "utf8",
     maxBuffer: 8 * 1024 * 1024,
     env: { ...process.env, ...env },
   });
 
-/** Owner and repo of a GitHub URL, without a trailing `.git`; null for any other host. */
+/** Owner and repo of a GitHub repo URL, without a trailing `.git`; null for anything else. */
 export function repoParts(url: string): { owner: string; repo: string } | null {
-  const m = /github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(url);
+  const m = /^https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(url);
   return m ? { owner: m[1], repo: m[2] } : null;
 }
 
@@ -166,21 +166,46 @@ export function fetchRemote(lock: ConstitutionLock, run: Run = defaultRun): stri
   }
 }
 
-/** The commit `lock.ref` points at now, or null when that cannot be confirmed. */
+/**
+ * The commit `lock.ref` points at now, or null when that cannot be confirmed.
+ * Asked the same way fetchRemote reads: through gh with the token when there
+ * is one, else anonymously, so the two halves of a sync agree on access.
+ */
 export function resolveCommit(lock: ConstitutionLock, run: Run = defaultRun): string | null {
   const parts = repoParts(lock.repo);
   if (!parts) return null;
+  const path = `repos/${parts.owner}/${parts.repo}/commits/${lock.ref}`;
+  const env = ghEnv();
   try {
     return parseCommitSha(
-      run(
-        "gh",
-        ["api", `repos/${parts.owner}/${parts.repo}/commits/${lock.ref}`, "--jq", ".sha"],
-        ghEnv(),
-      ),
+      env
+        ? run("gh", ["api", path, "--jq", ".sha"], env)
+        : run("curl", [
+            "-sfL",
+            "--max-time",
+            "20",
+            "-H",
+            "Accept: application/vnd.github.sha",
+            `https://api.github.com/${path}`,
+          ]),
     );
   } catch {
     return null;
   }
+}
+
+/**
+ * Why the remote could not be read, said as what it is: with no token the
+ * repository may simply be private; with one, the token itself is suspect.
+ * "No token is set" when one is set sends the reader after a problem that
+ * does not exist (CON-VER-005, issue #85).
+ */
+export function unreachableReason(lock: ConstitutionLock, tokenSet: boolean): string {
+  return tokenSet
+    ? `could not read ${lock.repo} at ${lock.ref} with the token that is set: it may be expired, ` +
+        "lack read access to the repository, or the ref may be gone."
+    : `could not read ${lock.repo} at ${lock.ref} anonymously: the repository is private and no ` +
+        "CONSTITUTION_TOKEN/GH_TOKEN is set.";
 }
 
 /**
@@ -196,8 +221,8 @@ export function syncFromRemote(
   const commit = resolveCommit(lock, run);
   if (!commit) {
     return (
-      `could not resolve which commit ${lock.ref} points at in ${lock.repo}. Set ` +
-      "CONSTITUTION_TOKEN (or make the repo public); refusing to write a lock whose commit would be a guess."
+      `${unreachableReason(lock, Boolean(ghEnv()))} Could not resolve which commit the ref points ` +
+      "at; refusing to write a lock whose commit would be a guess."
     );
   }
   const remote = fetchRemote({ ...lock, ref: commit }, run);
@@ -270,8 +295,8 @@ function main(): void {
   if (remote === null) {
     status = "unreachable";
     console.warn(
-      `[constitution] could not read ${lock.repo} at ${lock.ref}: the repository is private and ` +
-        "no CONSTITUTION_TOKEN/GH_TOKEN is set. The pin was NOT verified against the remote.",
+      `[constitution] ${unreachableReason(lock, Boolean(ghEnv()))} ` +
+        "The pin was NOT verified against the remote.",
     );
   } else if (sha256(remote) === lock.sha256) {
     status = "match";

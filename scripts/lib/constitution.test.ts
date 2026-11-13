@@ -373,6 +373,8 @@ describe("the token, the repo and the revision (issue #85)", () => {
       repo: "fleet",
     });
     expect(repoParts("https://gitlab.com/a/b")).toBeNull();
+    expect(repoParts("https://notgithub.com/a/b")).toBeNull();
+    expect(repoParts("https://gist.github.com/a/b")).toBeNull();
   });
 
   it("resolves the commit with the token, and refuses an answer that is not a sha", async () => {
@@ -418,6 +420,53 @@ describe("the token, the repo and the revision (issue #85)", () => {
       });
       expect(typeof got).toBe("string");
       expect(calls).toHaveLength(1);
+    });
+  });
+
+  it("the real runner hands the env it is given to the command", async () => {
+    const { defaultRun } = await import("../check-constitution");
+    const seen = defaultRun(
+      "node",
+      ["-e", "process.stdout.write(process.env.GH_TOKEN ?? '<unset>')"],
+      {
+        GH_TOKEN: "secret",
+      },
+    );
+    expect(seen).toBe("secret");
+  });
+
+  it("blames the token, not its absence, when a set token cannot read the remote", async () => {
+    const { unreachableReason } = await import("../check-constitution");
+    expect(unreachableReason(lock, true)).not.toMatch(/no CONSTITUTION_TOKEN/);
+    expect(unreachableReason(lock, true)).toMatch(/with the token that is set/);
+    expect(unreachableReason(lock, false)).toMatch(/no CONSTITUTION_TOKEN\/GH_TOKEN is set/);
+  });
+
+  it("with no token, a sync reads both the commit and the rules anonymously, at the sha", async () => {
+    const { syncFromRemote } = await import("../check-constitution");
+    withEnv({ CONSTITUTION_TOKEN: undefined, GH_TOKEN: undefined }, () => {
+      const calls: string[] = [];
+      const got = syncFromRemote(lock, (cmd, args) => {
+        const url = args[args.length - 1];
+        calls.push(`${cmd} ${url}`);
+        return url.includes("/commits/") ? `${SHA}\n` : "# rules\n";
+      });
+      expect(got).toEqual({ remote: "# rules\n", commit: SHA });
+      expect(calls).toEqual([
+        "curl https://api.github.com/repos/vivekanandba/fleet/commits/main",
+        `curl https://raw.githubusercontent.com/vivekanandba/fleet/${SHA}/CONSTITUTION.md`,
+      ]);
+    });
+  });
+
+  it("a sync that resolves the commit but cannot read the rules says which half failed", async () => {
+    const { syncFromRemote } = await import("../check-constitution");
+    withEnv({ CONSTITUTION_TOKEN: "secret" }, () => {
+      const got = syncFromRemote(lock, (_c, args) => {
+        if (args[1].includes("/commits/")) return SHA;
+        throw new Error("404");
+      });
+      expect(got).toMatch(/resolved main to bbbbbbb but could not read its CONSTITUTION\.md/);
     });
   });
 });
