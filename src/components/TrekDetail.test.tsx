@@ -321,20 +321,31 @@ describe("TrekDetail GPX export", () => {
     const revokeURL = vi.fn();
     vi.stubGlobal("URL", { ...URL, createObjectURL: createURL, revokeObjectURL: revokeURL });
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    // The revocation timer is run here, under the stub, never left to fire
+    // after the test: 10 s later the stub is gone, jsdom has no
+    // revokeObjectURL, and the TypeError lands on whichever test is running.
+    vi.useFakeTimers();
+    try {
+      render(
+        <TrekDetail trek={{ ...baseTrek, elevationM: 1350 }} origin={origin} onClose={vi.fn()} />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "GPX" }));
 
-    render(
-      <TrekDetail trek={{ ...baseTrek, elevationM: 1350 }} origin={origin} onClose={vi.fn()} />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "GPX" }));
-
-    expect(createURL).toHaveBeenCalledOnce();
-    const blob = createURL.mock.calls[0][0];
-    expect(blob.type).toBe("application/gpx+xml");
-    expect(clickSpy).toHaveBeenCalledOnce();
-    // Revocation is DEFERRED (spec 33): revoking synchronously after click()
-    // races the browser's blob fetch and intermittently aborts the download.
-    expect(revokeURL).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
+      expect(createURL).toHaveBeenCalledOnce();
+      const blob = createURL.mock.calls[0][0];
+      expect(blob.type).toBe("application/gpx+xml");
+      expect(clickSpy).toHaveBeenCalledOnce();
+      // Revocation is DEFERRED (spec 33): revoking synchronously after click()
+      // races the browser's blob fetch and intermittently aborts the download.
+      expect(revokeURL).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(10_000);
+      expect(revokeURL).toHaveBeenCalledWith("blob:gpx");
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+      clickSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 });
 
