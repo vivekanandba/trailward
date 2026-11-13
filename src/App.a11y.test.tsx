@@ -31,11 +31,7 @@ vi.mock("./lib/cells", () => ({
 
 beforeEach(() => localStorage.clear());
 
-// These render the whole App and audit it: 0.3–0.7 s alone, but past the
-// default 5 s on the shared runner at load 20–35 (2026-11-13). They assert
-// accessibility, not speed, so a load-sized budget keeps a slow machine from
-// reading as a violation (CON-VER-008).
-describe("App accessibility audit (spec 37)", { timeout: 30_000 }, () => {
+describe("App accessibility audit (spec 37)", () => {
   it("has no violations in the default state", async () => {
     const { container } = render(<App />);
     await screen.findByText("Skandagiri");
