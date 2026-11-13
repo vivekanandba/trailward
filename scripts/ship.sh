@@ -51,45 +51,44 @@ cmd_open() {
   gh pr view --json number --jq .number
 }
 
-# GraphQL: all review threads on the PR (id, resolved, first comment path/body).
-# Any extra args (e.g. `--jq '<filter>'`) are forwarded to `gh api` so callers
-# can project the result — without the forward the filter is silently dropped
-# and gh returns the raw JSON blob.
-_threads_json() {
-  local num="$1"; shift
-  gh api graphql \
-    -f query='query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$num){reviewThreads(first:100){totalCount nodes{id isResolved comments(first:1){nodes{path body}}}}}}}' \
-    -F owner="$(owner)" -F repo="$(name)" -F num="$num" "$@"
-}
-
-# GitHub caps reviewThreads at 100 per page; warn (don't silently miscount) if
-# a PR has more so the operator knows the count/resolve only covered the first 100.
-_warn_if_truncated() {
-  local num="$1" total
-  total="$(_threads_json "$num" --jq '.data.repository.pullRequest.reviewThreads.totalCount')"
-  [ "${total:-0}" -gt 100 ] &&
-    echo "ship: warning: PR #$num has $total review threads; only the first 100 are processed" >&2
-  return 0
+# Every review thread on the PR, one per line: "open|resolved<TAB>id<TAB>path<TAB>first
+# comment". GitHub serves 100 per page, so this follows every page (gh's
+# --paginate drives $endCursor), then checks the lines read against the PR's
+# totalCount. PRs #79 and #80 reached 101+ threads and a first-page read said
+# "0 unresolved" with one open (issue #83); so any read that cannot be shown
+# complete exits non-zero instead of guessing.
+_threads() {
+  local num="$1" out
+  out="$(gh api graphql --paginate \
+    -f query='query($owner:String!,$repo:String!,$num:Int!,$endCursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$num){reviewThreads(first:100,after:$endCursor){totalCount pageInfo{hasNextPage endCursor} nodes{id isResolved comments(first:1){nodes{path body}}}}}}}' \
+    -F owner="$(owner)" -F repo="$(name)" -F num="$num" --jq \
+    '.data.repository.pullRequest.reviewThreads | "total\t\(.totalCount)", (.nodes[] | "\(if .isResolved then "resolved" else "open" end)\t\(.id)\t\((.comments.nodes[0].path)//"?")\t\((.comments.nodes[0].body)//"" | gsub("[\n\t]";" ") | .[0:80])")')" \
+    || die "could not read the review threads of PR #$num; refusing to guess"
+  local total read
+  total="$(awk -F'\t' '$1 == "total" { print $2; exit }' <<< "$out")"
+  read="$(awk -F'\t' '$1 != "total"' <<< "$out" | grep -c . || true)"
+  [ -n "$total" ] && [ "$read" = "$total" ] \
+    || die "read $read of ${total:-an unknown number of} review threads on PR #$num; refusing to guess"
+  awk -F'\t' '$1 != "total"' <<< "$out"
 }
 
 cmd_threads() {
   local num; num="$(pr_number "${1:-}")"
-  _threads_json "$num" --jq \
-    '.data.repository.pullRequest.reviewThreads.nodes[] | (if .isResolved then "[resolved]  " else "[OPEN]      " end) + ((.comments.nodes[0].path)//"?") + " — " + ((.comments.nodes[0].body)//"" | gsub("\n";" ") | .[0:80])'
+  local all; all="$(_threads "$num")"
+  [ -n "$all" ] || return 0
+  awk -F'\t' '{ printf "%-12s%s — %s\n", ($1 == "open" ? "[OPEN]" : "[resolved]"), $3, $4 }' <<< "$all"
 }
 
 cmd_unresolved() {
   local num; num="$(pr_number "${1:-}")"
-  _warn_if_truncated "$num"
-  _threads_json "$num" --jq \
-    '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved|not)] | length'
+  local all; all="$(_threads "$num")"
+  awk -F'\t' '$1 == "open"' <<< "$all" | grep -c . || true
 }
 
 cmd_resolve_all() {
   local num; num="$(pr_number "${1:-}")"
-  _warn_if_truncated "$num"
-  local ids; ids="$(_threads_json "$num" --jq \
-    '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved|not) | .id')"
+  local all; all="$(_threads "$num")"
+  local ids; ids="$(awk -F'\t' '$1 == "open" { print $2 }' <<< "$all")"
   if [ -z "$ids" ]; then echo "no unresolved threads"; return; fi
   local ok=0 fail=0
   while IFS= read -r tid; do
