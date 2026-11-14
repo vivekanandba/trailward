@@ -35,6 +35,9 @@ jobs:
       - run: npm run apply:names
         env:
           GH_TOKEN: ${{ github.token }}
+          # What it applied, for the close step (a job-level env cannot read
+          # the runner context, so each step names the file).
+          APPLIED_NAMES_FILE: ${{ runner.temp }}/applied-names.json
       # Chunks, and a URL for a named pin that earns a page (spec 35); the same
       # npm script the landing step reruns on top of a moved main.
       - run: npm run derive:data
@@ -54,6 +57,17 @@ jobs:
         run: gh workflow run deploy.yml --ref "$GITHUB_REF_NAME"
         env:
           GH_TOKEN: ${{ github.token }}
+      # Thank and close each applied issue only now: had landing been refused,
+      # its rename would be discarded and the issue must stay open (issue #99).
+      # push-data.sh succeeds only when this run's data is on the branch, and
+      # only main is the map: a dispatch on a branch closes nothing. always()
+      # so a failed deploy dispatch does not leave landed names unanswered.
+      - name: Close the issues whose names landed
+        if: always() && steps.land.outcome == 'success' && github.ref == 'refs/heads/main'
+        run: npm run close:names
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPLIED_NAMES_FILE: ${{ runner.temp }}/applied-names.json
 
   # A red scheduled run emails only whoever last edited the cron (spec 10):
   # file a failure, close the issue on the next success.
