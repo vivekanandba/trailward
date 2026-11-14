@@ -225,6 +225,30 @@ describe("lastCommitDate (spec 35 — lastmod from the DATA's history)", () => {
     expect(lastCommitDate("f", repoRoot, git, { TRAILWARD_DATA_DATE: "soon" })).toBeUndefined();
   });
 
+  it("fails in CI rather than ship pages with no date (issue #94)", () => {
+    // Every CI job that builds the pages passes TRAILWARD_DATA_DATE; one that
+    // forgot must go red here, not publish pages missing "Data as of".
+    expect(() => lastCommitDate("f", repoRoot, fakeGit("true", ""), { CI: "true" })).toThrow(
+      /no data date in CI: shallow clone/,
+    );
+    const broken = () => {
+      throw new Error("fatal: not a git repository");
+    };
+    expect(() => lastCommitDate("f", repoRoot, broken, { CI: "true" })).toThrow(
+      /no data date in CI: fatal: not a git repository/,
+    );
+    // A date passed in, or read from full history, is fine in CI too.
+    expect(
+      lastCommitDate("f", repoRoot, fakeGit("true", ""), {
+        CI: "true",
+        TRAILWARD_DATA_DATE: "2026-09-19",
+      }),
+    ).toBe("2026-09-19");
+    expect(lastCommitDate("f", repoRoot, fakeGit("false", "2026-09-19"), { CI: "true" })).toBe(
+      "2026-09-19",
+    );
+  });
+
   it("gives no date in a shallow clone, whose one commit touched everything", () => {
     // A 1-commit CI checkout dated every page with the deploy day (spec 44 R5).
     expect(
@@ -233,11 +257,11 @@ describe("lastCommitDate (spec 35 — lastmod from the DATA's history)", () => {
   });
 
   it("returns undefined for a path git has never seen, rather than today", () => {
-    expect(lastCommitDate("no/such/file.xyz", repoRoot)).toBeUndefined();
+    expect(lastCommitDate("no/such/file.xyz", repoRoot, undefined, {})).toBeUndefined();
   });
 
   it("returns undefined outside a git repository instead of throwing", () => {
-    expect(lastCommitDate("package.json", "/")).toBeUndefined();
+    expect(lastCommitDate("package.json", "/", undefined, {})).toBeUndefined();
   });
 });
 

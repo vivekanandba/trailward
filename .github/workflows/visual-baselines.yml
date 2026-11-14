@@ -40,8 +40,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: The data's date, read once with the full history (spec 44 R5)
-        run: echo "TRAILWARD_DATA_DATE=$(git log -1 --format=%cs -- src/data/treks.json)" >> "$GITHUB_ENV"
+      - uses: ./.github/actions/data-date # spec 44 R5, issue #94
       - uses: ./.github/actions/playwright-setup
       # Both suites carry screenshots: visual.spec.ts covers the app states,
       # static.spec.ts the generated pages served by `vite preview` (spec 42 §C).
